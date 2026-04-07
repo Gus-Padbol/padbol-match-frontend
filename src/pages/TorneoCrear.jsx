@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from 'react';
+import '../styles/TorneoCrear.css';
+import { useNavigate } from 'react-router-dom';
+
+export default function TorneoCrear() {
+  const [sedes, setSedes] = useState([]);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    sede_id: '',
+    nivel_torneo: 'club',
+    tipo_torneo: 'round_robin',
+    fecha_inicio: '',
+    fecha_fin: '',
+    cantidad_equipos: '',
+    es_multisede: false,
+  });
+
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [mensaje, setMensaje] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/sedes')
+      .then(res => res.json())
+      .then(data => setSedes(data || []))
+      .catch(err => setError('Error al cargar sedes'));
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMensaje('');
+    setError('');
+
+    if (!formData.nombre || !formData.tipo_torneo || !formData.fecha_inicio || !formData.fecha_fin) {
+      setError('Completa los campos obligatorios');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.es_multisede && !formData.sede_id) {
+      setError('Selecciona una sede (o marca multisede)'); 
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/torneos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          sede_id: formData.es_multisede ? null : parseInt(formData.sede_id),
+          nivel_torneo: formData.nivel_torneo,
+          tipo_torneo: formData.tipo_torneo,
+          fecha_inicio: formData.fecha_inicio,
+          fecha_fin: formData.fecha_fin,
+          cantidad_equipos: formData.cantidad_equipos ? parseInt(formData.cantidad_equipos) : null,
+          es_multisede: formData.es_multisede,
+          created_by: null,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Result recibido:', result);
+
+      if (response.ok) {
+        setMensaje('✅ Torneo creado correctamente');
+        setTimeout(() => {
+          navigate(`/torneo/${result[0].id}/jugadores`);
+        }, 1500);
+      } else {
+        setError(result.error || 'Error al crear torneo');
+      }
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="torneo-crear-container">
+      <div className="torneo-crear-card">
+        <h1>🏆 Crear Nuevo Torneo</h1>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Nombre del Torneo *</label>
+            <input
+              type="text"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+              placeholder="Ej: Torneo La Meca 2026"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Nivel *</label>
+            <select name="nivel_torneo" value={formData.nivel_torneo} onChange={handleChange}>
+              <option value="club">Club</option>
+              <option value="nacional">Nacional</option>
+              <option value="internacional">Internacional</option>
+            </select>
+          </div>
+
+          <div className="form-group checkbox">
+            <input
+              type="checkbox"
+              name="es_multisede"
+              checked={formData.es_multisede}
+              onChange={handleChange}
+              id="multisede"
+            />
+            <label htmlFor="multisede">Multisede (varios países)</label>
+          </div>
+
+          {!formData.es_multisede && (
+            <div className="form-group">
+              <label>Sede *</label>
+              <select name="sede_id" value={formData.sede_id} onChange={handleChange} required>
+                <option value="">-- Selecciona Sede --</option>
+                {sedes.map(sede => (
+                  <option key={sede.id} value={sede.id}>
+                    {sede.nombre} - {sede.ciudad}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>Formato *</label>
+            <select name="tipo_torneo" value={formData.tipo_torneo} onChange={handleChange}>
+              <option value="round_robin">Round Robin (todos vs todos)</option>
+              <option value="knockout">Knockout (eliminación directa)</option>
+              <option value="grupos_knockout">Grupos + Knockout</option>
+            </select>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Fecha Inicio *</label>
+              <input
+                type="date"
+                name="fecha_inicio"
+                value={formData.fecha_inicio}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Fecha Fin *</label>
+              <input
+                type="date"
+                name="fecha_fin"
+                value={formData.fecha_fin}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Cantidad de Equipos (opcional)</label>
+            <input
+              type="number"
+              name="cantidad_equipos"
+              value={formData.cantidad_equipos}
+              onChange={handleChange}
+              placeholder="Ej: 8"
+              min="2"
+            />
+          </div>
+
+          {error && <div className="error-message">{error}</div>}
+          {mensaje && <div className="success-message">{mensaje}</div>}
+
+          <button type="submit" disabled={loading} className="btn-submit">
+            {loading ? 'Creando...' : '✅ Crear Torneo'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
