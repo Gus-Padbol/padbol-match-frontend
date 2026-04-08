@@ -1,7 +1,5 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "env": {
-    "CI": "false"
-  }
+  "framework": "create-react-app"
 }
