@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ReservaForm.css';
 
+const API_BASE_URL = 'https://padbol-backend.onrender.com';
+
 export default function ReservaForm({ currentCliente }) {
   const [sedes, setSedes] = useState([]);
   const [paises, setPaises] = useState([]);
@@ -28,7 +30,7 @@ export default function ReservaForm({ currentCliente }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/sedes')
+    fetch(`${API_BASE_URL}/api/sedes`)
       .then(res => res.json())
       .then(data => {
         setSedes(data || []);
@@ -86,7 +88,7 @@ export default function ReservaForm({ currentCliente }) {
     setLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/disponibilidad/${sedeSeleccionada.nombre}/${fecha}`
+        `${API_BASE_URL}/api/disponibilidad/${sedeSeleccionada.nombre}/${fecha}`
       );
       const reservadas = await response.json();
 
@@ -159,7 +161,7 @@ export default function ReservaForm({ currentCliente }) {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/api/disponibilidad/${sedeSeleccionada.nombre}/${formData.fecha}`
+        `${API_BASE_URL}/api/disponibilidad/${sedeSeleccionada.nombre}/${formData.fecha}`
       );
       const reservadas = await response.json();
 
@@ -220,7 +222,7 @@ export default function ReservaForm({ currentCliente }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/reservas', {
+      const response = await fetch(`${API_BASE_URL}/api/reservas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

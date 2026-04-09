@@ -10,6 +10,8 @@ import Perfil from './Perfil';
 import TorneoVista from './pages/TorneoVista';
 import { supabase } from './supabaseClient';
 
+const API_BASE_URL = 'https://padbol-backend.onrender.com';
+
 function AppContent() {
   const navigate = useNavigate();
   const [currentCliente, setCurrentCliente] = useState(() => {
