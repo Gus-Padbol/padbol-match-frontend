@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ReservaForm.css';
 
-export default function ReservaForm({ currentCliente, apiBaseUrl }) {
+export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const [sedes, setSedes] = useState([]);
   const [paises, setPaises] = useState([]);
   const [ciudades, setCiudades] = useState([]);
