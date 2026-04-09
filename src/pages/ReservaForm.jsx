@@ -27,7 +27,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl }) {
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
+ useEffect(() => {
     fetch(`${apiBaseUrl}/api/sedes`)
       .then(res => res.json())
       .then(data => {
@@ -36,7 +36,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl }) {
         setPaises(paisesUnicos);
       })
       .catch(err => setError('Error al cargar sedes'));
-  }, []);
+  }, [apiBaseUrl]);
 
   const handleChangePais = (e) => {
     const pais = e.target.value;
