@@ -223,11 +223,12 @@ return (
   <Routes>
     <Route path="/perfil" element={<Perfil />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/torneo/:torneoId/equipos" element={<FormEquipos apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/" element={
+    <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
+<Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
+<Route path="/torneo/:torneoId/equipos" element={<FormEquipos apiBaseUrl={API_BASE_URL} />} />
+<Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
+<Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} />} />
+<Route path="/" element={
       <div style={{ padding: '20px' }}>
         <div style={{ textAlign: 'right', marginBottom: '20px' }}>
           {isAdmin ? (
