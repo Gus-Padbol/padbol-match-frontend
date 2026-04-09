@@ -27,7 +27,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
- useEffect(() => {
+  useEffect(() => {
     fetch(`${apiBaseUrl}/api/sedes`)
       .then(res => res.json())
       .then(data => {
