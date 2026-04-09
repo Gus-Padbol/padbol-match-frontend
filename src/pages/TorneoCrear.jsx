@@ -21,7 +21,7 @@ export default function TorneoCrear() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/sedes')
+    fetch('https://padbol-backend.onrender.com/api/sedes')
       .then(res => res.json())
       .then(data => setSedes(data || []))
       .catch(err => setError('Error al cargar sedes'));
@@ -54,7 +54,7 @@ export default function TorneoCrear() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/torneos', {
+      const response = await fetch('https://padbol-backend.onrender.com/api/sedes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
