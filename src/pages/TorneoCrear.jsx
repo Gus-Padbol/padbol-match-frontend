@@ -54,7 +54,7 @@ export default function TorneoCrear() {
     }
 
     try {
-      const response = await fetch('https://padbol-backend.onrender.com/api/sedes', {
+      const response = await fetch('https://padbol-backend.onrender.com/api/torneos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
