@@ -9,40 +9,99 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [equiposPorTorneo, setEquiposPorTorneo] = useState({});
   const [ingresos, setIngresos] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editandoId, setEditandoId] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [mensajeExito, setMensajeExito] = useState('');
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Cargar reservas
-        const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
-        const resData = await resRes.json();
-        setReservas(resData);
-        const suma = resData.reduce((total, item) => total + (item.precio || 30000), 0);
-        setIngresos(suma);
-
-        // Cargar torneos
-        const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
-        const tornData = await tornRes.json();
-        setTorneos(tornData);
-
-        // Cargar equipos por cada torneo
-        const equiposMap = {};
-        for (const torneo of tornData) {
-          const equipRes = await fetch(`${apiBaseUrl}/api/torneos/${torneo.id}/equipos`);
-          const equipData = await equipRes.json();
-          equiposMap[torneo.id] = equipData;
-        }
-        setEquiposPorTorneo(equiposMap);
-
-        setLoading(false);
-      } catch (err) {
-        console.error('Error:', err);
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [apiBaseUrl]);
+
+  const fetchData = async () => {
+    try {
+      // Cargar reservas
+      const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
+      const resData = await resRes.json();
+      setReservas(resData);
+      const suma = resData.reduce((total, item) => total + (item.precio || 30000), 0);
+      setIngresos(suma);
+
+      // Cargar torneos
+      const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
+      const tornData = await tornRes.json();
+      setTorneos(tornData);
+
+      // Cargar equipos por cada torneo
+      const equiposMap = {};
+      for (const torneo of tornData) {
+        const equipRes = await fetch(`${apiBaseUrl}/api/torneos/${torneo.id}/equipos`);
+        const equipData = await equipRes.json();
+        equiposMap[torneo.id] = equipData;
+      }
+      setEquiposPorTorneo(equiposMap);
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error:', err);
+      setLoading(false);
+    }
+  };
+
+  const iniciarEdicion = (reserva) => {
+    setEditandoId(reserva.id);
+    setEditFormData({ ...reserva });
+    setMensajeExito('');
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setEditFormData({});
+  };
+
+  const guardarEdicion = async (reservaId) => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/reservas/${reservaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (response.ok) {
+        setMensajeExito('✅ Reserva actualizada');
+        setEditandoId(null);
+        setTimeout(() => {
+          fetchData();
+          setMensajeExito('');
+        }, 1500);
+      } else {
+        alert('Error al actualizar');
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  const cancelarReserva = async (reservaId) => {
+    if (!window.confirm('¿Cancelar esta reserva?')) return;
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/reservas/${reservaId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setMensajeExito('✅ Reserva cancelada');
+        setTimeout(() => {
+          fetchData();
+          setMensajeExito('');
+        }, 1500);
+      } else {
+        alert('Error al cancelar');
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
 
@@ -54,6 +113,19 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           Cerrar sesión
         </button>
       </div>
+
+      {mensajeExito && (
+        <div style={{
+          background: '#4caf50',
+          color: 'white',
+          padding: '15px',
+          borderRadius: '5px',
+          marginBottom: '20px',
+          textAlign: 'center',
+        }}>
+          {mensajeExito}
+        </div>
+      )}
 
       <div className="dashboard-grid">
         <div className="card ingresos">
@@ -119,23 +191,145 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
               <th>Nombre</th>
               <th>Email</th>
               <th>Precio</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {reservas.length > 0 ? (
               reservas.map(r => (
                 <tr key={r.id}>
-                  <td>{r.sede}</td>
-                  <td>{r.fecha}</td>
-                  <td>{r.hora}</td>
-                  <td>Cancha {r.cancha}</td>
-                  <td>{r.nombre}</td>
-                  <td>{r.email}</td>
-                  <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                  {editandoId === r.id ? (
+                    <>
+                      <td>
+                        <input
+                          type="text"
+                          value={editFormData.sede || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, sede: e.target.value })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="date"
+                          value={editFormData.fecha || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, fecha: e.target.value })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="time"
+                          value={editFormData.hora || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, hora: e.target.value })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={editFormData.cancha || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={editFormData.nombre || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, nombre: e.target.value })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="email"
+                          value={editFormData.email || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={editFormData.precio || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })}
+                          style={{ width: '100%', padding: '5px' }}
+                        />
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => guardarEdicion(r.id)}
+                          style={{
+                            padding: '5px 10px',
+                            background: '#4caf50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            marginRight: '5px',
+                          }}
+                        >
+                          ✅ Guardar
+                        </button>
+                        <button
+                          onClick={cancelarEdicion}
+                          style={{
+                            padding: '5px 10px',
+                            background: '#999',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          ✕ Cancelar
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{r.sede}</td>
+                      <td>{r.fecha}</td>
+                      <td>{r.hora}</td>
+                      <td>Cancha {r.cancha}</td>
+                      <td>{r.nombre}</td>
+                      <td>{r.email}</td>
+                      <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => iniciarEdicion(r)}
+                          style={{
+                            padding: '5px 10px',
+                            background: '#667eea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            marginRight: '5px',
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => cancelarReserva(r.id)}
+                          style={{
+                            padding: '5px 10px',
+                            background: '#d32f2f',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🗑️ Cancelar
+                        </button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             ) : (
-              <tr><td colSpan="7">Sin reservas</td></tr>
+              <tr><td colSpan="8">Sin reservas</td></tr>
             )}
           </tbody>
         </table>

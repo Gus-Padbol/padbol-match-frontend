@@ -19,9 +19,9 @@ export default function TorneoVista() {
       try {
         setLoading(true);
         const [torneoRes, equiposRes, partidosRes] = await Promise.all([
-          fetch(`http://localhost:3001/api/torneos/${torneoId}`),
-          fetch(`http://localhost:3001/api/torneos/${torneoId}/equipos`),
-          fetch(`http://localhost:3001/api/torneos/${torneoId}/partidos`)
+          fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}`),
+          fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/equipos`),
+          fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/partidos`)
         ]);
 
         if (!torneoRes.ok || !equiposRes.ok || !partidosRes.ok) {
@@ -147,7 +147,7 @@ export default function TorneoVista() {
     }
 
     try {
-      const res = await fetch(`http://localhost:3001/api/partidos/${selectedPartido.id}`, {
+      const res = await fetch(`https://padbol-backend.onrender.com/api/partidos/${selectedPartido.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

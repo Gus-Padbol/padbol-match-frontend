@@ -203,7 +203,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     setError('');
   };
 
-  const sedeSeleccionada = sedes.find(s => s.id === filtros.sede_id);
+  const sedeSeleccionada = Array.isArray(sedes) && sedes.length > 0 ? sedes.find(s => s.id === filtros.sede_id) : null;
 
   const handleChange = (e) => {
     const { name, value } = e.target;

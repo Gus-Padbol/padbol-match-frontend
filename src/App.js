@@ -18,6 +18,11 @@ function AppContent() {
     const saved = localStorage.getItem('currentCliente');
     return saved ? JSON.parse(saved) : null;
   });
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+  const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+  setIsAdmin(savedIsAdmin);
+}, []);
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -30,7 +35,7 @@ function AppContent() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleLogin = (e) => {
+ const handleLogin = (e) => {
     e.preventDefault();
     setErrorMsg('');
     
@@ -44,6 +49,10 @@ function AppContent() {
 
     if (user) {
       setCurrentCliente(user);
+     if (loginEmail === 'admin@padbol.com') {
+  setIsAdmin(true);
+  localStorage.setItem('isAdmin', 'true');
+}
       localStorage.setItem('currentCliente', JSON.stringify(user));
       setLoginEmail('');
       setLoginPassword('');
@@ -52,7 +61,6 @@ function AppContent() {
       setErrorMsg('Email o contraseña incorrectos');
     }
   };
-
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -222,9 +230,15 @@ return (
     <Route path="/" element={
       <div style={{ padding: '20px' }}>
         <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-            Mi Perfil
-          </button>
+          {isAdmin ? (
+            <button onClick={() => navigate('/admin')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              📊 Admin Dashboard
+            </button>
+          ) : (
+            <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              Mi Perfil
+            </button>
+          )}
           <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
             Cerrar sesión
           </button>
