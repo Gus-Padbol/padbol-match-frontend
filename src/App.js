@@ -218,7 +218,7 @@ function AppContent() {
     <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar />} />
     <Route path="/torneo/:torneoId/equipos" element={<FormEquipos />} />
     <Route path="/torneo/:torneoId/vista" element={<TorneoVista />} />
-    <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} />} />
+    <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} />} />
     <Route path="/" element={
       <div style={{ padding: '20px' }}>
         <div style={{ textAlign: 'right', marginBottom: '20px' }}>
@@ -229,7 +229,7 @@ function AppContent() {
             Cerrar sesión
           </button>
         </div>
-        <ReservaForm currentCliente={currentCliente} />
+        <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
       </div>
     } />
   </Routes>

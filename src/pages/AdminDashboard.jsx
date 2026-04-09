@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
 
-const API_BASE_URL = 'https://padbol-backend.onrender.com';
-
-export default function AdminDashboard({ handleLogout }) {
+export default function AdminDashboard({ handleLogout, apiBaseUrl }) {
   const navigate = useNavigate();
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
@@ -16,21 +14,21 @@ export default function AdminDashboard({ handleLogout }) {
     const fetchData = async () => {
       try {
         // Cargar reservas
-        const resRes = await fetch(`${API_BASE_URL}/api/reservas`);
+        const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
         const resData = await resRes.json();
         setReservas(resData);
         const suma = resData.reduce((total, item) => total + (item.precio || 30000), 0);
         setIngresos(suma);
 
         // Cargar torneos
-        const tornRes = await fetch(`${API_BASE_URL}/api/torneos`);
+        const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
         const tornData = await tornRes.json();
         setTorneos(tornData);
 
         // Cargar equipos por cada torneo
         const equiposMap = {};
         for (const torneo of tornData) {
-          const equipRes = await fetch(`${API_BASE_URL}/api/torneos/${torneo.id}/equipos`);
+          const equipRes = await fetch(`${apiBaseUrl}/api/torneos/${torneo.id}/equipos`);
           const equipData = await equipRes.json();
           equiposMap[torneo.id] = equipData;
         }
