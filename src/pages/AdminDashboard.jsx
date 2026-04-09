@@ -144,7 +144,15 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       </div>
 
       <div className="section">
-        <h2>📋 Torneos Creados</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+  <h2>📋 Torneos Creados</h2>
+  <button
+    onClick={() => navigate('/torneo/crear')}
+    style={{ padding: '10px 20px', background: '#e53935', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+  >
+    + Nuevo Torneo
+  </button>
+</div>
         {torneos.length === 0 ? (
           <p>Sin torneos</p>
         ) : (
