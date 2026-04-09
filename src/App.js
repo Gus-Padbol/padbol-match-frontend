@@ -211,13 +211,13 @@ function AppContent() {
     );
   }
 
- return (
+return (
   <Routes>
     <Route path="/perfil" element={<Perfil />} />
-    <Route path="/crear-torneo" element={<TorneoCrear />} />
-    <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar />} />
-    <Route path="/torneo/:torneoId/equipos" element={<FormEquipos />} />
-    <Route path="/torneo/:torneoId/vista" element={<TorneoVista />} />
+    <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
+    <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
+    <Route path="/torneo/:torneoId/equipos" element={<FormEquipos apiBaseUrl={API_BASE_URL} />} />
+    <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
     <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} />} />
     <Route path="/" element={
       <div style={{ padding: '20px' }}>
@@ -235,7 +235,6 @@ function AppContent() {
   </Routes>
 );
 }
-
 function App() {
   return (
     <Router>
