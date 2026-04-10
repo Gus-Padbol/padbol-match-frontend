@@ -196,8 +196,7 @@ function AppContent() {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
         <div style={{ marginBottom: '16px' }}>
-          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '72px', height: '72px', borderRadius: '50%' }} />
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '6px' }}>PADBOL MATCH</div>
+          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '100px' }} />
         </div>
         <p style={{ color: '#4caf50', fontWeight: 'bold', marginBottom: '10px' }}>✅ ¡Cuenta creada con éxito!</p>
         <h2 style={{ color: '#333', marginBottom: '10px' }}>¿Querés competir en torneos de PADBOL?</h2>
@@ -223,8 +222,7 @@ function AppContent() {
     return (
       <div style={{ maxWidth: '400px', margin: '60px auto', padding: '20px', fontFamily: 'Arial' }}>
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '72px', height: '72px', borderRadius: '50%' }} />
-          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '6px' }}>PADBOL MATCH</div>
+          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '100px' }} />
         </div>
         <h2 style={{ marginBottom: '20px' }}>🏆 Ficha de Jugador</h2>
         <form onSubmit={handleSubmitFicha}>
@@ -282,8 +280,7 @@ function AppContent() {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial' }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
-          <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '8px' }}>PADBOL MATCH</div>
+          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '100px' }} />
         </div>
 
         {showLogin ? (
