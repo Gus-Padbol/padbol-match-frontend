@@ -9,6 +9,7 @@ import FormEquipos from './pages/FormEquipos';
 import Perfil from './Perfil';
 import TorneoVista from './pages/TorneoVista';
 import { supabase } from './supabaseClient';
+import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
@@ -30,7 +31,8 @@ function AppContent() {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
-  const [registerWhatsapp, setRegisterWhatsapp] = useState('');
+  const [registerCodigoPais, setRegisterCodigoPais] = useState('+54');
+  const [registerNumeroTel, setRegisterNumeroTel] = useState('');
   const [registerFoto, setRegisterFoto] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -107,7 +109,7 @@ function AppContent() {
       nombre: registerNombre,
       email: registerEmail,
       password: registerPassword,
-      whatsapp: registerWhatsapp,
+      whatsapp: `${registerCodigoPais}${registerNumeroTel.replace(/[\s\-().]/g, '')}`,
       foto: fotoUrl,
     };
 
@@ -119,7 +121,8 @@ function AppContent() {
     setRegisterEmail('');
     setRegisterPassword('');
     setRegisterConfirmPassword('');
-    setRegisterWhatsapp('');
+    setRegisterCodigoPais('+54');
+    setRegisterNumeroTel('');
     setRegisterFoto(null);
     
     setTimeout(() => setShowLogin(true), 2000);
@@ -192,13 +195,42 @@ function AppContent() {
               onChange={(e) => setRegisterConfirmPassword(e.target.value)}
               style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
             />
-            <input
-              type="tel"
-              placeholder="WhatsApp (ej: +54 9 11 2345 6789)"
-              value={registerWhatsapp}
-              onChange={(e) => setRegisterWhatsapp(e.target.value)}
-              style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
-            />
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <select
+                  value={registerCodigoPais}
+                  onChange={(e) => setRegisterCodigoPais(e.target.value)}
+                  style={{ width: '110px', flexShrink: 0, padding: '10px 4px', border: '1px solid #ccc', borderRadius: '5px', fontSize: '14px', background: 'white' }}
+                >
+                  <optgroup label="Principales">
+                    {PAISES_TELEFONO_PRINCIPALES.map(p => (
+                      <option key={p.nombre} value={p.codigo}>
+                        {p.bandera} {p.codigo}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Otros">
+                    {PAISES_TELEFONO_OTROS.map(p => (
+                      <option key={p.nombre} value={p.codigo}>
+                        {p.bandera} {p.codigo} {p.nombre}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <input
+                  type="tel"
+                  placeholder="9 11 2345 6789"
+                  value={registerNumeroTel}
+                  onChange={(e) => setRegisterNumeroTel(e.target.value)}
+                  style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+                />
+              </div>
+              {registerNumeroTel && (
+                <small style={{ color: '#888', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  WhatsApp: {registerCodigoPais}{registerNumeroTel.replace(/[\s\-().]/g, '')}
+                </small>
+              )}
+            </div>
             <input
               type="file"
               accept="image/*"
