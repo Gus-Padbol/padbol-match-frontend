@@ -471,15 +471,14 @@ return (
 <Route path="/" element={
       <div style={{ padding: '20px' }}>
         <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-          {isAdmin ? (
+          {isAdmin && (
             <button onClick={() => navigate('/admin')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
               📊 Admin Dashboard
             </button>
-          ) : (
-            <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              Mi Perfil
-            </button>
           )}
+          <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+            👤 Mi Perfil
+          </button>
           <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
             Cerrar sesión
           </button>
