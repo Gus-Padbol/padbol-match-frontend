@@ -199,8 +199,8 @@ function AppContent() {
           <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '100px' }} />
         </div>
         <p style={{ color: '#4caf50', fontWeight: 'bold', marginBottom: '10px' }}>✅ ¡Cuenta creada con éxito!</p>
-        <h2 style={{ color: '#333', marginBottom: '10px' }}>¿Querés competir en torneos de PADBOL?</h2>
-        <p style={{ color: '#666', marginBottom: '30px', fontSize: '14px' }}>Podés crear tu ficha de jugador ahora o hacerlo más tarde.</p>
+        <h2 style={{ color: 'white', marginBottom: '10px' }}>¿Querés competir en torneos de PADBOL?</h2>
+        <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '30px', fontSize: '14px' }}>Podés crear tu ficha de jugador ahora o hacerlo más tarde.</p>
         <button
           onClick={handleElegirSi}
           style={{ width: '100%', padding: '12px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold', marginBottom: '10px' }}
@@ -209,7 +209,7 @@ function AppContent() {
         </button>
         <button
           onClick={handleElegirNo}
-          style={{ width: '100%', padding: '12px', background: '#999', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px' }}
+          style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '2px solid rgba(255,255,255,0.6)', borderRadius: '5px', cursor: 'pointer', fontSize: '15px' }}
         >
           🎾 No, solo reservar canchas
         </button>
