@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
+import { supabase } from '../supabaseClient';
+
+const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
 
 export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const navigate = useNavigate();
@@ -13,9 +16,59 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
 
+  const [pendientes, setPendientes] = useState([]);
+  const [pendientesLoading, setPendientesLoading] = useState(true);
+  // keyed by player email: { open: bool, categoria: string, saving: bool }
+  const [validacionState, setValidacionState] = useState({});
+
   useEffect(() => {
     fetchData();
+    fetchPendientes();
   }, [apiBaseUrl]);
+
+  const fetchPendientes = async () => {
+    setPendientesLoading(true);
+    const { data, error } = await supabase
+      .from('jugadores_perfil')
+      .select('email, nombre, pais, nivel')
+      .eq('pendiente_validacion', true)
+      .order('nombre');
+    if (!error) setPendientes(data || []);
+    setPendientesLoading(false);
+  };
+
+  const aprobarJugador = async (email) => {
+    setValidacionState(prev => ({ ...prev, [email]: { ...prev[email], saving: true } }));
+    await supabase
+      .from('jugadores_perfil')
+      .update({ pendiente_validacion: false })
+      .eq('email', email);
+    setPendientes(prev => prev.filter(p => p.email !== email));
+    setValidacionState(prev => { const s = { ...prev }; delete s[email]; return s; });
+  };
+
+  const guardarCategoria = async (email) => {
+    const nuevaCategoria = validacionState[email]?.categoria;
+    if (!nuevaCategoria) return;
+    setValidacionState(prev => ({ ...prev, [email]: { ...prev[email], saving: true } }));
+    await supabase
+      .from('jugadores_perfil')
+      .update({ nivel: nuevaCategoria, pendiente_validacion: false })
+      .eq('email', email);
+    setPendientes(prev => prev.filter(p => p.email !== email));
+    setValidacionState(prev => { const s = { ...prev }; delete s[email]; return s; });
+  };
+
+  const toggleCambiarCategoria = (email, nivelActual) => {
+    setValidacionState(prev => ({
+      ...prev,
+      [email]: {
+        open: !prev[email]?.open,
+        categoria: prev[email]?.categoria || nivelActual,
+        saving: false,
+      },
+    }));
+  };
 
   const fetchData = async () => {
     try {
@@ -201,6 +254,74 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
               )}
             </div>
           ))
+        )}
+      </div>
+
+      <div className="section">
+        <h2>⏳ Jugadores Pendientes de Validación</h2>
+        {pendientesLoading ? (
+          <p style={{ color: '#999' }}>Cargando...</p>
+        ) : pendientes.length === 0 ? (
+          <p style={{ color: '#999' }}>No hay jugadores pendientes de validación.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {pendientes.map(jugador => {
+              const flag = (jugador.pais || '').split(' ')[0];
+              const vs = validacionState[jugador.email] || {};
+              return (
+                <div key={jugador.email} style={{ background: 'white', border: '1px solid #ffe082', borderRadius: '8px', padding: '14px 18px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: '180px' }}>
+                    <strong style={{ fontSize: '15px' }}>{jugador.nombre}</strong>
+                    <div style={{ color: '#888', fontSize: '12px', marginTop: '2px' }}>{jugador.email}</div>
+                    <div style={{ marginTop: '5px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {flag && <span style={{ fontSize: '18px' }}>{flag}</span>}
+                      <span style={{ background: '#fffde7', border: '1px solid #ffc107', color: '#7c5b00', borderRadius: '12px', padding: '2px 10px', fontSize: '12px', fontWeight: 'bold' }}>
+                        {jugador.nivel}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      disabled={vs.saving}
+                      onClick={() => aprobarJugador(jugador.email)}
+                      style={{ padding: '7px 14px', background: '#43a047', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', opacity: vs.saving ? 0.6 : 1 }}
+                    >
+                      ✅ Aprobar
+                    </button>
+                    <button
+                      disabled={vs.saving}
+                      onClick={() => toggleCambiarCategoria(jugador.email, jugador.nivel)}
+                      style={{ padding: '7px 14px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', opacity: vs.saving ? 0.6 : 1 }}
+                    >
+                      ✏️ Cambiar categoría
+                    </button>
+
+                    {vs.open && (
+                      <>
+                        <select
+                          value={vs.categoria || jugador.nivel}
+                          onChange={e => setValidacionState(prev => ({ ...prev, [jugador.email]: { ...prev[jugador.email], categoria: e.target.value } }))}
+                          style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '13px' }}
+                        >
+                          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <button
+                          disabled={vs.saving}
+                          onClick={() => guardarCategoria(jugador.email)}
+                          style={{ padding: '7px 14px', background: '#7b1fa2', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', opacity: vs.saving ? 0.6 : 1 }}
+                        >
+                          {vs.saving ? 'Guardando...' : '💾 Guardar'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
