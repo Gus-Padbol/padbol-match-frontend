@@ -17,7 +17,7 @@ export default function JugadoresCargar() {
 
   useEffect(() => {
     if (torneoId) {
-      fetch(`https://padbol-backend.onrender.com:3001/api/torneos/${torneoId}`)
+      fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}`)
         .then(res => res.json())
         .then(data => setTorneo(data))
         .catch(err => setError('Error al cargar torneo'));
@@ -26,7 +26,7 @@ export default function JugadoresCargar() {
 
   useEffect(() => {
     if (torneoId) {
-      fetch(`https://padbol-backend.onrender.com:3001/api/torneos/${torneoId}/jugadores`)
+      fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/jugadores`)
         .then(res => res.json())
         .then(data => setJugadores(data || []))
         .catch(err => console.error('Error:', err));
@@ -55,7 +55,7 @@ export default function JugadoresCargar() {
 
     try {
       const response = await fetch(
-        `https://padbol-backend.onrender.com:3001/api/torneos/${torneoId}/jugadores`,
+        `https://padbol-backend.onrender.com/api/torneos/${torneoId}/jugadores`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -89,7 +89,7 @@ export default function JugadoresCargar() {
   const handleEliminarJugador = async (jugadorId) => {
     if (window.confirm('¿Eliminar este jugador?')) {
       try {
-        await fetch(`https://padbol-backend.onrender.com:3001/api/jugadores_torneo/${jugadorId}`, {
+        await fetch(`https://padbol-backend.onrender.com/api/jugadores_torneo/${jugadorId}`, {
           method: 'DELETE',
         });
         setJugadores(jugadores.filter(j => j.id !== jugadorId));
