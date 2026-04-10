@@ -125,6 +125,19 @@
   color: #764ba2;
 }
 
+.tabla-posiciones .equipo-nombre {
+  vertical-align: top;
+}
+
+.jugadores-nombres {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #999;
+  margin-top: 3px;
+  letter-spacing: 0.01em;
+}
+
 .tabla-posiciones .pts {
   font-weight: 700;
   color: #764ba2;
@@ -178,6 +191,10 @@
   color: #ffffff;
 }
 
+.partido-item:hover .jugadores-nombres {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .partido-item:hover .estado {
   color: #ffffff;
 }
@@ -195,6 +212,8 @@
 
 .equipo-a,
 .equipo-b {
+  display: flex;
+  flex-direction: column;
   color: inherit;
 }
 

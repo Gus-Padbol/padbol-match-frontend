@@ -110,6 +110,7 @@ export default function TorneoVista() {
   const tablaPosiciones = equipos.map(eq => ({
     id: eq.id,
     nombre: eq.nombre,
+    jugadores: eq.jugadores || [],
     jj: stats[eq.id].jj,
     g: stats[eq.id].g,
     p: stats[eq.id].p,
@@ -207,7 +208,14 @@ export default function TorneoVista() {
               {tablaPosiciones.map((eq, idx) => (
                 <tr key={eq.id}>
                   <td>{idx + 1}</td>
-                  <td className="equipo-nombre">{eq.nombre}</td>
+                  <td className="equipo-nombre">
+                    {eq.nombre}
+                    {eq.jugadores.length > 0 && (
+                      <span className="jugadores-nombres">
+                        {eq.jugadores.map(j => j.nombre).join(' · ')}
+                      </span>
+                    )}
+                  </td>
                   <td>{eq.jj}</td>
                   <td>{eq.g}</td>
                   <td>{eq.p}</td>
@@ -240,9 +248,23 @@ export default function TorneoVista() {
                 return (
                   <div key={partido.id} className="partido-item" onClick={() => abrirModal(partido)}>
                     <div className="partido-content">
-                      <span className="equipo-a">{eqA?.nombre || 'Equipo A'}</span>
+                      <span className="equipo-a">
+                        {eqA?.nombre || 'Equipo A'}
+                        {eqA?.jugadores?.length > 0 && (
+                          <span className="jugadores-nombres">
+                            {eqA.jugadores.map(j => j.nombre).join(' · ')}
+                          </span>
+                        )}
+                      </span>
                       <span className="vs">vs</span>
-                      <span className="equipo-b">{eqB?.nombre || 'Equipo B'}</span>
+                      <span className="equipo-b">
+                        {eqB?.nombre || 'Equipo B'}
+                        {eqB?.jugadores?.length > 0 && (
+                          <span className="jugadores-nombres">
+                            {eqB.jugadores.map(j => j.nombre).join(' · ')}
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <span className={`estado ${partido.estado}`}>
                       {partido.estado === 'finalizado' ? '✅ Finalizado' : '⏳ Pendiente'}
