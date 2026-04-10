@@ -2,6 +2,65 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/JugadoresCargar.css';
 
+const PAISES_PRIORITARIOS = [
+  { nombre: 'Argentina',      bandera: '🇦🇷' },
+  { nombre: 'España',         bandera: '🇪🇸' },
+  { nombre: 'Italia',         bandera: '🇮🇹' },
+  { nombre: 'Francia',        bandera: '🇫🇷' },
+  { nombre: 'Alemania',       bandera: '🇩🇪' },
+  { nombre: 'Rumania',        bandera: '🇷🇴' },
+  { nombre: 'Austria',        bandera: '🇦🇹' },
+  { nombre: 'Estados Unidos', bandera: '🇺🇸' },
+  { nombre: 'Brasil',         bandera: '🇧🇷' },
+  { nombre: 'Uruguay',        bandera: '🇺🇾' },
+  { nombre: 'Chile',          bandera: '🇨🇱' },
+  { nombre: 'Colombia',       bandera: '🇨🇴' },
+  { nombre: 'México',         bandera: '🇲🇽' },
+];
+
+const OTROS_PAISES = [
+  { nombre: 'Australia',               bandera: '🇦🇺' },
+  { nombre: 'Bélgica',                 bandera: '🇧🇪' },
+  { nombre: 'Bolivia',                 bandera: '🇧🇴' },
+  { nombre: 'Canadá',                  bandera: '🇨🇦' },
+  { nombre: 'China',                   bandera: '🇨🇳' },
+  { nombre: 'Croacia',                 bandera: '🇭🇷' },
+  { nombre: 'Dinamarca',               bandera: '🇩🇰' },
+  { nombre: 'Ecuador',                 bandera: '🇪🇨' },
+  { nombre: 'Emiratos Árabes Unidos',  bandera: '🇦🇪' },
+  { nombre: 'Eslovaquia',              bandera: '🇸🇰' },
+  { nombre: 'Eslovenia',               bandera: '🇸🇮' },
+  { nombre: 'Finlandia',               bandera: '🇫🇮' },
+  { nombre: 'Grecia',                  bandera: '🇬🇷' },
+  { nombre: 'Guatemala',               bandera: '🇬🇹' },
+  { nombre: 'Honduras',                bandera: '🇭🇳' },
+  { nombre: 'Hungría',                 bandera: '🇭🇺' },
+  { nombre: 'India',                   bandera: '🇮🇳' },
+  { nombre: 'Irlanda',                 bandera: '🇮🇪' },
+  { nombre: 'Israel',                  bandera: '🇮🇱' },
+  { nombre: 'Japón',                   bandera: '🇯🇵' },
+  { nombre: 'Kazajistán',              bandera: '🇰🇿' },
+  { nombre: 'Marruecos',               bandera: '🇲🇦' },
+  { nombre: 'Noruega',                 bandera: '🇳🇴' },
+  { nombre: 'Nueva Zelanda',           bandera: '🇳🇿' },
+  { nombre: 'países Bajos',            bandera: '🇳🇱' },
+  { nombre: 'Panamá',                  bandera: '🇵🇦' },
+  { nombre: 'Paraguay',                bandera: '🇵🇾' },
+  { nombre: 'Perú',                    bandera: '🇵🇪' },
+  { nombre: 'Polonia',                 bandera: '🇵🇱' },
+  { nombre: 'Portugal',                bandera: '🇵🇹' },
+  { nombre: 'Reino Unido',             bandera: '🇬🇧' },
+  { nombre: 'República Checa',         bandera: '🇨🇿' },
+  { nombre: 'Rusia',                   bandera: '🇷🇺' },
+  { nombre: 'Serbia',                  bandera: '🇷🇸' },
+  { nombre: 'Sudáfrica',               bandera: '🇿🇦' },
+  { nombre: 'Suecia',                  bandera: '🇸🇪' },
+  { nombre: 'Suiza',                   bandera: '🇨🇭' },
+  { nombre: 'Turquía',                 bandera: '🇹🇷' },
+  { nombre: 'Ucrania',                 bandera: '🇺🇦' },
+  { nombre: 'Venezuela',               bandera: '🇻🇪' },
+];
+
 export default function JugadoresCargar() {
   const { torneoId } = useParams();
   const navigate = useNavigate();
@@ -10,6 +69,7 @@ export default function JugadoresCargar() {
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
+    pais: '',
   });
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -62,6 +122,7 @@ export default function JugadoresCargar() {
           body: JSON.stringify({
             nombre: formData.nombre,
             email: formData.email,
+            pais: formData.pais || null,
             user_id: null,
             numero_camiseta: null,
             es_capitan: false,
@@ -73,7 +134,7 @@ export default function JugadoresCargar() {
 
       if (response.ok) {
         setJugadores([...jugadores, result[0]]);
-        setFormData({ nombre: '', email: '' });
+        setFormData({ nombre: '', email: '', pais: '' });
         setMensaje('✅ Jugador agregado');
         setTimeout(() => setMensaje(''), 3000);
       } else {
@@ -170,6 +231,27 @@ export default function JugadoresCargar() {
             />
           </div>
 
+          <div className="form-group">
+            <label>País</label>
+            <select name="pais" value={formData.pais} onChange={handleChange}>
+              <option value="">— Seleccionar país —</option>
+              <optgroup label="Principales">
+                {PAISES_PRIORITARIOS.map(p => (
+                  <option key={p.nombre} value={`${p.bandera} ${p.nombre}`}>
+                    {p.bandera} {p.nombre}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Otros países">
+                {OTROS_PAISES.map(p => (
+                  <option key={p.nombre} value={`${p.bandera} ${p.nombre}`}>
+                    {p.bandera} {p.nombre}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
           {error && <div className="error-message">{error}</div>}
           {mensaje && <div className="success-message">{mensaje}</div>}
 
@@ -219,6 +301,11 @@ export default function JugadoresCargar() {
                     <p style={{ margin: '2px 0', color: '#666', fontSize: '12px' }}>
                       {j.email}
                     </p>
+                    {j.pais && (
+                      <p style={{ margin: '2px 0', color: '#999', fontSize: '12px' }}>
+                        {j.pais}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => handleEliminarJugador(j.id)}
