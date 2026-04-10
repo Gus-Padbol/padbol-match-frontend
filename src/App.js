@@ -34,6 +34,7 @@ function AppContent() {
   const [registerCodigoPais, setRegisterCodigoPais] = useState('+54');
   const [registerNumeroTel, setRegisterNumeroTel] = useState('');
   const [registerFoto, setRegisterFoto] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -134,6 +135,7 @@ function AppContent() {
     setRegisterCodigoPais('+54');
     setRegisterNumeroTel('');
     setRegisterFoto(null);
+    setFotoPreview(null);
 
     setShowPreguntaTorneo(true);
   };
@@ -193,7 +195,10 @@ function AppContent() {
   if (!currentCliente && showPreguntaTorneo) {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
-        <h1 style={{ color: '#d32f2f' }}>🎾 PADBOL MATCH</h1>
+        <div style={{ marginBottom: '16px' }}>
+          <img src="/logo192.png" alt="Padbol Match" style={{ width: '72px', height: '72px', borderRadius: '50%' }} />
+          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '6px' }}>PADBOL MATCH</div>
+        </div>
         <p style={{ color: '#4caf50', fontWeight: 'bold', marginBottom: '10px' }}>✅ ¡Cuenta creada con éxito!</p>
         <h2 style={{ color: '#333', marginBottom: '10px' }}>¿Querés competir en torneos de PADBOL?</h2>
         <p style={{ color: '#666', marginBottom: '30px', fontSize: '14px' }}>Podés crear tu ficha de jugador ahora o hacerlo más tarde.</p>
@@ -217,7 +222,10 @@ function AppContent() {
     const inputStyle = { width: '100%', padding: '10px', marginBottom: '14px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box', fontSize: '14px' };
     return (
       <div style={{ maxWidth: '400px', margin: '60px auto', padding: '20px', fontFamily: 'Arial' }}>
-        <h1 style={{ textAlign: 'center', color: '#d32f2f' }}>🎾 PADBOL MATCH</h1>
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <img src="/logo192.png" alt="Padbol Match" style={{ width: '72px', height: '72px', borderRadius: '50%' }} />
+          <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '6px' }}>PADBOL MATCH</div>
+        </div>
         <h2 style={{ marginBottom: '20px' }}>🏆 Ficha de Jugador</h2>
         <form onSubmit={handleSubmitFicha}>
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Lateralidad</label>
@@ -273,7 +281,10 @@ function AppContent() {
   if (!currentCliente) {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial' }}>
-        <h1 style={{ textAlign: 'center', color: '#d32f2f' }}>🎾 PADBOL MATCH</h1>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <img src="/logo192.png" alt="Padbol Match" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
+          <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#d32f2f', letterSpacing: '1px', marginTop: '8px' }}>PADBOL MATCH</div>
+        </div>
 
         {showLogin ? (
           <form onSubmit={handleLogin}>
@@ -367,12 +378,41 @@ function AppContent() {
                 </small>
               )}
             </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setRegisterFoto(e.target.files[0])}
-              style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
-            />
+            <div style={{ marginBottom: '14px' }}>
+              <label htmlFor="foto-upload" style={{
+                display: 'block',
+                border: '2px dashed #ccc',
+                borderRadius: '8px',
+                padding: '20px 16px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: fotoPreview ? '#fff' : '#fafafa',
+                transition: 'border-color 0.2s',
+              }}>
+                {fotoPreview ? (
+                  <>
+                    <img src={fotoPreview} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', display: 'block', margin: '0 auto 8px' }} />
+                    <span style={{ color: '#666', fontSize: '12px' }}>{registerFoto?.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '28px', display: 'block', marginBottom: '6px' }}>📸</span>
+                    <span style={{ color: '#666', fontSize: '13px' }}>Subí tu foto de perfil</span>
+                  </>
+                )}
+              </label>
+              <input
+                id="foto-upload"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  setRegisterFoto(file || null);
+                  setFotoPreview(file ? URL.createObjectURL(file) : null);
+                }}
+                style={{ display: 'none' }}
+              />
+            </div>
             {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
             {successMsg && <p style={{ color: 'green' }}>{successMsg}</p>}
             <button type="submit" style={{ width: '100%', padding: '10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
