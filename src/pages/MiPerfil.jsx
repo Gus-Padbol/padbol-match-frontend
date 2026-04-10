@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
@@ -26,6 +26,9 @@ export default function MiPerfil({ currentCliente }) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoUploading, setFotoUploading] = useState(false);
+  const fotoInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     lateralidad: 'Diestro',
@@ -79,6 +82,45 @@ export default function MiPerfil({ currentCliente }) {
       if (res.ok) setSedes(await res.json() || []);
     } catch {
       // sedes optional — fail silently
+    }
+  };
+
+  const handleFotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    setFotoPreview(URL.createObjectURL(file));
+    setFotoUploading(true);
+    setErrorMsg('');
+
+    try {
+      const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const fotoUrl = `https://vpldffhsxhgnmitiikof.supabase.co/storage/v1/object/public/avatars/${fileName}`;
+
+      // Save URL to jugadores_perfil (upsert so it works even before full profile is saved)
+      const { error: dbError } = perfil
+        ? await supabase.from('jugadores_perfil').update({ foto_url: fotoUrl }).eq('email', currentCliente.email)
+        : await supabase.from('jugadores_perfil').insert([{
+            email: currentCliente.email,
+            nombre: currentCliente.nombre,
+            foto_url: fotoUrl,
+          }]);
+
+      if (dbError) throw dbError;
+
+      await fetchPerfil();
+    } catch (err) {
+      setErrorMsg('Error al subir foto: ' + err.message);
+      setFotoPreview(null);
+    } finally {
+      setFotoUploading(false);
     }
   };
 
@@ -170,17 +212,53 @@ export default function MiPerfil({ currentCliente }) {
       {/* Hero card */}
       <div style={{ background: 'white', borderRadius: '12px', padding: '30px 24px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
         {/* Photo */}
-        {currentCliente.foto ? (
-          <img
-            src={currentCliente.foto}
-            alt="Foto"
-            style={{ width: '150px', height: '150px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #d32f2f', marginBottom: '14px', display: 'block', margin: '0 auto 14px' }}
-          />
-        ) : (
-          <div style={{ width: '150px', height: '150px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: '64px', border: '3px solid #d32f2f' }}>
-            👤
-          </div>
-        )}
+        {(() => {
+          const src = fotoPreview || perfil?.foto_url || currentCliente.foto;
+          const circle = (
+            <div style={{ position: 'relative', width: '150px', margin: '0 auto 14px', display: 'inline-block' }}>
+              {src ? (
+                <img
+                  src={src}
+                  alt="Foto"
+                  style={{ width: '150px', height: '150px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #d32f2f', display: 'block' }}
+                />
+              ) : (
+                <div style={{ width: '150px', height: '150px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', border: '3px solid #d32f2f' }}>
+                  👤
+                </div>
+              )}
+              {editando && (
+                <div
+                  onClick={() => !fotoUploading && fotoInputRef.current?.click()}
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: fotoUploading ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    cursor: fotoUploading ? 'default' : 'pointer',
+                    color: 'white', fontSize: '12px', fontWeight: 'bold', gap: '4px',
+                  }}
+                >
+                  {fotoUploading ? (
+                    <span>Subiendo...</span>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '24px' }}>📷</span>
+                      <span>Cambiar foto</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+          return circle;
+        })()}
+        <input
+          ref={fotoInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFotoChange}
+          style={{ display: 'none' }}
+        />
 
         <h3 style={{ margin: '0 0 6px', fontSize: '22px', color: '#222' }}>{currentCliente.nombre}</h3>
 
@@ -328,7 +406,7 @@ export default function MiPerfil({ currentCliente }) {
                 style={{ flex: 1, padding: '11px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', opacity: saving ? 0.6 : 1 }}>
                 {saving ? 'Guardando...' : '✅ Guardar'}
               </button>
-              <button type="button" onClick={() => { setEditando(false); setErrorMsg(''); }}
+              <button type="button" onClick={() => { setEditando(false); setErrorMsg(''); setFotoPreview(null); }}
                 style={{ flex: 1, padding: '11px', background: 'transparent', color: '#666', border: '1px solid #ccc', borderRadius: '5px', cursor: 'pointer' }}>
                 Cancelar
               </button>
