@@ -26,7 +26,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [searchParams] = useSearchParams();
   const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
   const isSuperAdmin = currentEmail === 'padbolinternacional@gmail.com';
-  console.log('[AdminDashboard] currentEmail:', currentEmail, '| isSuperAdmin:', isSuperAdmin);
+  const isAdmin = ['padbolinternacional@gmail.com', 'admin@padbol.com', 'sm@padbol.com', 'juanpablo@padbol.com'].includes(currentEmail);
 
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
@@ -104,6 +104,49 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       }
     } catch (err) {
       alert('Error: ' + err.message);
+    }
+  };
+
+  const [editandoTorneoId, setEditandoTorneoId] = useState(null);
+  const [editTorneoForm, setEditTorneoForm] = useState({});
+  const [savingTorneo, setSavingTorneo] = useState(false);
+
+  const abrirEditTorneo = (torneo) => {
+    setEditandoTorneoId(torneo.id);
+    setEditTorneoForm({
+      nombre:       torneo.nombre       || '',
+      nivel_torneo: torneo.nivel_torneo || '',
+      tipo_torneo:  torneo.tipo_torneo  || '',
+      fecha_inicio: torneo.fecha_inicio || '',
+      fecha_fin:    torneo.fecha_fin    || '',
+      sede_id:      torneo.sede_id      != null ? String(torneo.sede_id) : '',
+    });
+  };
+
+  const guardarTorneo = async (torneoId) => {
+    setSavingTorneo(true);
+    try {
+      const body = {
+        ...editTorneoForm,
+        sede_id: editTorneoForm.sede_id ? parseInt(editTorneoForm.sede_id) : null,
+      };
+      const res = await fetch(`${apiBaseUrl}/api/torneos/${torneoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTorneos(prev => prev.map(t => t.id === torneoId ? { ...t, ...body } : t));
+        setEditandoTorneoId(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert('Error al guardar: ' + (data.error || res.statusText));
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSavingTorneo(false);
     }
   };
 
@@ -319,66 +362,134 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 finalizado:'#6b7280',
               }[torneo.estado] || '#6b7280';
 
+              const isEditingThis = editandoTorneoId === torneo.id;
+              const inp = { padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', width: '100%', boxSizing: 'border-box' };
+
               return (
                 <div key={torneo.id} style={{
                   background: 'white',
-                  border: '1px solid #e5e7eb',
+                  border: isEditingThis ? '2px solid #667eea' : '1px solid #e5e7eb',
                   borderRadius: '8px',
                   padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  flexWrap: 'wrap',
                 }}>
-                  {/* Name + flag */}
-                  <div style={{ flex: 1, minWidth: '160px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {flag && <span style={{ fontSize: '20px' }}>{flag}</span>}
-                      <strong style={{ fontSize: '14px', color: '#111' }}>{torneo.nombre}</strong>
+                  {isEditingThis ? (
+                    /* ── Inline edit form ── */
+                    <div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Nombre</label>
+                          <input style={inp} value={editTorneoForm.nombre} onChange={e => setEditTorneoForm(p => ({ ...p, nombre: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Sede</label>
+                          <select style={inp} value={editTorneoForm.sede_id} onChange={e => setEditTorneoForm(p => ({ ...p, sede_id: e.target.value }))}>
+                            <option value="">— Sin sede —</option>
+                            {Object.values(sedesMap).map(s => (
+                              <option key={s.id} value={String(s.id)}>{sedeFlag(s)} {s.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Nivel</label>
+                          <input style={inp} value={editTorneoForm.nivel_torneo} onChange={e => setEditTorneoForm(p => ({ ...p, nivel_torneo: e.target.value }))} placeholder="Ej: Intermedio" />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Formato</label>
+                          <select style={inp} value={editTorneoForm.tipo_torneo} onChange={e => setEditTorneoForm(p => ({ ...p, tipo_torneo: e.target.value }))}>
+                            <option value="">— Seleccionar —</option>
+                            <option value="round_robin">Round Robin</option>
+                            <option value="knockout">Knockout</option>
+                            <option value="grupos_knockout">Grupos + Knockout</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Fecha inicio</label>
+                          <input type="date" style={inp} value={editTorneoForm.fecha_inicio} onChange={e => setEditTorneoForm(p => ({ ...p, fecha_inicio: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#555', display: 'block', marginBottom: '3px' }}>Fecha fin</label>
+                          <input type="date" style={inp} value={editTorneoForm.fecha_fin} onChange={e => setEditTorneoForm(p => ({ ...p, fecha_fin: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => setEditandoTorneoId(null)}
+                          style={{ padding: '6px 14px', background: 'transparent', color: '#666', border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          disabled={savingTorneo}
+                          onClick={() => guardarTorneo(torneo.id)}
+                          style={{ padding: '6px 16px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: savingTorneo ? 0.6 : 1 }}
+                        >
+                          {savingTorneo ? 'Guardando...' : '✅ Guardar'}
+                        </button>
+                      </div>
                     </div>
-                    {sede && <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{sede.nombre}</div>}
-                  </div>
+                  ) : (
+                    /* ── Compact view ── */
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      {/* Name + flag */}
+                      <div style={{ flex: 1, minWidth: '160px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {flag && <span style={{ fontSize: '20px' }}>{flag}</span>}
+                          <strong style={{ fontSize: '14px', color: '#111' }}>{torneo.nombre}</strong>
+                        </div>
+                        {sede && <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{sede.nombre}</div>}
+                      </div>
 
-                  {/* Meta pills */}
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {torneo.nivel_torneo && (
-                      <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                        {torneo.nivel_torneo}
-                      </span>
-                    )}
-                    {torneo.tipo_torneo && (
-                      <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                        {torneo.tipo_torneo}
-                      </span>
-                    )}
-                    <span style={{ background: estadoColor, color: 'white', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                      {torneo.estado}
-                    </span>
-                    {torneo.fecha_inicio && (
-                      <span style={{ color: '#6b7280', fontSize: '11px' }}>
-                        📅 {torneo.fecha_inicio}{torneo.fecha_fin ? ` → ${torneo.fecha_fin}` : ''}
-                      </span>
-                    )}
-                  </div>
+                      {/* Meta pills */}
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {torneo.nivel_torneo && (
+                          <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                            {torneo.nivel_torneo}
+                          </span>
+                        )}
+                        {torneo.tipo_torneo && (
+                          <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                            {torneo.tipo_torneo}
+                          </span>
+                        )}
+                        <span style={{ background: estadoColor, color: 'white', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                          {torneo.estado}
+                        </span>
+                        {torneo.fecha_inicio && (
+                          <span style={{ color: '#6b7280', fontSize: '11px' }}>
+                            📅 {torneo.fecha_inicio}{torneo.fecha_fin ? ` → ${torneo.fecha_fin}` : ''}
+                          </span>
+                        )}
+                      </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <button
-                      onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
-                      style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                    >
-                      Ver torneo →
-                    </button>
-                    {isSuperAdmin && (
-                      <button
-                        onClick={() => eliminarTorneo(torneo.id, torneo.nombre)}
-                        style={{ padding: '6px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                        title="Eliminar torneo"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
+                          style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                        >
+                          Ver →
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => abrirEditTorneo(torneo)}
+                            style={{ padding: '6px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                            title="Editar torneo"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => eliminarTorneo(torneo.id, torneo.nombre)}
+                            style={{ padding: '6px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                            title="Eliminar torneo"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
