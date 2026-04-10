@@ -35,7 +35,7 @@ export default function MiPerfil({ currentCliente }) {
     nivel: '5ta',
     pais: '',
     ciudad: '',
-    club: '',
+
     fecha_nacimiento: '',
     sede_id: '',
     numero_fipa: '',
@@ -66,7 +66,7 @@ export default function MiPerfil({ currentCliente }) {
         nivel: data.nivel || '5ta',
         pais: data.pais || '',
         ciudad: data.ciudad || '',
-        club: data.club || '',
+
         fecha_nacimiento: data.fecha_nacimiento || '',
         sede_id: data.sede_id ? String(data.sede_id) : '',
         numero_fipa: data.numero_fipa || '',
@@ -142,7 +142,7 @@ export default function MiPerfil({ currentCliente }) {
       pendiente_validacion: true,
       pais: formData.pais,
       ciudad: formData.ciudad || null,
-      club: formData.club || null,
+
       fecha_nacimiento: formData.fecha_nacimiento || null,
       sede_id: formData.sede_id ? parseInt(formData.sede_id) : null,
       numero_fipa: formData.numero_fipa || null,
@@ -270,8 +270,8 @@ export default function MiPerfil({ currentCliente }) {
         {perfil?.ciudad && (
           <p style={{ margin: '0 0 3px', color: '#777', fontSize: '13px' }}>📍 {perfil.ciudad}</p>
         )}
-        {perfil?.club && (
-          <p style={{ margin: '0', color: '#777', fontSize: '13px' }}>🏟️ {perfil.club}</p>
+        {perfil?.sede_id && (
+          <p style={{ margin: '0', color: '#777', fontSize: '13px' }}>🏟️ {sedeNombre(perfil.sede_id)}</p>
         )}
 
         {/* Badges */}
@@ -324,7 +324,7 @@ export default function MiPerfil({ currentCliente }) {
               } />
               <Row label="Lateralidad" value={perfil.lateralidad} />
               {perfil.fecha_nacimiento && <Row label="Fecha de nacimiento" value={perfil.fecha_nacimiento} />}
-              {perfil.sede_id && <Row label="Sede representada" value={sedeNombre(perfil.sede_id)} />}
+              {perfil.sede_id && <Row label="Club al que representa" value={sedeNombre(perfil.sede_id)} />}
               {perfil.numero_fipa && <Row label="N° FIPA" value={perfil.numero_fipa} />}
               <Row label="Federado" value={perfil.es_federado ? '✅ Sí' : '❌ No'} />
             </div>
@@ -372,15 +372,12 @@ export default function MiPerfil({ currentCliente }) {
             <label style={labelStyle}>Ciudad</label>
             <input type="text" name="ciudad" placeholder="Ej: Buenos Aires" value={formData.ciudad} onChange={handleChange} style={{ ...inputStyle, marginBottom: '14px' }} />
 
-            <label style={labelStyle}>Club</label>
-            <input type="text" name="club" placeholder="Ej: Club Padbol Palermo" value={formData.club} onChange={handleChange} style={{ ...inputStyle, marginBottom: '14px' }} />
-
             <label style={labelStyle}>Fecha de nacimiento</label>
             <input type="date" name="fecha_nacimiento" value={formData.fecha_nacimiento} onChange={handleChange} style={{ ...inputStyle, marginBottom: '14px' }} />
 
-            <label style={labelStyle}>Sede representada</label>
+            <label style={labelStyle}>Club al que representa</label>
             <select name="sede_id" value={formData.sede_id} onChange={handleChange} style={{ ...inputStyle, marginBottom: '14px' }}>
-              <option value="">— Seleccionar sede —</option>
+              <option value="">— Seleccionar club —</option>
               {sedes.map(s => <option key={s.id} value={String(s.id)}>{s.nombre}</option>)}
             </select>
 
