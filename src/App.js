@@ -388,7 +388,7 @@ function AppContent() {
               }}>
                 {fotoPreview ? (
                   <>
-                    <img src={fotoPreview} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', display: 'block', margin: '0 auto 8px' }} />
+                    <img src={fotoPreview} alt="Preview" style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'contain', display: 'block', margin: '0 auto 8px' }} />
                     <span style={{ color: '#666', fontSize: '12px' }}>{registerFoto?.name}</span>
                   </>
                 ) : (
