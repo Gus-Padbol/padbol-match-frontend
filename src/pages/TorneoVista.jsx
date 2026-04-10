@@ -10,6 +10,8 @@ function formatFecha(str) {
   return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`;
 }
 
+const ADMIN_EMAILS = ['padbolinternacional@gmail.com', 'admin@padbol.com', 'sm@padbol.com', 'juanpablo@padbol.com'];
+
 export default function TorneoVista() {
   const { torneoId } = useParams();
   const navigate = useNavigate();
@@ -21,6 +23,10 @@ export default function TorneoVista() {
   const [showModal, setShowModal] = useState(false);
   const [selectedPartido, setSelectedPartido] = useState(null);
   const [resultado, setResultado] = useState({ set1: '', set2: '', set3: '' });
+  const [iniciando, setIniciando] = useState(false);
+
+  const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
+  const isAdmin = ADMIN_EMAILS.includes(currentEmail);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,6 +185,27 @@ export default function TorneoVista() {
     }
   };
 
+  const iniciarTorneo = async () => {
+    if (!window.confirm('¿Iniciar el torneo? El estado cambiará a "en curso".')) return;
+    setIniciando(true);
+    try {
+      const res = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'en_curso' })
+      });
+      if (res.ok) {
+        setTorneo(prev => ({ ...prev, estado: 'en_curso' }));
+      } else {
+        alert('Error al iniciar el torneo');
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setIniciando(false);
+    }
+  };
+
   if (loading) return <div className="loading">Cargando...</div>;
   if (error) return <div className="error">Error: {error}</div>;
   if (!torneo) return <div className="error">Torneo no encontrado</div>;
@@ -190,6 +217,16 @@ export default function TorneoVista() {
       <div className="torneo-header">
         <h1>🏆 {torneo.nombre}</h1>
         <p>{torneo.nivel_torneo} • {torneo.tipo_torneo} • {formatFecha(torneo.fecha_inicio)} a {formatFecha(torneo.fecha_fin)}</p>
+        {isAdmin && !['en_curso', 'finalizado'].includes((torneo.estado || '').toLowerCase()) && (
+          <div className="torneo-acciones">
+            <button className="btn-agregar-jugadores" onClick={() => navigate(`/torneo/${torneoId}/jugadores`)}>
+              👥 Agregar jugadores
+            </button>
+            <button className="btn-iniciar-torneo" onClick={iniciarTorneo} disabled={iniciando}>
+              {iniciando ? 'Iniciando...' : '🚀 Iniciar torneo'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="contenedor-dos-columnas">

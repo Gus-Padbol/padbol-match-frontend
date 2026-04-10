@@ -36,12 +36,12 @@ function horaRango(hora, duracion) {
 // Returns a JSX status badge for a reserva
 function EstadoBadge({ reserva }) {
   if (reserva.estado === 'cancelada' || reserva.cancelada) {
-    return <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>❌ Cancelada</span>;
+    return <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>❌ Cancelada</span>;
   }
   if (esFutura(reserva)) {
-    return <span style={{ background: '#dcfce7', color: '#166534', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
+    return <span style={{ background: '#ede9fe', color: '#3b2f6e', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
   }
-  return <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>✅ Completada</span>;
+  return <span style={{ background: '#f1f5f9', color: '#64748b', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>✅ Completada</span>;
 }
 
 // Returns true if the reserva's fecha+hora is in the future
@@ -82,7 +82,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'resumen');
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') || sessionStorage.getItem('adminActiveTab') || 'resumen'
+  );
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -329,7 +331,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         {TABS.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => { setActiveTab(tab.id); sessionStorage.setItem('adminActiveTab', tab.id); }}
             style={{
               position: 'relative',
               padding: '10px 18px',
@@ -712,40 +714,22 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
           return (
             <>
-              {/* Summary counts */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '8px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '22px' }}>🟢</span>
-                  <div>
-                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#166534', lineHeight: 1 }}>{proximas.length}</div>
-                    <div style={{ fontSize: '12px', color: '#15803d' }}>Próximas</div>
-                  </div>
-                </div>
-                <div style={{ background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '8px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '22px' }}>⚫</span>
-                  <div>
-                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#374151', lineHeight: 1 }}>{completadas.length}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Completadas</div>
-                  </div>
-                </div>
-              </div>
-
               {/* Upcoming */}
               <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#166534' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'rgba(255,255,255,0.9)' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#a78bfa', display: 'inline-block' }} />
                   Próximas reservas
                 </h3>
-                <ReservasTable lista={proximas} accentColor="#16a34a" emptyText="Sin reservas próximas." />
+                <ReservasTable lista={proximas} accentColor="#3b2f6e" emptyText="Sin reservas próximas." />
               </div>
 
               {/* Completed */}
               <div>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#6b7280' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#9ca3af', display: 'inline-block' }} />
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'rgba(255,255,255,0.7)' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
                   Reservas completadas
                 </h3>
-                <ReservasTable lista={completadas} accentColor="#6b7280" emptyText="Sin reservas completadas." />
+                <ReservasTable lista={completadas} accentColor="#4a4a6a" emptyText="Sin reservas completadas." />
               </div>
             </>
           );
