@@ -181,7 +181,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       </div>
 
       {/* Tab navigation */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid #e0e0e0', paddingBottom: '0' }}>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid rgba(255,255,255,0.3)', paddingBottom: '0' }}>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -190,11 +190,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
               position: 'relative',
               padding: '10px 18px',
               border: 'none',
-              borderBottom: activeTab === tab.id ? '3px solid #d32f2f' : '3px solid transparent',
+              borderBottom: activeTab === tab.id ? '3px solid white' : '3px solid transparent',
               background: 'none',
               cursor: 'pointer',
               fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-              color: activeTab === tab.id ? '#d32f2f' : '#555',
+              color: activeTab === tab.id ? 'white' : 'rgba(255,255,255,0.7)',
               fontSize: '14px',
               marginBottom: '-2px',
               whiteSpace: 'nowrap',
