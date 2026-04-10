@@ -24,8 +24,9 @@ function sedeFlag(sede) {
 export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const currentEmail = JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '';
+  const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
   const isSuperAdmin = currentEmail === 'padbolinternacional@gmail.com';
+  console.log('[AdminDashboard] currentEmail:', currentEmail, '| isSuperAdmin:', isSuperAdmin);
 
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
