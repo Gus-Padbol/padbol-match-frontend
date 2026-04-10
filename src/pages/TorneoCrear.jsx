@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../styles/TorneoCrear.css';
 import { useNavigate } from 'react-router-dom';
 
-export default function TorneoCrear() {
+export default function TorneoCrear({ apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const [sedes, setSedes] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
