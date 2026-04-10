@@ -16,11 +16,11 @@ export default function FormEquipos() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const torneoRes = await fetch(`http://localhost:3001/api/torneos/${torneoId}`);
+        const torneoRes = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}`);
         const torneoData = await torneoRes.json();
         setTorneo(torneoData);
 
-        const jugadoresRes = await fetch(`http://localhost:3001/api/torneos/${torneoId}/jugadores`);
+        const jugadoresRes = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/jugadores`);
         const jugadoresData = await jugadoresRes.json();
         setJugadores(jugadoresData || []);
 
@@ -96,7 +96,7 @@ export default function FormEquipos() {
           jugadores: equipo.jugadores.map(j => ({ id: j.id, nombre: j.nombre, email: j.email })),
         };
 
-        const response = await fetch(`http://localhost:3001/api/torneos/${torneoId}/equipos`, {
+        const response = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/equipos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(equipoData),
