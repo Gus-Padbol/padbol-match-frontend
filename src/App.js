@@ -46,7 +46,7 @@ function AppContent() {
   const [showFichaJugador, setShowFichaJugador] = useState(false);
   const [pendingUserData, setPendingUserData] = useState(null);
   const [fichaLateralidad, setFichaLateralidad] = useState('Diestro');
-  const [fichaNivel, setFichaNivel] = useState('Principiante');
+  const [fichaNivel, setFichaNivel] = useState('5ta');
   const [fichaPais, setFichaPais] = useState('');
   const [fichaCiudad, setFichaCiudad] = useState('');
   const [fichaClub, setFichaClub] = useState('');
@@ -240,13 +240,19 @@ function AppContent() {
             <option value="Zurdo">🤛 Zurdo</option>
           </select>
 
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Nivel de juego</label>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Categoría</label>
           <select value={fichaNivel} onChange={e => setFichaNivel(e.target.value)} style={inputStyle}>
-            <option value="Principiante">🟢 Principiante</option>
-            <option value="Intermedio">🟡 Intermedio</option>
-            <option value="Avanzado">🟠 Avanzado</option>
-            <option value="Profesional">🔴 Profesional</option>
+            <option value="Principiante">Principiante</option>
+            <option value="5ta">5ta</option>
+            <option value="4ta">4ta</option>
+            <option value="3ra">3ra</option>
+            <option value="2da">2da</option>
+            <option value="1ra">1ra</option>
+            <option value="Elite">Elite</option>
           </select>
+          <p style={{ color: '#f59e0b', fontSize: '12px', marginTop: '-10px', marginBottom: '14px' }}>
+            ⏳ La categoría será validada por un administrador
+          </p>
 
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>País *</label>
           <select value={fichaPais} onChange={e => setFichaPais(e.target.value)} style={inputStyle} required>
