@@ -9,7 +9,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const navigate = useNavigate();
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
-  const [equiposPorTorneo, setEquiposPorTorneo] = useState({});
+  const [sedesMap, setSedesMap] = useState({});
   const [ingresos, setIngresos] = useState({ ARS: 0, USD: 0, EUR: 0 });
   const [loading, setLoading] = useState(true);
   const [editandoId, setEditandoId] = useState(null);
@@ -90,14 +90,16 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       const tornData = await tornRes.json();
       setTorneos(tornData);
 
-      // Cargar equipos por cada torneo
-      const equiposMap = {};
-      for (const torneo of tornData) {
-        const equipRes = await fetch(`${apiBaseUrl}/api/torneos/${torneo.id}/equipos`);
-        const equipData = await equipRes.json();
-        equiposMap[torneo.id] = equipData;
-      }
-      setEquiposPorTorneo(equiposMap);
+      // Cargar sedes para mostrar flag en cada torneo
+      try {
+        const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`);
+        if (sedesRes.ok) {
+          const sedesData = await sedesRes.json();
+          const map = {};
+          (sedesData || []).forEach(s => { map[s.id] = s; });
+          setSedesMap(map);
+        }
+      } catch { /* sedes opcionales */ }
 
       setLoading(false);
     } catch (err) {
@@ -259,46 +261,81 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       </div>}
 
       {activeTab === 'torneos' && <div className="section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-  <h2>📋 Torneos Creados</h2>
-  <button
-    onClick={() => navigate('/torneo/crear')}
-    style={{ padding: '10px 20px', background: '#e53935', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
-  >
-    + Nuevo Torneo
-  </button>
-</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ margin: 0 }}>📋 Torneos Creados</h2>
+          <button
+            onClick={() => navigate('/torneo/crear')}
+            style={{ padding: '8px 16px', background: '#e53935', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+          >
+            + Nuevo Torneo
+          </button>
+        </div>
         {torneos.length === 0 ? (
-          <p>Sin torneos</p>
+          <p style={{ color: '#999' }}>Sin torneos</p>
         ) : (
-          torneos.map(torneo => (
-            <div key={torneo.id} className="torneo-card">
-              <h3 
-                style={{ cursor: 'pointer', color: '#667eea', textDecoration: 'underline' }} 
-                onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
-              >
-                {torneo.nombre}
-              </h3>
-              <p><strong>Nivel:</strong> {torneo.nivel_torneo}</p>
-              <p><strong>Formato:</strong> {torneo.tipo_torneo}</p>
-              <p><strong>Estado:</strong> {torneo.estado}</p>
-              <p><strong>Fechas:</strong> {torneo.fecha_inicio} a {torneo.fecha_fin}</p>
-              
-              <h4>Equipos ({equiposPorTorneo[torneo.id]?.length || 0}):</h4>
-              {equiposPorTorneo[torneo.id]?.length > 0 ? (
-                <div className="equipos-list">
-                  {equiposPorTorneo[torneo.id].map(equipo => (
-                    <div key={equipo.id} className="equipo-item">
-                      <p><strong>{equipo.nombre}</strong></p>
-                      <p>Jugadores: {equipo.jugadores?.length || 0}</p>
+          <div style={{ display: 'grid', gap: '10px' }}>
+            {torneos.map(torneo => {
+              const sede = sedesMap[torneo.sede_id];
+              const flag = sede?.pais ? sede.pais.split(' ')[0] : '';
+              const estadoColor = {
+                pendiente: '#f59e0b',
+                en_curso:  '#2563eb',
+                finalizado:'#6b7280',
+              }[torneo.estado] || '#6b7280';
+
+              return (
+                <div key={torneo.id} style={{
+                  background: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}>
+                  {/* Name + flag */}
+                  <div style={{ flex: 1, minWidth: '160px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {flag && <span style={{ fontSize: '20px' }}>{flag}</span>}
+                      <strong style={{ fontSize: '14px', color: '#111' }}>{torneo.nombre}</strong>
                     </div>
-                  ))}
+                    {sede && <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{sede.nombre}</div>}
+                  </div>
+
+                  {/* Meta pills */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {torneo.nivel_torneo && (
+                      <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                        {torneo.nivel_torneo}
+                      </span>
+                    )}
+                    {torneo.tipo_torneo && (
+                      <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                        {torneo.tipo_torneo}
+                      </span>
+                    )}
+                    <span style={{ background: estadoColor, color: 'white', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
+                      {torneo.estado}
+                    </span>
+                    {torneo.fecha_inicio && (
+                      <span style={{ color: '#6b7280', fontSize: '11px' }}>
+                        📅 {torneo.fecha_inicio}{torneo.fecha_fin ? ` → ${torneo.fecha_fin}` : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action */}
+                  <button
+                    onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
+                    style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                  >
+                    Ver torneo →
+                  </button>
                 </div>
-              ) : (
-                <p style={{ color: '#999' }}>Sin equipos</p>
-              )}
-            </div>
-          ))
+              );
+            })}
+          </div>
         )}
       </div>}
 
