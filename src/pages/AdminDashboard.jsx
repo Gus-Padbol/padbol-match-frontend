@@ -6,6 +6,24 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants
 
 const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
 
+// "2026-02-26" → "26 Feb 2026"
+function formatFecha(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`;
+}
+
+// "2026-04-10" → "Viernes 10 de Abril"
+function formatFechaDia(str) {
+  if (!str) return '';
+  // Parse as local date to avoid UTC-shift issues
+  const [y, m, d] = str.split('-').map(Number);
+  const fecha = new Date(y, m - 1, d);
+  return fecha.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+    .replace(/^\w/, c => c.toUpperCase());
+}
+
 // Build a lookup: country name (lowercase) → flag emoji
 const FLAG_MAP = {};
 [...PAISES_TELEFONO_PRINCIPALES, ...PAISES_TELEFONO_OTROS].forEach(p => {
@@ -456,7 +474,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                         </span>
                         {torneo.fecha_inicio && (
                           <span style={{ color: '#6b7280', fontSize: '11px' }}>
-                            📅 {torneo.fecha_inicio}{torneo.fecha_fin ? ` → ${torneo.fecha_fin}` : ''}
+                            📅 {formatFecha(torneo.fecha_inicio)}{torneo.fecha_fin ? ` → ${formatFecha(torneo.fecha_fin)}` : ''}
                           </span>
                         )}
                       </div>
@@ -571,7 +589,6 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           <thead>
             <tr>
               <th>Sede</th>
-              <th>Fecha</th>
               <th>Hora</th>
               <th>Cancha</th>
               <th>Nombre</th>
@@ -581,8 +598,31 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </tr>
           </thead>
           <tbody>
-            {reservas.length > 0 ? (
-              reservas.map(r => (
+            {reservas.length > 0 ? (() => {
+              // Group by fecha, sorted ascending
+              const groups = {};
+              reservas.forEach(r => {
+                const key = r.fecha || 'Sin fecha';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(r);
+              });
+              const sortedDays = Object.keys(groups).sort();
+
+              return sortedDays.map(dia => (
+                <React.Fragment key={dia}>
+                  <tr>
+                    <td colSpan="7" style={{
+                      background: '#667eea',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: '13px',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                    }}>
+                      📅 {formatFechaDia(dia)}
+                    </td>
+                  </tr>
+                  {groups[dia].map(r => (
                 <tr key={r.id}>
                   {editandoId === r.id ? (
                     <>
@@ -591,14 +631,6 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           type="text"
                           value={editFormData.sede || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, sede: e.target.value })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          value={editFormData.fecha || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, fecha: e.target.value })}
                           style={{ width: '100%', padding: '5px' }}
                         />
                       </td>
@@ -675,7 +707,6 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   ) : (
                     <>
                       <td>{r.sede}</td>
-                      <td>{r.fecha}</td>
                       <td>{r.hora}</td>
                       <td>Cancha {r.cancha}</td>
                       <td>{r.nombre}</td>
@@ -713,9 +744,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                     </>
                   )}
                 </tr>
-              ))
-            ) : (
-              <tr><td colSpan="8">Sin reservas</td></tr>
+                  ))}
+                </React.Fragment>
+              ));
+            })() : (
+              <tr><td colSpan="7">Sin reservas</td></tr>
             )}
           </tbody>
         </table>

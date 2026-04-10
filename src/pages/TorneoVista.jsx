@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/TorneoVista.css';
 
+// "2026-02-26" → "26 Feb 2026"
+function formatFecha(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`;
+}
+
 export default function TorneoVista() {
   const { torneoId } = useParams();
   const navigate = useNavigate();
@@ -181,7 +189,7 @@ export default function TorneoVista() {
 
       <div className="torneo-header">
         <h1>🏆 {torneo.nombre}</h1>
-        <p>{torneo.nivel_torneo} • {torneo.tipo_torneo} • {torneo.fecha_inicio} a {torneo.fecha_fin}</p>
+        <p>{torneo.nivel_torneo} • {torneo.tipo_torneo} • {formatFecha(torneo.fecha_inicio)} a {formatFecha(torneo.fecha_fin)}</p>
       </div>
 
       <div className="contenedor-dos-columnas">
