@@ -13,17 +13,18 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
+const ADMIN_EMAILS = [
+  'padbolinternacional@gmail.com',
+  'admin@padbol.com',
+];
+
 function AppContent() {
   const navigate = useNavigate();
   const [currentCliente, setCurrentCliente] = useState(() => {
     const saved = localStorage.getItem('currentCliente');
     return saved ? JSON.parse(saved) : null;
   });
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-  const savedIsAdmin = localStorage.getItem('isAdmin') === 'true';
-  setIsAdmin(savedIsAdmin);
-}, []);
+  const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -64,10 +65,6 @@ function AppContent() {
 
     if (user) {
       setCurrentCliente(user);
-     if (loginEmail === 'admin@padbol.com') {
-  setIsAdmin(true);
-  localStorage.setItem('isAdmin', 'true');
-}
       localStorage.setItem('currentCliente', JSON.stringify(user));
       setLoginEmail('');
       setLoginPassword('');
