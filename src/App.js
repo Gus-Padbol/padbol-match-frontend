@@ -37,6 +37,15 @@ function AppContent() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Post-registration flow
+  const [showPreguntaTorneo, setShowPreguntaTorneo] = useState(false);
+  const [showFichaJugador, setShowFichaJugador] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState(null);
+  const [fichaLateralidad, setFichaLateralidad] = useState('Diestro');
+  const [fichaNivel, setFichaNivel] = useState('Principiante');
+  const [fichaPais, setFichaPais] = useState('');
+  const [fichaLoading, setFichaLoading] = useState(false);
+
  const handleLogin = (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -115,8 +124,9 @@ function AppContent() {
 
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
-    setSuccessMsg('✅ Registro exitoso. Ahora inicia sesión.');
-    
+
+    setPendingUserData({ email: registerEmail, nombre: registerNombre, whatsapp: newUser.whatsapp });
+
     setRegisterNombre('');
     setRegisterEmail('');
     setRegisterPassword('');
@@ -124,8 +134,54 @@ function AppContent() {
     setRegisterCodigoPais('+54');
     setRegisterNumeroTel('');
     setRegisterFoto(null);
-    
-    setTimeout(() => setShowLogin(true), 2000);
+
+    setShowPreguntaTorneo(true);
+  };
+
+  const handleElegirNo = () => {
+    setShowPreguntaTorneo(false);
+    setShowFichaJugador(false);
+    setPendingUserData(null);
+    setShowLogin(true);
+  };
+
+  const handleElegirSi = () => {
+    setShowPreguntaTorneo(false);
+    setShowFichaJugador(true);
+  };
+
+  const handleSubmitFicha = async (e) => {
+    e.preventDefault();
+    if (!fichaPais) {
+      setErrorMsg('Seleccioná tu país');
+      return;
+    }
+    setFichaLoading(true);
+    setErrorMsg('');
+    try {
+      const { error } = await supabase
+        .from('jugadores_perfil')
+        .insert([{
+          email: pendingUserData.email,
+          nombre: pendingUserData.nombre,
+          whatsapp: pendingUserData.whatsapp,
+          lateralidad: fichaLateralidad,
+          nivel: fichaNivel,
+          pais: fichaPais,
+        }]);
+      if (error) throw error;
+      setFichaLateralidad('Diestro');
+      setFichaNivel('Principiante');
+      setFichaPais('');
+    } catch (err) {
+      setErrorMsg('Error al guardar ficha: ' + err.message);
+      setFichaLoading(false);
+      return;
+    }
+    setFichaLoading(false);
+    setShowFichaJugador(false);
+    setPendingUserData(null);
+    setShowLogin(true);
   };
 
   const handleLogout = () => {
@@ -133,6 +189,86 @@ function AppContent() {
     localStorage.removeItem('currentCliente');
     navigate('/');
   };
+
+  if (!currentCliente && showPreguntaTorneo) {
+    return (
+      <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
+        <h1 style={{ color: '#d32f2f' }}>🎾 PADBOL MATCH</h1>
+        <p style={{ color: '#4caf50', fontWeight: 'bold', marginBottom: '10px' }}>✅ ¡Cuenta creada con éxito!</p>
+        <h2 style={{ color: '#333', marginBottom: '10px' }}>¿Querés competir en torneos de PADBOL?</h2>
+        <p style={{ color: '#666', marginBottom: '30px', fontSize: '14px' }}>Podés crear tu ficha de jugador ahora o hacerlo más tarde.</p>
+        <button
+          onClick={handleElegirSi}
+          style={{ width: '100%', padding: '12px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold', marginBottom: '10px' }}
+        >
+          🏆 Sí, crear mi ficha de jugador
+        </button>
+        <button
+          onClick={handleElegirNo}
+          style={{ width: '100%', padding: '12px', background: '#999', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px' }}
+        >
+          🎾 No, solo reservar canchas
+        </button>
+      </div>
+    );
+  }
+
+  if (!currentCliente && showFichaJugador) {
+    const inputStyle = { width: '100%', padding: '10px', marginBottom: '14px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box', fontSize: '14px' };
+    return (
+      <div style={{ maxWidth: '400px', margin: '60px auto', padding: '20px', fontFamily: 'Arial' }}>
+        <h1 style={{ textAlign: 'center', color: '#d32f2f' }}>🎾 PADBOL MATCH</h1>
+        <h2 style={{ marginBottom: '20px' }}>🏆 Ficha de Jugador</h2>
+        <form onSubmit={handleSubmitFicha}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Lateralidad</label>
+          <select value={fichaLateralidad} onChange={e => setFichaLateralidad(e.target.value)} style={inputStyle}>
+            <option value="Diestro">🤜 Diestro</option>
+            <option value="Zurdo">🤛 Zurdo</option>
+          </select>
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Nivel de juego</label>
+          <select value={fichaNivel} onChange={e => setFichaNivel(e.target.value)} style={inputStyle}>
+            <option value="Principiante">🟢 Principiante</option>
+            <option value="Intermedio">🟡 Intermedio</option>
+            <option value="Avanzado">🟠 Avanzado</option>
+            <option value="Profesional">🔴 Profesional</option>
+          </select>
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>País *</label>
+          <select value={fichaPais} onChange={e => setFichaPais(e.target.value)} style={inputStyle} required>
+            <option value="">— Seleccionar país —</option>
+            <optgroup label="Principales">
+              {PAISES_TELEFONO_PRINCIPALES.map(p => (
+                <option key={p.nombre} value={`${p.bandera} ${p.nombre}`}>{p.bandera} {p.nombre}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Otros países">
+              {PAISES_TELEFONO_OTROS.map(p => (
+                <option key={p.nombre} value={`${p.bandera} ${p.nombre}`}>{p.bandera} {p.nombre}</option>
+              ))}
+            </optgroup>
+          </select>
+
+          {errorMsg && <p style={{ color: 'red', marginBottom: '10px' }}>{errorMsg}</p>}
+
+          <button
+            type="submit"
+            disabled={fichaLoading}
+            style={{ width: '100%', padding: '12px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold', marginBottom: '10px', opacity: fichaLoading ? 0.6 : 1 }}
+          >
+            {fichaLoading ? 'Guardando...' : '✅ Guardar ficha'}
+          </button>
+          <button
+            type="button"
+            onClick={handleElegirNo}
+            style={{ width: '100%', padding: '10px', background: 'transparent', color: '#999', border: '1px solid #ccc', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' }}
+          >
+            Omitir por ahora
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   if (!currentCliente) {
     return (
