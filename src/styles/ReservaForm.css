@@ -46,6 +46,45 @@
   box-shadow: 0 0 5px rgba(211, 47, 47, 0.3);
 }
 
+.phone-field {
+  display: flex;
+  gap: 8px;
+}
+
+.phone-field select {
+  width: 110px;
+  flex-shrink: 0;
+  padding: 12px 6px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: white;
+}
+
+.phone-field input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.phone-field select:focus,
+.phone-field input:focus {
+  outline: none;
+  border-color: #d32f2f;
+  box-shadow: 0 0 5px rgba(211, 47, 47, 0.3);
+}
+
+.phone-preview {
+  display: block;
+  margin-top: 6px;
+  color: #888;
+  font-size: 12px;
+}
+
 .precio-display {
   font-size: 18px;
   font-weight: bold;

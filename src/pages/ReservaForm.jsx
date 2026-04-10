@@ -1,6 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ReservaForm.css';
 
+const PAISES_TELEFONO_PRINCIPALES = [
+  { nombre: 'Argentina',      bandera: '🇦🇷', codigo: '+54'  },
+  { nombre: 'España',         bandera: '🇪🇸', codigo: '+34'  },
+  { nombre: 'Italia',         bandera: '🇮🇹', codigo: '+39'  },
+  { nombre: 'Francia',        bandera: '🇫🇷', codigo: '+33'  },
+  { nombre: 'Alemania',       bandera: '🇩🇪', codigo: '+49'  },
+  { nombre: 'Rumania',        bandera: '🇷🇴', codigo: '+40'  },
+  { nombre: 'Austria',        bandera: '🇦🇹', codigo: '+43'  },
+  { nombre: 'Estados Unidos', bandera: '🇺🇸', codigo: '+1'   },
+  { nombre: 'Brasil',         bandera: '🇧🇷', codigo: '+55'  },
+  { nombre: 'Uruguay',        bandera: '🇺🇾', codigo: '+598' },
+  { nombre: 'Chile',          bandera: '🇨🇱', codigo: '+56'  },
+  { nombre: 'Colombia',       bandera: '🇨🇴', codigo: '+57'  },
+  { nombre: 'México',         bandera: '🇲🇽', codigo: '+52'  },
+];
+
+const PAISES_TELEFONO_OTROS = [
+  { nombre: 'Australia',      bandera: '🇦🇺', codigo: '+61'  },
+  { nombre: 'Bélgica',        bandera: '🇧🇪', codigo: '+32'  },
+  { nombre: 'Bolivia',        bandera: '🇧🇴', codigo: '+591' },
+  { nombre: 'Canadá',         bandera: '🇨🇦', codigo: '+1'   },
+  { nombre: 'Chile',          bandera: '🇨🇱', codigo: '+56'  },
+  { nombre: 'China',          bandera: '🇨🇳', codigo: '+86'  },
+  { nombre: 'Croacia',        bandera: '🇭🇷', codigo: '+385' },
+  { nombre: 'Ecuador',        bandera: '🇪🇨', codigo: '+593' },
+  { nombre: 'Grecia',         bandera: '🇬🇷', codigo: '+30'  },
+  { nombre: 'Honduras',       bandera: '🇭🇳', codigo: '+504' },
+  { nombre: 'Hungría',        bandera: '🇭🇺', codigo: '+36'  },
+  { nombre: 'Israel',         bandera: '🇮🇱', codigo: '+972' },
+  { nombre: 'Japón',          bandera: '🇯🇵', codigo: '+81'  },
+  { nombre: 'Marruecos',      bandera: '🇲🇦', codigo: '+212' },
+  { nombre: 'Noruega',        bandera: '🇳🇴', codigo: '+47'  },
+  { nombre: 'Países Bajos',   bandera: '🇳🇱', codigo: '+31'  },
+  { nombre: 'Paraguay',       bandera: '🇵🇾', codigo: '+595' },
+  { nombre: 'Perú',           bandera: '🇵🇪', codigo: '+51'  },
+  { nombre: 'Polonia',        bandera: '🇵🇱', codigo: '+48'  },
+  { nombre: 'Portugal',       bandera: '🇵🇹', codigo: '+351' },
+  { nombre: 'Reino Unido',    bandera: '🇬🇧', codigo: '+44'  },
+  { nombre: 'Rusia',          bandera: '🇷🇺', codigo: '+7'   },
+  { nombre: 'Serbia',         bandera: '🇷🇸', codigo: '+381' },
+  { nombre: 'Suecia',         bandera: '🇸🇪', codigo: '+46'  },
+  { nombre: 'Suiza',          bandera: '🇨🇭', codigo: '+41'  },
+  { nombre: 'Turquía',        bandera: '🇹🇷', codigo: '+90'  },
+  { nombre: 'Ucrania',        bandera: '🇺🇦', codigo: '+380' },
+  { nombre: 'Venezuela',      bandera: '🇻🇪', codigo: '+58'  },
+];
+
 export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const [sedes, setSedes] = useState([]);
   const [paises, setPaises] = useState([]);
@@ -19,7 +66,16 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     fecha: '',
     hora: '',
     cancha: '',
+    codigoPais: '+54',
+    numeroTel: '',
   });
+
+  // Pre-fill phone from profile if available
+  useEffect(() => {
+    if (currentCliente?.whatsapp) {
+      setFormData(prev => ({ ...prev, numeroTel: currentCliente.whatsapp }));
+    }
+  }, [currentCliente]);
 
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [canchasDisponibles, setCanchasDisponibles] = useState([]);
@@ -215,9 +271,17 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.numeroTel.trim()) {
+      setError('Ingresa tu número de WhatsApp');
+      return;
+    }
+
     setLoading(true);
     setMensaje('');
     setError('');
+
+    const whatsappCompleto = `${formData.codigoPais}${formData.numeroTel.replace(/[\s\-().]/g, '')}`;
 
     try {
       const response = await fetch(`${apiBaseUrl}/api/reservas`, {
@@ -230,7 +294,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
           cancha: parseInt(formData.cancha),
           nombre: currentCliente.nombre,
           email: currentCliente.email,
-          whatsapp: currentCliente.whatsapp || '',
+          whatsapp: whatsappCompleto,
           nivel: 'Principiante',
           precio: sedeSeleccionada.precio_por_reserva,
         }),
@@ -247,6 +311,8 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
             fecha: '',
             hora: '',
             cancha: '',
+            codigoPais: '+54',
+            numeroTel: '',
           });
           setMensaje('');
           setHorariosDisponibles([]);
@@ -511,7 +577,43 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
             <p><strong>🏟️ Cancha:</strong> {formData.cancha}</p>
             <p><strong>👤 Jugador:</strong> {currentCliente.nombre}</p>
             <p><strong>📧 Email:</strong> {currentCliente.email}</p>
-            <p><strong>💬 WhatsApp:</strong> {currentCliente.whatsapp || 'No registrado'}</p>
+          </div>
+
+          <div className="form-group">
+            <label>💬 WhatsApp *</label>
+            <div className="phone-field">
+              <select
+                value={formData.codigoPais}
+                onChange={e => setFormData(prev => ({ ...prev, codigoPais: e.target.value }))}
+              >
+                <optgroup label="Principales">
+                  {PAISES_TELEFONO_PRINCIPALES.map(p => (
+                    <option key={p.nombre} value={p.codigo}>
+                      {p.bandera} {p.codigo}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Otros">
+                  {PAISES_TELEFONO_OTROS.map(p => (
+                    <option key={p.nombre} value={p.codigo}>
+                      {p.bandera} {p.codigo} {p.nombre}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <input
+                type="tel"
+                name="numeroTel"
+                value={formData.numeroTel}
+                onChange={handleChange}
+                placeholder="9 11 2345 6789"
+              />
+            </div>
+            {formData.numeroTel && (
+              <small className="phone-preview">
+                Número completo: {formData.codigoPais}{formData.numeroTel.replace(/[\s\-().]/g, '')}
+              </small>
+            )}
           </div>
 
           {error && <div className="error-message">{error}</div>}
