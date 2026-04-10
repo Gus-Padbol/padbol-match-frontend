@@ -111,6 +111,7 @@ export default function FormEquipos() {
       setLoading(true);
       setError('');
 
+      // 1. Save all teams
       for (const equipo of equipos) {
         const equipoData = {
           nombre: equipo.nombre,
@@ -129,9 +130,22 @@ export default function FormEquipos() {
         }
       }
 
+      // 2. Generate matches based on tournament format
+      const genRes = await fetch(`${API}/api/torneos/${torneoId}/generar-partidos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!genRes.ok) {
+        const genErr = await genRes.json();
+        throw new Error(genErr.error || 'Error al generar partidos');
+      }
+
+      const genData = await genRes.json();
+
       sessionStorage.removeItem(`equipos_${torneoId}`);
-      setMensaje('✅ Torneo iniciado con éxito');
-      setTimeout(() => navigate('/admin'), 1500);
+      setMensaje(`✅ Torneo iniciado — ${genData.total} partidos generados (${genData.formato})`);
+      setTimeout(() => navigate('/admin'), 2000);
     } catch (err) {
       setError('Error: ' + err.message);
     } finally {
