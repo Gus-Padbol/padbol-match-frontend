@@ -126,6 +126,7 @@ export default function TorneoVista() {
     id: eq.id,
     nombre: eq.nombre,
     jugadores: eq.jugadores || [],
+    puntos_ranking: eq.puntos_ranking || 0,
     jj: stats[eq.id].jj,
     g: stats[eq.id].g,
     p: stats[eq.id].p,
@@ -217,6 +218,10 @@ export default function TorneoVista() {
       });
       const data = await res.json();
       if (res.ok) {
+        setEquipos(prev => prev.map(eq => {
+          const found = (data.clasificacion || []).find(c => c.equipo_id === eq.id);
+          return found ? { ...eq, puntos_ranking: found.puntos } : eq;
+        }));
         setTorneo(prev => ({ ...prev, estado: 'finalizado' }));
       } else {
         alert(data.error || 'Error al finalizar el torneo');
@@ -231,6 +236,79 @@ export default function TorneoVista() {
   if (loading) return <div className="loading">Cargando...</div>;
   if (error) return <div className="error">Error: {error}</div>;
   if (!torneo) return <div className="error">Torneo no encontrado</div>;
+
+  if (torneo.estado === 'finalizado') {
+    const top3   = tablaPosiciones.slice(0, 3);
+    const rest   = tablaPosiciones.slice(3, 10);
+    const first  = top3[0];
+    const second = top3[1];
+    const third  = top3[2];
+
+    const PodiumCard = ({ eq, medal }) => (
+      <div className="podium-card">
+        <div className="podium-medal">{medal}</div>
+        <div className="podium-team-name">{eq.nombre}</div>
+        {eq.jugadores.length > 0 && (
+          <div className="podium-players">{eq.jugadores.map(j => j.nombre).join(' · ')}</div>
+        )}
+        <div className="podium-points">{eq.puntos_ranking} <span>pts</span></div>
+      </div>
+    );
+
+    return (
+      <div className="torneo-vista-container">
+        <button className="btn-atras" onClick={() => navigate('/admin?tab=torneos')}>← Atrás</button>
+
+        <div className="finalizado-header">
+          <div className="finalizado-trophy">🏆</div>
+          <h1 className="finalizado-titulo">¡Torneo Finalizado!</h1>
+          <p className="finalizado-nombre">{torneo.nombre}</p>
+          <p className="finalizado-info">
+            {torneo.nivel_torneo} • {torneo.tipo_torneo} • {formatFecha(torneo.fecha_inicio)} a {formatFecha(torneo.fecha_fin)}
+          </p>
+        </div>
+
+        <div className="podium-wrapper">
+          {second && (
+            <div className="podium-slot">
+              <PodiumCard eq={second} medal="🥈" />
+              <div className="podium-block podium-block-2">2</div>
+            </div>
+          )}
+          {first && (
+            <div className="podium-slot">
+              <PodiumCard eq={first} medal="🥇" />
+              <div className="podium-block podium-block-1">1</div>
+            </div>
+          )}
+          {third && (
+            <div className="podium-slot">
+              <PodiumCard eq={third} medal="🥉" />
+              <div className="podium-block podium-block-3">3</div>
+            </div>
+          )}
+        </div>
+
+        {rest.length > 0 && (
+          <div className="clasificacion-resto">
+            <h3>Clasificación final</h3>
+            {rest.map((eq, idx) => (
+              <div key={eq.id} className="clasificacion-item">
+                <span className="clasificacion-pos">{idx + 4}</span>
+                <div className="clasificacion-info">
+                  <span className="clasificacion-nombre">{eq.nombre}</span>
+                  {eq.jugadores.length > 0 && (
+                    <span className="clasificacion-players">{eq.jugadores.map(j => j.nombre).join(' · ')}</span>
+                  )}
+                </div>
+                <span className="clasificacion-pts">{eq.puntos_ranking} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="torneo-vista-container">
