@@ -101,6 +101,12 @@ export default function FormEquipos() {
     setEquipos(equipos.filter(e => e.id !== equipoId));
   };
 
+  const renombrarEquipo = (equipoId, nuevoNombre) => {
+    setEquipos(equipos.map(e =>
+      e.id === equipoId ? { ...e, nombre: nuevoNombre } : e
+    ));
+  };
+
   const iniciarTorneo = async () => {
     if (equipos.length === 0) {
       setError('Crea al menos un equipo');
@@ -216,7 +222,13 @@ export default function FormEquipos() {
                 equipos.map(equipo => (
                   <div key={equipo.id} className="equipo-item">
                     <div className="equipo-header">
-                      <h3>{equipo.nombre}</h3>
+                      <input
+                        type="text"
+                        className="equipo-nombre-input"
+                        value={equipo.nombre}
+                        onChange={e => renombrarEquipo(equipo.id, e.target.value)}
+                        placeholder="Nombre del equipo"
+                      />
                       <button
                         className="btn-eliminar"
                         onClick={() => eliminarEquipo(equipo.id)}
