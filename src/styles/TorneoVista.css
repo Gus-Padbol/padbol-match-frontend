@@ -94,6 +94,28 @@
   cursor: not-allowed;
 }
 
+.btn-finalizar-torneo {
+  background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-finalizar-torneo:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.5);
+}
+
+.btn-finalizar-torneo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .contenedor-dos-columnas {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -24,6 +24,7 @@ export default function TorneoVista() {
   const [selectedPartido, setSelectedPartido] = useState(null);
   const [resultado, setResultado] = useState({ set1: '', set2: '', set3: '' });
   const [iniciando, setIniciando] = useState(false);
+  const [finalizando, setFinalizando] = useState(false);
 
   const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
   const isAdmin = ADMIN_EMAILS.includes(currentEmail);
@@ -206,6 +207,27 @@ export default function TorneoVista() {
     }
   };
 
+  const finalizarTorneo = async () => {
+    if (!window.confirm('¿Finalizar el torneo? Se calcularán las posiciones finales y se asignarán los puntos de ranking.')) return;
+    setFinalizando(true);
+    try {
+      const res = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/finalizar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTorneo(prev => ({ ...prev, estado: 'finalizado' }));
+      } else {
+        alert(data.error || 'Error al finalizar el torneo');
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setFinalizando(false);
+    }
+  };
+
   if (loading) return <div className="loading">Cargando...</div>;
   if (error) return <div className="error">Error: {error}</div>;
   if (!torneo) return <div className="error">Torneo no encontrado</div>;
@@ -224,6 +246,13 @@ export default function TorneoVista() {
             </button>
             <button className="btn-iniciar-torneo" onClick={iniciarTorneo} disabled={iniciando}>
               {iniciando ? 'Iniciando...' : '🚀 Iniciar torneo'}
+            </button>
+          </div>
+        )}
+        {isAdmin && torneo.estado === 'en_curso' && partidos.length > 0 && partidos.every(p => p.estado === 'finalizado') && (
+          <div className="torneo-acciones">
+            <button className="btn-finalizar-torneo" onClick={finalizarTorneo} disabled={finalizando}>
+              {finalizando ? 'Finalizando...' : '🏆 Finalizar torneo'}
             </button>
           </div>
         )}
