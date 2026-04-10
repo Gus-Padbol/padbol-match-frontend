@@ -2,12 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import '../styles/FormEquipos.css';
 
+const API = 'https://padbol-backend.onrender.com';
+
 export default function FormEquipos() {
   const { torneoId } = useParams();
   const navigate = useNavigate();
   const [torneo, setTorneo] = useState(null);
   const [jugadores, setJugadores] = useState([]);
-  const [equipos, setEquipos] = useState([]);
+  const [equipos, setEquipos] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`equipos_${torneoId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedJugadores, setSelectedJugadores] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,11 +25,11 @@ export default function FormEquipos() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const torneoRes = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}`);
+        const torneoRes = await fetch(`${API}/api/torneos/${torneoId}`);
         const torneoData = await torneoRes.json();
         setTorneo(torneoData);
 
-        const jugadoresRes = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/jugadores`);
+        const jugadoresRes = await fetch(`${API}/api/torneos/${torneoId}/jugadores`);
         const jugadoresData = await jugadoresRes.json();
         setJugadores(jugadoresData || []);
 
@@ -34,20 +43,34 @@ export default function FormEquipos() {
     fetchData();
   }, [torneoId]);
 
+  // Persist equipos to sessionStorage whenever they change
+  useEffect(() => {
+    sessionStorage.setItem(`equipos_${torneoId}`, JSON.stringify(equipos));
+  }, [equipos, torneoId]);
+
+  // Build a map of jugadorId -> equipo nombre for assigned players
+  const assignedMap = {};
+  equipos.forEach(eq => {
+    eq.jugadores.forEach(j => {
+      assignedMap[j.id] = eq.nombre;
+    });
+  });
+
   const handleSelectJugador = (jugadorId) => {
+    if (assignedMap[jugadorId]) return;
     setSelectedJugadores(prev => {
-      const newSelected = { ...prev };
-      if (newSelected[jugadorId]) {
-        delete newSelected[jugadorId];
+      const next = { ...prev };
+      if (next[jugadorId]) {
+        delete next[jugadorId];
       } else {
-        newSelected[jugadorId] = true;
+        next[jugadorId] = true;
       }
-      return newSelected;
+      return next;
     });
   };
 
   const crearEquipo = () => {
-    const selected = Object.keys(selectedJugadores).map(id => 
+    const selected = Object.keys(selectedJugadores).map(id =>
       jugadores.find(j => j.id === parseInt(id))
     );
 
@@ -88,7 +111,6 @@ export default function FormEquipos() {
       setLoading(true);
       setError('');
 
-      // Guardar cada equipo en la BD
       for (const equipo of equipos) {
         const equipoData = {
           nombre: equipo.nombre,
@@ -96,7 +118,7 @@ export default function FormEquipos() {
           jugadores: equipo.jugadores.map(j => ({ id: j.id, nombre: j.nombre, email: j.email })),
         };
 
-        const response = await fetch(`https://padbol-backend.onrender.com/api/torneos/${torneoId}/equipos`, {
+        const response = await fetch(`${API}/api/torneos/${torneoId}/equipos`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(equipoData),
@@ -107,10 +129,9 @@ export default function FormEquipos() {
         }
       }
 
+      sessionStorage.removeItem(`equipos_${torneoId}`);
       setMensaje('✅ Torneo iniciado con éxito');
-      setTimeout(() => {
-        navigate('/admin');
-      }, 1500);
+      setTimeout(() => navigate('/admin'), 1500);
     } catch (err) {
       setError('Error: ' + err.message);
     } finally {
@@ -119,6 +140,8 @@ export default function FormEquipos() {
   };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
+
+  const unassignedCount = jugadores.filter(j => !assignedMap[j.id]).length;
 
   return (
     <div className="form-equipos-container">
@@ -132,25 +155,34 @@ export default function FormEquipos() {
 
         <div className="form-equipos-layout">
           <div className="seccion-jugadores">
-            <h2>👥 Jugadores ({jugadores.length})</h2>
+            <h2>👥 Jugadores ({unassignedCount} disponibles)</h2>
             <div className="lista-jugadores">
               {jugadores.length === 0 ? (
                 <p className="sin-datos">Sin jugadores</p>
               ) : (
-                jugadores.map(jugador => (
-                  <div key={jugador.id} className="jugador-item">
-                    <input
-                      type="checkbox"
-                      id={`jugador-${jugador.id}`}
-                      checked={!!selectedJugadores[jugador.id]}
-                      onChange={() => handleSelectJugador(jugador.id)}
-                    />
-                    <label htmlFor={`jugador-${jugador.id}`}>
-                      <strong>{jugador.nombre}</strong>
-                      <span>{jugador.email}</span>
-                    </label>
-                  </div>
-                ))
+                jugadores.map(jugador => {
+                  const teamName = assignedMap[jugador.id];
+                  const isAssigned = !!teamName;
+                  return (
+                    <div
+                      key={jugador.id}
+                      className={`jugador-item${isAssigned ? ' jugador-asignado' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`jugador-${jugador.id}`}
+                        checked={!!selectedJugadores[jugador.id]}
+                        onChange={() => handleSelectJugador(jugador.id)}
+                        disabled={isAssigned}
+                      />
+                      <label htmlFor={`jugador-${jugador.id}`}>
+                        <strong>{jugador.nombre}</strong>
+                        <span>{jugador.email}</span>
+                        {isAssigned && <span className="equipo-badge">{teamName}</span>}
+                      </label>
+                    </div>
+                  );
+                })
               )}
             </div>
 

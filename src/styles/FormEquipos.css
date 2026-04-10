@@ -91,6 +91,28 @@ h1 {
   border-color: #667eea;
 }
 
+.jugador-item.jugador-asignado {
+  opacity: 0.55;
+  cursor: default;
+  background: #f5f5f5;
+}
+
+.jugador-item.jugador-asignado:hover {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+
+.equipo-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: #667eea;
+  color: white !important;
+  font-size: 11px !important;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
 .jugador-item input[type="checkbox"] {
   margin-right: 15px;
   cursor: pointer;
