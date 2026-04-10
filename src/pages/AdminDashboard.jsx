@@ -170,13 +170,36 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
   const fetchData = async () => {
     try {
+      // Cargar sedes primero para poder resolver moneda por sede
+      let sedesData = [];
+      try {
+        const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`);
+        if (sedesRes.ok) {
+          sedesData = await sedesRes.json() || [];
+          const map = {};
+          sedesData.forEach(s => { map[s.id] = s; });
+          setSedesMap(map);
+        }
+      } catch { /* sedes opcionales */ }
+
+      // nombre de sede → moneda (ej: "Padbol Vienna" → "EUR")
+      const sedeMonedaMap = {};
+      sedesData.forEach(s => {
+        if (s.nombre && s.moneda) sedeMonedaMap[s.nombre.trim().toLowerCase()] = s.moneda;
+      });
+
       // Cargar reservas
       const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
       const resData = await resRes.json();
       setReservas(resData);
+
       const totales = { ARS: 0, USD: 0, EUR: 0 };
       resData.forEach(item => {
-        const moneda = item.moneda || 'ARS';
+        // Priority: reserva.moneda → sede's moneda → ARS
+        const moneda =
+          item.moneda ||
+          (item.sede ? sedeMonedaMap[item.sede.trim().toLowerCase()] : null) ||
+          'ARS';
         if (moneda in totales) totales[moneda] += item.precio || 0;
         else totales.ARS += item.precio || 0;
       });
@@ -186,17 +209,6 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
       const tornData = await tornRes.json();
       setTorneos(tornData);
-
-      // Cargar sedes para mostrar flag en cada torneo
-      try {
-        const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`);
-        if (sedesRes.ok) {
-          const sedesData = await sedesRes.json();
-          const map = {};
-          (sedesData || []).forEach(s => { map[s.id] = s; });
-          setSedesMap(map);
-        }
-      } catch { /* sedes opcionales */ }
 
       setLoading(false);
     } catch (err) {
@@ -274,9 +286,14 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     <div className="admin-dashboard">
       <div className="admin-header">
         <h1>🏆 PADBOL MATCH - ADMIN</h1>
-        <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-          Cerrar sesión
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => navigate('/')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
+            ← Inicio
+          </button>
+          <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+            Cerrar sesión
+          </button>
+        </div>
       </div>
 
       {/* Tab navigation */}

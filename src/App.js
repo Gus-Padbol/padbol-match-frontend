@@ -35,6 +35,9 @@ function AppContent() {
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
   const [registerCodigoPais, setRegisterCodigoPais] = useState('+54');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [registerNumeroTel, setRegisterNumeroTel] = useState('');
   const [registerFoto, setRegisterFoto] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
@@ -333,13 +336,19 @@ function AppContent() {
               onChange={(e) => setLoginEmail(e.target.value)}
               style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
             />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
-            />
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                type={showLoginPassword ? 'text' : 'password'}
+                placeholder="Contraseña"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                style={{ width: '100%', padding: '10px', paddingRight: '40px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+              />
+              <button type="button" onClick={() => setShowLoginPassword(p => !p)}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888' }}>
+                {showLoginPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
             <button type="submit" style={{ width: '100%', padding: '10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Entrar
@@ -365,20 +374,32 @@ function AppContent() {
               onChange={(e) => setRegisterEmail(e.target.value)}
               style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
             />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={registerPassword}
-              onChange={(e) => setRegisterPassword(e.target.value)}
-              style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
-            />
-            <input
-              type="password"
-              placeholder="Confirmar Contraseña"
-              value={registerConfirmPassword}
-              onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-              style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
-            />
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                type={showRegPassword ? 'text' : 'password'}
+                placeholder="Contraseña"
+                value={registerPassword}
+                onChange={(e) => setRegisterPassword(e.target.value)}
+                style={{ width: '100%', padding: '10px', paddingRight: '40px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+              />
+              <button type="button" onClick={() => setShowRegPassword(p => !p)}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888' }}>
+                {showRegPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                type={showRegConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirmar Contraseña"
+                value={registerConfirmPassword}
+                onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                style={{ width: '100%', padding: '10px', paddingRight: '40px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+              />
+              <button type="button" onClick={() => setShowRegConfirmPassword(p => !p)}
+                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888' }}>
+                {showRegConfirmPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             <div style={{ marginBottom: '10px' }}>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <select
