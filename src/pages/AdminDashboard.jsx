@@ -663,8 +663,22 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   {Object.keys(groups).map(dia => (
                     <React.Fragment key={dia}>
                       <tr>
-                        <td colSpan="8" style={{ background: accentColor, color: 'white', fontWeight: 'bold', fontSize: '13px', padding: '7px 12px' }}>
-                          📅 {formatFechaDia(dia)}
+                        <td colSpan="8" style={{ background: 'transparent', padding: '18px 0 6px 0', border: 'none' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(59, 47, 110, 0.12)',
+                            border: '1px solid rgba(59, 47, 110, 0.25)',
+                            color: accentColor === '#3b2f6e' ? '#3b2f6e' : '#4a4a6a',
+                            borderRadius: '20px',
+                            padding: '4px 14px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            letterSpacing: '0.02em',
+                          }}>
+                            📅 {formatFechaDia(dia)}
+                          </span>
                         </td>
                       </tr>
                       {groups[dia].map(r => (
