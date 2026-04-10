@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './AdminDashboard.css';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
@@ -23,7 +23,10 @@ function sedeFlag(sede) {
 
 export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const currentEmail = JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '';
+  const isSuperAdmin = currentEmail === 'padbolinternacional@gmail.com';
+
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
   const [sedesMap, setSedesMap] = useState({});
@@ -32,7 +35,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'resumen');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'resumen');
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -86,6 +89,21 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         saving: false,
       },
     }));
+  };
+
+  const eliminarTorneo = async (torneoId, torneoNombre) => {
+    if (!window.confirm(`¿Eliminar el torneo "${torneoNombre}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/torneos/${torneoId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setTorneos(prev => prev.filter(t => t.id !== torneoId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert('Error al eliminar: ' + (data.error || res.statusText));
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const fetchData = async () => {
@@ -342,13 +360,24 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                     )}
                   </div>
 
-                  {/* Action */}
-                  <button
-                    onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
-                    style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
-                  >
-                    Ver torneo →
-                  </button>
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button
+                      onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
+                      style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                    >
+                      Ver torneo →
+                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => eliminarTorneo(torneo.id, torneo.nombre)}
+                        style={{ padding: '6px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
+                        title="Eliminar torneo"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
