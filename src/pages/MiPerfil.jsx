@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 
+const API_BASE_URL = 'https://padbol-backend.onrender.com';
+
 export default function MiPerfil({ currentCliente }) {
   const navigate = useNavigate();
   const [perfil, setPerfil] = useState(null);
+  const [sedes, setSedes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -19,6 +22,9 @@ export default function MiPerfil({ currentCliente }) {
     ciudad: '',
     club: '',
     fecha_nacimiento: '',
+    sede_id: '',
+    numero_fipa: '',
+    es_federado: false,
   });
 
   useEffect(() => {
@@ -27,6 +33,7 @@ export default function MiPerfil({ currentCliente }) {
       return;
     }
     fetchPerfil();
+    fetchSedes();
   }, [currentCliente]);
 
   const fetchPerfil = async () => {
@@ -46,14 +53,29 @@ export default function MiPerfil({ currentCliente }) {
         ciudad: data.ciudad || '',
         club: data.club || '',
         fecha_nacimiento: data.fecha_nacimiento || '',
+        sede_id: data.sede_id ? String(data.sede_id) : '',
+        numero_fipa: data.numero_fipa || '',
+        es_federado: data.es_federado || false,
       });
     }
     setLoading(false);
   };
 
+  const fetchSedes = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sedes`);
+      if (res.ok) {
+        const data = await res.json();
+        setSedes(data || []);
+      }
+    } catch {
+      // sedes are optional — fail silently
+    }
+  };
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleGuardar = async (e) => {
@@ -66,17 +88,22 @@ export default function MiPerfil({ currentCliente }) {
     setErrorMsg('');
     setSuccessMsg('');
 
+    const payload = {
+      lateralidad: formData.lateralidad,
+      nivel: formData.nivel,
+      pais: formData.pais,
+      ciudad: formData.ciudad || null,
+      club: formData.club || null,
+      fecha_nacimiento: formData.fecha_nacimiento || null,
+      sede_id: formData.sede_id ? parseInt(formData.sede_id) : null,
+      numero_fipa: formData.numero_fipa || null,
+      es_federado: formData.es_federado,
+    };
+
     if (perfil) {
       const { error } = await supabase
         .from('jugadores_perfil')
-        .update({
-          lateralidad: formData.lateralidad,
-          nivel: formData.nivel,
-          pais: formData.pais,
-          ciudad: formData.ciudad || null,
-          club: formData.club || null,
-          fecha_nacimiento: formData.fecha_nacimiento || null,
-        })
+        .update(payload)
         .eq('email', currentCliente.email);
 
       if (error) {
@@ -91,12 +118,7 @@ export default function MiPerfil({ currentCliente }) {
           email: currentCliente.email,
           nombre: currentCliente.nombre,
           whatsapp: currentCliente.whatsapp || null,
-          lateralidad: formData.lateralidad,
-          nivel: formData.nivel,
-          pais: formData.pais,
-          ciudad: formData.ciudad || null,
-          club: formData.club || null,
-          fecha_nacimiento: formData.fecha_nacimiento || null,
+          ...payload,
         }]);
 
       if (error) {
@@ -113,6 +135,11 @@ export default function MiPerfil({ currentCliente }) {
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
+  const sedeNombre = (id) => {
+    const sede = sedes.find(s => String(s.id) === String(id));
+    return sede ? sede.nombre : '—';
+  };
+
   const inputStyle = {
     width: '100%',
     padding: '10px',
@@ -121,14 +148,29 @@ export default function MiPerfil({ currentCliente }) {
     borderRadius: '5px',
     boxSizing: 'border-box',
     fontSize: '14px',
+    background: 'white',
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontWeight: 'bold',
+    marginBottom: '6px',
+    color: '#333',
+    fontSize: '13px',
   };
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Cargando perfil...</div>;
   }
 
+  // Extract flag from pais string like "🇦🇷 Argentina"
+  const paisFlag = (perfil?.pais || '').split(' ')[0];
+  const paisNombre = (perfil?.pais || '').split(' ').slice(1).join(' ');
+
   return (
-    <div style={{ maxWidth: '500px', margin: '40px auto', padding: '20px', fontFamily: 'Arial' }}>
+    <div style={{ maxWidth: '520px', margin: '40px auto', padding: '20px', fontFamily: 'Arial' }}>
+
+      {/* Top nav */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <button
           onClick={() => navigate('/')}
@@ -139,29 +181,49 @@ export default function MiPerfil({ currentCliente }) {
         <h2 style={{ margin: 0, color: '#d32f2f' }}>Mi Perfil</h2>
       </div>
 
-      <div style={{ background: '#f5f5f5', borderRadius: '10px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        {/* Header with user info */}
-        <div style={{ textAlign: 'center', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid #e0e0e0' }}>
-          {currentCliente.foto ? (
-            <img
-              src={currentCliente.foto}
-              alt="Foto"
-              style={{ width: '90px', height: '90px', borderRadius: '12px', objectFit: 'contain', border: '2px solid #d32f2f', marginBottom: '10px' }}
-            />
-          ) : (
-            <div style={{ width: '90px', height: '90px', borderRadius: '12px', background: '#ddd', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: '36px' }}>
-              👤
-            </div>
-          )}
-          <h3 style={{ margin: '0 0 4px', color: '#222' }}>{currentCliente.nombre}</h3>
-          <p style={{ margin: 0, color: '#888', fontSize: '13px' }}>{currentCliente.email}</p>
-          {currentCliente.whatsapp && (
-            <p style={{ margin: '4px 0 0', color: '#888', fontSize: '13px' }}>📱 {currentCliente.whatsapp}</p>
-          )}
+      {/* Profile hero card */}
+      <div style={{ background: 'white', borderRadius: '12px', padding: '30px 24px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
+        {currentCliente.foto ? (
+          <img
+            src={currentCliente.foto}
+            alt="Foto"
+            style={{ width: '150px', height: '150px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #d32f2f', marginBottom: '14px' }}
+          />
+        ) : (
+          <div style={{ width: '150px', height: '150px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: '56px', border: '3px solid #d32f2f' }}>
+            👤
+          </div>
+        )}
+
+        <h3 style={{ margin: '0 0 6px', fontSize: '22px', color: '#222' }}>{currentCliente.nombre}</h3>
+
+        {perfil?.pais && (
+          <p style={{ margin: '0 0 4px', fontSize: '18px' }}>
+            {paisFlag} <span style={{ color: '#555', fontSize: '14px' }}>{paisNombre}</span>
+          </p>
+        )}
+        {perfil?.ciudad && (
+          <p style={{ margin: '0 0 4px', color: '#777', fontSize: '13px' }}>📍 {perfil.ciudad}</p>
+        )}
+        {perfil?.club && (
+          <p style={{ margin: '0', color: '#777', fontSize: '13px' }}>🏟️ {perfil.club}</p>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+          {perfil?.nivel && <Badge text={perfil.nivel} color="#1976d2" />}
+          {perfil?.lateralidad && <Badge text={perfil.lateralidad} color="#555" />}
+          {perfil?.es_federado && <Badge text="Federado" color="#388e3c" />}
+          {perfil?.numero_fipa && <Badge text={`FIPA: ${perfil.numero_fipa}`} color="#7b1fa2" />}
         </div>
 
+        {successMsg && <p style={{ color: '#4caf50', fontWeight: 'bold', marginTop: '12px', marginBottom: 0 }}>{successMsg}</p>}
+      </div>
+
+      {/* Ficha detail card */}
+      <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
+
         {!perfil && !editando ? (
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p style={{ color: '#666', marginBottom: '16px' }}>Aún no tenés ficha de jugador creada.</p>
             <button
               onClick={() => setEditando(true)}
@@ -170,17 +232,18 @@ export default function MiPerfil({ currentCliente }) {
               🏆 Crear ficha de jugador
             </button>
           </div>
+
         ) : !editando ? (
           <>
-            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 14px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>Datos del jugador</h4>
+            <div style={{ display: 'grid', gap: '2px', marginBottom: '18px' }}>
               <Row label="Lateralidad" value={perfil.lateralidad} />
               <Row label="Nivel" value={perfil.nivel} />
-              <Row label="País" value={perfil.pais} />
-              {perfil.ciudad && <Row label="Ciudad" value={perfil.ciudad} />}
-              {perfil.club && <Row label="Club" value={perfil.club} />}
               {perfil.fecha_nacimiento && <Row label="Fecha de nacimiento" value={perfil.fecha_nacimiento} />}
+              {perfil.sede_id && <Row label="Sede representada" value={sedeNombre(perfil.sede_id)} />}
+              {perfil.numero_fipa && <Row label="N° FIPA" value={perfil.numero_fipa} />}
+              <Row label="Federado" value={perfil.es_federado ? '✅ Sí' : '❌ No'} />
             </div>
-            {successMsg && <p style={{ color: '#4caf50', textAlign: 'center', fontWeight: 'bold' }}>{successMsg}</p>}
             <button
               onClick={() => setEditando(true)}
               style={{ width: '100%', padding: '11px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
@@ -188,15 +251,18 @@ export default function MiPerfil({ currentCliente }) {
               ✏️ Editar perfil
             </button>
           </>
+
         ) : (
           <form onSubmit={handleGuardar}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Lateralidad</label>
+            <h4 style={{ margin: '0 0 16px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>Editar datos</h4>
+
+            <label style={labelStyle}>Lateralidad</label>
             <select name="lateralidad" value={formData.lateralidad} onChange={handleChange} style={inputStyle}>
               <option value="Diestro">🤜 Diestro</option>
               <option value="Zurdo">🤛 Zurdo</option>
             </select>
 
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Nivel de juego</label>
+            <label style={labelStyle}>Nivel de juego</label>
             <select name="nivel" value={formData.nivel} onChange={handleChange} style={inputStyle}>
               <option value="Principiante">🟢 Principiante</option>
               <option value="Intermedio">🟡 Intermedio</option>
@@ -204,7 +270,7 @@ export default function MiPerfil({ currentCliente }) {
               <option value="Profesional">🔴 Profesional</option>
             </select>
 
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>País *</label>
+            <label style={labelStyle}>País *</label>
             <select name="pais" value={formData.pais} onChange={handleChange} style={inputStyle} required>
               <option value="">— Seleccionar país —</option>
               <optgroup label="Principales">
@@ -219,34 +285,55 @@ export default function MiPerfil({ currentCliente }) {
               </optgroup>
             </select>
 
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Ciudad</label>
-            <input
-              type="text"
-              name="ciudad"
-              placeholder="Ej: Buenos Aires"
-              value={formData.ciudad}
-              onChange={handleChange}
-              style={inputStyle}
-            />
+            <label style={labelStyle}>Ciudad</label>
+            <input type="text" name="ciudad" placeholder="Ej: Buenos Aires" value={formData.ciudad} onChange={handleChange} style={inputStyle} />
 
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Club</label>
-            <input
-              type="text"
-              name="club"
-              placeholder="Ej: Club Padbol Palermo"
-              value={formData.club}
-              onChange={handleChange}
-              style={inputStyle}
-            />
+            <label style={labelStyle}>Club</label>
+            <input type="text" name="club" placeholder="Ej: Club Padbol Palermo" value={formData.club} onChange={handleChange} style={inputStyle} />
 
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Fecha de nacimiento</label>
-            <input
-              type="date"
-              name="fecha_nacimiento"
-              value={formData.fecha_nacimiento}
-              onChange={handleChange}
-              style={inputStyle}
-            />
+            <label style={labelStyle}>Fecha de nacimiento</label>
+            <input type="date" name="fecha_nacimiento" value={formData.fecha_nacimiento} onChange={handleChange} style={inputStyle} />
+
+            <label style={labelStyle}>Sede representada</label>
+            <select name="sede_id" value={formData.sede_id} onChange={handleChange} style={inputStyle}>
+              <option value="">— Seleccionar sede —</option>
+              {sedes.map(s => (
+                <option key={s.id} value={String(s.id)}>{s.nombre}</option>
+              ))}
+            </select>
+
+            <label style={labelStyle}>N° FIPA (número de federación)</label>
+            <input type="text" name="numero_fipa" placeholder="Ej: 12345" value={formData.numero_fipa} onChange={handleChange} style={inputStyle} />
+
+            <label style={{ ...labelStyle, marginBottom: '12px' }}>¿Sos federado?</label>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, es_federado: true }))}
+                style={{
+                  flex: 1, padding: '10px', border: '2px solid',
+                  borderColor: formData.es_federado ? '#388e3c' : '#ddd',
+                  background: formData.es_federado ? '#e8f5e9' : 'white',
+                  color: formData.es_federado ? '#388e3c' : '#666',
+                  borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold',
+                }}
+              >
+                ✅ Sí
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, es_federado: false }))}
+                style={{
+                  flex: 1, padding: '10px', border: '2px solid',
+                  borderColor: !formData.es_federado ? '#d32f2f' : '#ddd',
+                  background: !formData.es_federado ? '#fff3f3' : 'white',
+                  color: !formData.es_federado ? '#d32f2f' : '#666',
+                  borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold',
+                }}
+              >
+                ❌ No
+              </button>
+            </div>
 
             {errorMsg && <p style={{ color: 'red', marginBottom: '10px' }}>{errorMsg}</p>}
 
@@ -269,15 +356,42 @@ export default function MiPerfil({ currentCliente }) {
           </form>
         )}
       </div>
+
+      {/* Historial de Torneos */}
+      <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>
+        <h4 style={{ margin: '0 0 14px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
+          🏆 Historial de Torneos
+        </h4>
+        <p style={{ color: '#aaa', textAlign: 'center', margin: '20px 0', fontSize: '14px' }}>
+          Aún no participaste en ningún torneo registrado.
+        </p>
+      </div>
+
     </div>
   );
 }
 
 function Row({ label, value }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #eee' }}>
-      <span style={{ color: '#666', fontSize: '14px' }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #eee' }}>
+      <span style={{ color: '#777', fontSize: '13px' }}>{label}</span>
       <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#333' }}>{value}</span>
     </div>
+  );
+}
+
+function Badge({ text, color }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '4px 12px',
+      borderRadius: '20px',
+      fontSize: '12px',
+      fontWeight: 'bold',
+      color: 'white',
+      background: color,
+    }}>
+      {text}
+    </span>
   );
 }
