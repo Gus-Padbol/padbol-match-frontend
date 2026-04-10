@@ -177,7 +177,7 @@ export default function TorneoVista() {
 
   return (
     <div className="torneo-vista-container">
-      <button className="btn-atras" onClick={() => navigate('/admin')}>← Atrás</button>
+      <button className="btn-atras" onClick={() => navigate('/admin', { state: { tab: 'torneos' } })}>← Atrás</button>
 
       <div className="torneo-header">
         <h1>🏆 {torneo.nombre}</h1>

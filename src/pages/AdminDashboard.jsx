@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './AdminDashboard.css';
 import { supabase } from '../supabaseClient';
+import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 
 const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
 
+// Build a lookup: country name (lowercase) → flag emoji
+const FLAG_MAP = {};
+[...PAISES_TELEFONO_PRINCIPALES, ...PAISES_TELEFONO_OTROS].forEach(p => {
+  FLAG_MAP[p.nombre.toLowerCase()] = p.bandera;
+});
+
+function sedeFlag(sede) {
+  if (!sede?.pais) return '';
+  const pais = sede.pais.trim();
+  // Already starts with a flag emoji (multi-char emoji code point)
+  if ([...pais][0]?.match(/\p{Emoji_Presentation}/u)) return [...pais][0];
+  // Plain country name — look it up
+  return FLAG_MAP[pais.toLowerCase()] || '';
+}
+
 export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
   const [sedesMap, setSedesMap] = useState({});
@@ -15,7 +32,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
-  const [activeTab, setActiveTab] = useState('resumen');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'resumen');
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -276,7 +293,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           <div style={{ display: 'grid', gap: '10px' }}>
             {torneos.map(torneo => {
               const sede = sedesMap[torneo.sede_id];
-              const flag = sede?.pais ? sede.pais.split(' ')[0] : '';
+              const flag = sedeFlag(sede);
               const estadoColor = {
                 pendiente: '#f59e0b',
                 en_curso:  '#2563eb',
