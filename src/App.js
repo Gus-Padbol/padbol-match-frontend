@@ -6,7 +6,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TorneoCrear from './pages/TorneoCrear';
 import JugadoresCargar from './pages/JugadoresCargar';
 import FormEquipos from './pages/FormEquipos';
-import Perfil from './Perfil';
+import MiPerfil from './pages/MiPerfil';
 import TorneoVista from './pages/TorneoVista';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
@@ -45,6 +45,9 @@ function AppContent() {
   const [fichaLateralidad, setFichaLateralidad] = useState('Diestro');
   const [fichaNivel, setFichaNivel] = useState('Principiante');
   const [fichaPais, setFichaPais] = useState('');
+  const [fichaCiudad, setFichaCiudad] = useState('');
+  const [fichaClub, setFichaClub] = useState('');
+  const [fichaFechaNacimiento, setFichaFechaNacimiento] = useState('');
   const [fichaLoading, setFichaLoading] = useState(false);
 
  const handleLogin = (e) => {
@@ -170,11 +173,17 @@ function AppContent() {
           lateralidad: fichaLateralidad,
           nivel: fichaNivel,
           pais: fichaPais,
+          ciudad: fichaCiudad || null,
+          club: fichaClub || null,
+          fecha_nacimiento: fichaFechaNacimiento || null,
         }]);
       if (error) throw error;
       setFichaLateralidad('Diestro');
       setFichaNivel('Principiante');
       setFichaPais('');
+      setFichaCiudad('');
+      setFichaClub('');
+      setFichaFechaNacimiento('');
     } catch (err) {
       setErrorMsg('Error al guardar ficha: ' + err.message);
       setFichaLoading(false);
@@ -254,6 +263,32 @@ function AppContent() {
               ))}
             </optgroup>
           </select>
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Ciudad</label>
+          <input
+            type="text"
+            placeholder="Ej: Buenos Aires"
+            value={fichaCiudad}
+            onChange={e => setFichaCiudad(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Club</label>
+          <input
+            type="text"
+            placeholder="Ej: Club Padbol Palermo"
+            value={fichaClub}
+            onChange={e => setFichaClub(e.target.value)}
+            style={inputStyle}
+          />
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px', color: '#333' }}>Fecha de nacimiento</label>
+          <input
+            type="date"
+            value={fichaFechaNacimiento}
+            onChange={e => setFichaFechaNacimiento(e.target.value)}
+            style={inputStyle}
+          />
 
           {errorMsg && <p style={{ color: 'red', marginBottom: '10px' }}>{errorMsg}</p>}
 
@@ -426,7 +461,7 @@ function AppContent() {
 
 return (
   <Routes>
-    <Route path="/perfil" element={<Perfil />} />
+    <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
