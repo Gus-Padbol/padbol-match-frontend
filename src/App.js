@@ -16,6 +16,8 @@ const API_BASE_URL = 'https://padbol-backend.onrender.com';
 const ADMIN_EMAILS = [
   'padbolinternacional@gmail.com',
   'admin@padbol.com',
+  'sm@padbol.com',
+  'juanpablo@padbol.com',
 ];
 
 function AppContent() {
