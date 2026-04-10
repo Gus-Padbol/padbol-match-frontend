@@ -15,6 +15,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
+  const [activeTab, setActiveTab] = useState('resumen');
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -163,6 +164,13 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
 
+  const TABS = [
+    { id: 'resumen',      label: '📊 Resumen' },
+    { id: 'torneos',      label: '🏆 Torneos' },
+    { id: 'reservas',     label: '📅 Reservas' },
+    { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
+  ];
+
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
@@ -172,20 +180,57 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         </button>
       </div>
 
+      {/* Tab navigation */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid #e0e0e0', paddingBottom: '0' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              position: 'relative',
+              padding: '10px 18px',
+              border: 'none',
+              borderBottom: activeTab === tab.id ? '3px solid #d32f2f' : '3px solid transparent',
+              background: 'none',
+              cursor: 'pointer',
+              fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+              color: activeTab === tab.id ? '#d32f2f' : '#555',
+              fontSize: '14px',
+              marginBottom: '-2px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {tab.label}
+            {tab.badge > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '4px',
+                right: '4px',
+                background: '#d32f2f',
+                color: 'white',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {mensajeExito && (
-        <div style={{
-          background: '#4caf50',
-          color: 'white',
-          padding: '15px',
-          borderRadius: '5px',
-          marginBottom: '20px',
-          textAlign: 'center',
-        }}>
+        <div style={{ background: '#4caf50', color: 'white', padding: '15px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
           {mensajeExito}
         </div>
       )}
 
-      <div className="dashboard-grid">
+      {activeTab === 'resumen' && <div className="dashboard-grid">
         <div className="card ingresos">
           <h2>Ingresos Totales</h2>
           <div className="ingresos-por-moneda">
@@ -211,9 +256,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           <h2>Total Torneos</h2>
           <p className="count">{torneos.length}</p>
         </div>
-      </div>
+      </div>}
 
-      <div className="section">
+      {activeTab === 'torneos' && <div className="section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
   <h2>📋 Torneos Creados</h2>
   <button
@@ -255,9 +300,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </div>
           ))
         )}
-      </div>
+      </div>}
 
-      <div className="section">
+      {activeTab === 'validaciones' && <div className="section">
         <h2>⏳ Jugadores Pendientes de Validación</h2>
         {pendientesLoading ? (
           <p style={{ color: '#999' }}>Cargando...</p>
@@ -323,9 +368,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             })}
           </div>
         )}
-      </div>
+      </div>}
 
-      <div className="section">
+      {activeTab === 'reservas' && <div className="section">
         <h2>💰 Reservas Confirmadas</h2>
         <table className="reservas-table">
           <thead>
@@ -479,7 +524,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
+
     </div>
   );
 }
