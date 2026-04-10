@@ -7,7 +7,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
   const [equiposPorTorneo, setEquiposPorTorneo] = useState({});
-  const [ingresos, setIngresos] = useState(0);
+  const [ingresos, setIngresos] = useState({ ARS: 0, USD: 0, EUR: 0 });
   const [loading, setLoading] = useState(true);
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
@@ -23,8 +23,13 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
       const resData = await resRes.json();
       setReservas(resData);
-      const suma = resData.reduce((total, item) => total + (item.precio || 30000), 0);
-      setIngresos(suma);
+      const totales = { ARS: 0, USD: 0, EUR: 0 };
+      resData.forEach(item => {
+        const moneda = item.moneda || 'ARS';
+        if (moneda in totales) totales[moneda] += item.precio || 0;
+        else totales.ARS += item.precio || 0;
+      });
+      setIngresos(totales);
 
       // Cargar torneos
       const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
@@ -130,8 +135,20 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       <div className="dashboard-grid">
         <div className="card ingresos">
           <h2>Ingresos Totales</h2>
-          <p className="amount">${ingresos.toLocaleString('es-AR')}</p>
-          <p className="currency">ARS</p>
+          <div className="ingresos-por-moneda">
+            <div className="ingreso-fila">
+              <span className="ingreso-codigo">ARS</span>
+              <span className="ingreso-valor">$ {ingresos.ARS.toLocaleString('es-AR')}</span>
+            </div>
+            <div className="ingreso-fila">
+              <span className="ingreso-codigo">USD</span>
+              <span className="ingreso-valor">US$ {ingresos.USD.toLocaleString('en-US')}</span>
+            </div>
+            <div className="ingreso-fila">
+              <span className="ingreso-codigo">EUR</span>
+              <span className="ingreso-valor">€ {ingresos.EUR.toLocaleString('de-DE')}</span>
+            </div>
+          </div>
         </div>
         <div className="card reservas">
           <h2>Total Reservas</h2>
