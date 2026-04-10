@@ -23,6 +23,27 @@ function formatFechaDia(str) {
     .replace(/^\w/, c => c.toUpperCase());
 }
 
+// "18:00" + 90 → "18:00 - 19:30"
+function horaRango(hora, duracion) {
+  if (!hora) return '—';
+  const [hh, mm] = hora.split(':').map(Number);
+  const mins = (mm || 0) + (parseInt(duracion) || 0);
+  const endH = String(hh + Math.floor(mins / 60)).padStart(2, '0');
+  const endM = String(mins % 60).padStart(2, '0');
+  return duracion ? `${hora} - ${endH}:${endM}` : hora;
+}
+
+// Returns a JSX status badge for a reserva
+function EstadoBadge({ reserva }) {
+  if (reserva.estado === 'cancelada' || reserva.cancelada) {
+    return <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>❌ Cancelada</span>;
+  }
+  if (esFutura(reserva)) {
+    return <span style={{ background: '#dcfce7', color: '#166534', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
+  }
+  return <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>✅ Completada</span>;
+}
+
 // Returns true if the reserva's fecha+hora is in the future
 function esFutura(reserva) {
   if (!reserva.fecha) return false;
@@ -627,11 +648,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 <thead>
                   <tr>
                     <th>Sede</th>
-                    <th>Hora</th>
+                    <th>Horario</th>
                     <th>Cancha</th>
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Precio</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -639,7 +661,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   {Object.keys(groups).map(dia => (
                     <React.Fragment key={dia}>
                       <tr>
-                        <td colSpan="7" style={{ background: accentColor, color: 'white', fontWeight: 'bold', fontSize: '13px', padding: '7px 12px' }}>
+                        <td colSpan="8" style={{ background: accentColor, color: 'white', fontWeight: 'bold', fontSize: '13px', padding: '7px 12px' }}>
                           📅 {formatFechaDia(dia)}
                         </td>
                       </tr>
@@ -648,11 +670,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           {editandoId === r.id ? (
                             <>
                               <td><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td><input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                  <input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ padding: '5px', flex: 1 }} />
+                                  <input type="number" placeholder="min" value={editFormData.duracion || ''} onChange={e => setEditFormData({ ...editFormData, duracion: e.target.value })} style={{ padding: '5px', width: '52px' }} title="Duración en minutos" />
+                                </div>
+                              </td>
                               <td><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
                               <td><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
                               <td><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
                               <td><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><EstadoBadge reserva={r} /></td>
                               <td style={{ textAlign: 'center' }}>
                                 <button onClick={() => guardarEdicion(r.id)} style={{ padding: '5px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✅ Guardar</button>
                                 <button onClick={cancelarEdicion} style={{ padding: '5px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>✕ Cancelar</button>
@@ -661,11 +689,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           ) : (
                             <>
                               <td>{r.sede}</td>
-                              <td>{r.hora}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
                               <td>Cancha {r.cancha}</td>
                               <td>{r.nombre}</td>
                               <td>{r.email}</td>
                               <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                              <td><EstadoBadge reserva={r} /></td>
                               <td style={{ textAlign: 'center' }}>
                                 <button onClick={() => iniciarEdicion(r)} style={{ padding: '5px 10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✏️ Editar</button>
                                 <button onClick={() => cancelarReserva(r.id)} style={{ padding: '5px 10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>🗑️ Cancelar</button>
