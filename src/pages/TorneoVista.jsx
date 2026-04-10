@@ -281,7 +281,19 @@ export default function TorneoVista() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h3>Cargar Resultado</h3>
-            <p>{selectedPartido && `${equipos.find(e => e.id === selectedPartido.equipo_a_id)?.nombre} vs ${equipos.find(e => e.id === selectedPartido.equipo_b_id)?.nombre}`}</p>
+            {selectedPartido && (() => {
+              const mA = equipos.find(e => e.id === selectedPartido.equipo_a_id);
+              const mB = equipos.find(e => e.id === selectedPartido.equipo_b_id);
+              const nombresA = mA?.jugadores?.map(j => j.nombre).join(', ');
+              const nombresB = mB?.jugadores?.map(j => j.nombre).join(', ');
+              return (
+                <p>
+                  {mA?.nombre}{nombresA && <span className="modal-jugadores"> ({nombresA})</span>}
+                  {' vs '}
+                  {mB?.nombre}{nombresB && <span className="modal-jugadores"> ({nombresB})</span>}
+                </p>
+              );
+            })()}
             
             <div className="form-sets">
               <div className="input-group">
