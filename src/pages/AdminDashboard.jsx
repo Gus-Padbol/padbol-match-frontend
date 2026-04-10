@@ -17,11 +17,18 @@ function formatFecha(str) {
 // "2026-04-10" → "Viernes 10 de Abril"
 function formatFechaDia(str) {
   if (!str) return '';
-  // Parse as local date to avoid UTC-shift issues
   const [y, m, d] = str.split('-').map(Number);
   const fecha = new Date(y, m - 1, d);
   return fecha.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
     .replace(/^\w/, c => c.toUpperCase());
+}
+
+// Returns true if the reserva's fecha+hora is in the future
+function esFutura(reserva) {
+  if (!reserva.fecha) return false;
+  const [y, m, d] = reserva.fecha.split('-').map(Number);
+  const [hh = 23, mm = 59] = (reserva.hora || '23:59').split(':').map(Number);
+  return new Date(y, m - 1, d, hh, mm) > new Date();
 }
 
 // Build a lookup: country name (lowercase) → flag emoji
@@ -601,174 +608,119 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       </div>}
 
       {activeTab === 'reservas' && <div className="section">
-        <h2>💰 Reservas Confirmadas</h2>
-        <table className="reservas-table">
-          <thead>
-            <tr>
-              <th>Sede</th>
-              <th>Hora</th>
-              <th>Cancha</th>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Precio</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reservas.length > 0 ? (() => {
-              // Group by fecha, sorted ascending
-              const groups = {};
-              reservas.forEach(r => {
-                const key = r.fecha || 'Sin fecha';
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(r);
-              });
-              const sortedDays = Object.keys(groups).sort();
+        {(() => {
+          const proximas   = reservas.filter(esFutura).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
+          const completadas = reservas.filter(r => !esFutura(r)).sort((a, b) => (a.fecha + a.hora) > (b.fecha + b.hora) ? -1 : 1);
 
-              return sortedDays.map(dia => (
-                <React.Fragment key={dia}>
+          const ReservasTable = ({ lista, accentColor, emptyText }) => {
+            if (lista.length === 0) return <p style={{ color: '#aaa', padding: '10px 0', fontSize: '13px' }}>{emptyText}</p>;
+
+            const groups = {};
+            lista.forEach(r => {
+              const key = r.fecha || 'Sin fecha';
+              if (!groups[key]) groups[key] = [];
+              groups[key].push(r);
+            });
+
+            return (
+              <table className="reservas-table" style={{ marginBottom: 0 }}>
+                <thead>
                   <tr>
-                    <td colSpan="7" style={{
-                      background: '#667eea',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '13px',
-                      padding: '8px 12px',
-                      borderRadius: '4px',
-                    }}>
-                      📅 {formatFechaDia(dia)}
-                    </td>
+                    <th>Sede</th>
+                    <th>Hora</th>
+                    <th>Cancha</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
                   </tr>
-                  {groups[dia].map(r => (
-                <tr key={r.id}>
-                  {editandoId === r.id ? (
-                    <>
-                      <td>
-                        <input
-                          type="text"
-                          value={editFormData.sede || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, sede: e.target.value })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="time"
-                          value={editFormData.hora || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, hora: e.target.value })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editFormData.cancha || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={editFormData.nombre || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, nombre: e.target.value })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="email"
-                          value={editFormData.email || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={editFormData.precio || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })}
-                          style={{ width: '100%', padding: '5px' }}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          onClick={() => guardarEdicion(r.id)}
-                          style={{
-                            padding: '5px 10px',
-                            background: '#4caf50',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '5px',
-                          }}
-                        >
-                          ✅ Guardar
-                        </button>
-                        <button
-                          onClick={cancelarEdicion}
-                          style={{
-                            padding: '5px 10px',
-                            background: '#999',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          ✕ Cancelar
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{r.sede}</td>
-                      <td>{r.hora}</td>
-                      <td>Cancha {r.cancha}</td>
-                      <td>{r.nombre}</td>
-                      <td>{r.email}</td>
-                      <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          onClick={() => iniciarEdicion(r)}
-                          style={{
-                            padding: '5px 10px',
-                            background: '#667eea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '5px',
-                          }}
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => cancelarReserva(r.id)}
-                          style={{
-                            padding: '5px 10px',
-                            background: '#d32f2f',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          🗑️ Cancelar
-                        </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(groups).map(dia => (
+                    <React.Fragment key={dia}>
+                      <tr>
+                        <td colSpan="7" style={{ background: accentColor, color: 'white', fontWeight: 'bold', fontSize: '13px', padding: '7px 12px' }}>
+                          📅 {formatFechaDia(dia)}
+                        </td>
+                      </tr>
+                      {groups[dia].map(r => (
+                        <tr key={r.id}>
+                          {editandoId === r.id ? (
+                            <>
+                              <td><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button onClick={() => guardarEdicion(r.id)} style={{ padding: '5px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✅ Guardar</button>
+                                <button onClick={cancelarEdicion} style={{ padding: '5px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>✕ Cancelar</button>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td>{r.sede}</td>
+                              <td>{r.hora}</td>
+                              <td>Cancha {r.cancha}</td>
+                              <td>{r.nombre}</td>
+                              <td>{r.email}</td>
+                              <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button onClick={() => iniciarEdicion(r)} style={{ padding: '5px 10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✏️ Editar</button>
+                                <button onClick={() => cancelarReserva(r.id)} style={{ padding: '5px 10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>🗑️ Cancelar</button>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </React.Fragment>
                   ))}
-                </React.Fragment>
-              ));
-            })() : (
-              <tr><td colSpan="7">Sin reservas</td></tr>
-            )}
-          </tbody>
-        </table>
+                </tbody>
+              </table>
+            );
+          };
+
+          return (
+            <>
+              {/* Summary counts */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '8px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '22px' }}>🟢</span>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#166534', lineHeight: 1 }}>{proximas.length}</div>
+                    <div style={{ fontSize: '12px', color: '#15803d' }}>Próximas</div>
+                  </div>
+                </div>
+                <div style={{ background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '8px', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '22px' }}>⚫</span>
+                  <div>
+                    <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#374151', lineHeight: 1 }}>{completadas.length}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>Completadas</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Upcoming */}
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#166534' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                  Próximas reservas
+                </h3>
+                <ReservasTable lista={proximas} accentColor="#16a34a" emptyText="Sin reservas próximas." />
+              </div>
+
+              {/* Completed */}
+              <div>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#6b7280' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#9ca3af', display: 'inline-block' }} />
+                  Reservas completadas
+                </h3>
+                <ReservasTable lista={completadas} accentColor="#6b7280" emptyText="Sin reservas completadas." />
+              </div>
+            </>
+          );
+        })()}
       </div>}
 
     </div>
