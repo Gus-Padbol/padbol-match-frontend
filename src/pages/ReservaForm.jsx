@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/ReservaForm.css';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 
 export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialSedeId = searchParams.get('sedeId');
+
   const [sedes, setSedes] = useState([]);
   const [paises, setPaises] = useState([]);
   const [ciudades, setCiudades] = useState([]);
@@ -47,6 +52,20 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       })
       .catch(err => setError('Error al cargar sedes'));
   }, [apiBaseUrl]);
+
+  // If arriving from SedePublica with ?sedeId=X, skip straight to pantalla 2
+  useEffect(() => {
+    if (!initialSedeId || sedes.length === 0) return;
+    const id = parseInt(initialSedeId);
+    const sede = sedes.find(s => s.id === id);
+    if (!sede) return;
+    const ciudadesDelPais = [...new Set(sedes.filter(s => s.pais === sede.pais).map(s => s.ciudad))].sort();
+    const sedesDeLaCiudad = sedes.filter(s => s.pais === sede.pais && s.ciudad === sede.ciudad);
+    setCiudades(ciudadesDelPais);
+    setSedesFiltradasPorCiudad(sedesDeLaCiudad);
+    setFiltros({ pais: sede.pais, ciudad: sede.ciudad, sede_id: id });
+    setPantalla(2);
+  }, [sedes, initialSedeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangePais = (e) => {
     const pais = e.target.value;
@@ -339,7 +358,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
             {error && <div className="error-message">{error}</div>}
 
             {filtros.sede_id && (
-              <button type="button" onClick={siguientePantalla2} style={{
+              <button type="button" onClick={() => navigate(`/sede/${filtros.sede_id}`)} style={{
                 width: '100%',
                 padding: '12px',
                 background: '#d32f2f',
@@ -351,7 +370,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
                 cursor: 'pointer',
                 marginTop: '20px',
               }}>
-                ➜ Continuar
+                Ver sede →
               </button>
             )}
           </form>

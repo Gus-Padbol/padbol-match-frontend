@@ -10,6 +10,7 @@ import MiPerfil from './pages/MiPerfil';
 import TorneoVista from './pages/TorneoVista';
 import Rankings from './pages/Rankings';
 import TorneosPublicos from './pages/TorneosPublicos';
+import SedePublica from './pages/SedePublica';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
 import useUserRole from './hooks/useUserRole';
@@ -568,6 +569,7 @@ return (
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
     <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} />} />
+    <Route path="/sede/:sedeId" element={<SedePublica currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
