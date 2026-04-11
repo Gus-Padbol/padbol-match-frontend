@@ -9,6 +9,7 @@ import FormEquipos from './pages/FormEquipos';
 import MiPerfil from './pages/MiPerfil';
 import TorneoVista from './pages/TorneoVista';
 import Rankings from './pages/Rankings';
+import TorneosPublicos from './pages/TorneosPublicos';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
 import useUserRole from './hooks/useUserRole';
@@ -566,6 +567,7 @@ return (
     } />
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
+    <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
@@ -642,8 +644,11 @@ return (
         /* ── Regular user: reservation form ── */
         <div style={{ padding: '20px' }}>
           <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+            <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              🏆 Torneos
+            </button>
             <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              🏆 Rankings
+              🏅 Rankings
             </button>
             <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
               👤 Mi Perfil

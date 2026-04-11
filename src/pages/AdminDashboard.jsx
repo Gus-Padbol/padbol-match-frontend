@@ -586,6 +586,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>{currentEmail}</span>
+          <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
+            🏆 Torneos
+          </button>
+          <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
+            🏅 Rankings
+          </button>
           <button onClick={() => navigate('/')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
             ← Inicio
           </button>
