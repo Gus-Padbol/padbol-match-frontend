@@ -486,6 +486,76 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     }
   };
 
+  // ── Mi Sede (admin_club + admin_nacional only) ──
+  const puedeVerMiSede = (esAdminClub || esAdminNacional) && sedeId;
+  const [miSede,        setMiSede]        = useState(null);
+  const [miSedeLoading, setMiSedeLoading] = useState(false);
+  const [miSedeForm,    setMiSedeForm]    = useState({});
+  const [miSedeSaving,  setMiSedeSaving]  = useState(false);
+  const [miSedeMsg,     setMiSedeMsg]     = useState('');
+  const [canchas,       setCanchas]       = useState([]);
+  const [nuevaCancha,   setNuevaCancha]   = useState('');
+
+  useEffect(() => {
+    if (activeTab !== 'mi_sede' || !sedeId) return;
+    setMiSedeLoading(true);
+    Promise.all([
+      supabase.from('sedes').select('*').eq('id', sedeId).maybeSingle(),
+      supabase.from('canchas').select('*').eq('sede_id', sedeId).order('nombre'),
+    ]).then(([{ data: sedeData }, { data: canchasData }]) => {
+      if (sedeData) {
+        setMiSede(sedeData);
+        setMiSedeForm({
+          nombre:           sedeData.nombre          || '',
+          direccion:        sedeData.direccion        || '',
+          ciudad:           sedeData.ciudad           || '',
+          pais:             sedeData.pais             || '',
+          telefono:         sedeData.telefono         || '',
+          email_contacto:   sedeData.email_contacto  || '',
+          horario_apertura: sedeData.horario_apertura || '',
+          horario_cierre:   sedeData.horario_cierre   || '',
+          precio_turno:     sedeData.precio_turno     ?? '',
+          moneda:           sedeData.moneda           || 'ARS',
+        });
+      }
+      setCanchas(canchasData || []);
+      setMiSedeLoading(false);
+    }).catch(() => setMiSedeLoading(false));
+  }, [activeTab, sedeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const guardarMiSede = async () => {
+    setMiSedeSaving(true); setMiSedeMsg('');
+    const { error } = await supabase.from('sedes').update({
+      nombre:           miSedeForm.nombre,
+      direccion:        miSedeForm.direccion        || null,
+      ciudad:           miSedeForm.ciudad           || null,
+      pais:             miSedeForm.pais             || null,
+      telefono:         miSedeForm.telefono         || null,
+      email_contacto:   miSedeForm.email_contacto  || null,
+      horario_apertura: miSedeForm.horario_apertura || null,
+      horario_cierre:   miSedeForm.horario_cierre   || null,
+      precio_turno:     miSedeForm.precio_turno !== '' ? parseFloat(miSedeForm.precio_turno) : null,
+      moneda:           miSedeForm.moneda           || 'ARS',
+    }).eq('id', sedeId);
+    setMiSedeSaving(false);
+    setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
+    setTimeout(() => setMiSedeMsg(''), 3000);
+  };
+
+  const agregarCancha = async () => {
+    const nombre = nuevaCancha.trim();
+    if (!nombre) return;
+    const { data, error } = await supabase.from('canchas').insert({ sede_id: sedeId, nombre, estado: 'activa' }).select().single();
+    if (!error && data) { setCanchas(prev => [...prev, data]); setNuevaCancha(''); }
+    else if (error) alert('Error al agregar cancha: ' + error.message);
+  };
+
+  const toggleCanchaEstado = async (cancha) => {
+    const nuevoEstado = cancha.estado === 'activa' ? 'inactiva' : 'activa';
+    const { error } = await supabase.from('canchas').update({ estado: nuevoEstado }).eq('id', cancha.id);
+    if (!error) setCanchas(prev => prev.map(c => c.id === cancha.id ? { ...c, estado: nuevoEstado } : c));
+  };
+
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
 
   const TABS = [
@@ -493,7 +563,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     { id: 'torneos',      label: '🏆 Torneos' },
     { id: 'reservas',     label: '📅 Reservas' },
     { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
-    ...(puedeVerConfig ? [{ id: 'config', label: '⚙️ Config' }] : []),
+    ...(puedeVerMiSede  ? [{ id: 'mi_sede', label: '🏟️ Mi Sede' }] : []),
+    ...(puedeVerConfig  ? [{ id: 'config',  label: '⚙️ Config' }]  : []),
   ];
 
   return (
@@ -1276,6 +1347,139 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           )}
         </div>
 
+      </div>}
+
+      {/* ── Mi Sede tab ── */}
+      {activeTab === 'mi_sede' && puedeVerMiSede && <div className="section">
+        <h2>🏟️ Mi Sede</h2>
+
+        {miSedeLoading ? (
+          <p style={{ color: '#999' }}>Cargando datos de la sede...</p>
+        ) : !miSede ? (
+          <p style={{ color: '#f87171' }}>No se encontró información de la sede.</p>
+        ) : (<>
+
+          {/* ── 1. Info General ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Información General</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
+              {[
+                { label: 'Nombre del club',        field: 'nombre' },
+                { label: 'Dirección',              field: 'direccion' },
+                { label: 'Ciudad',                 field: 'ciudad' },
+                { label: 'País',                   field: 'pais' },
+                { label: 'Teléfono de contacto',   field: 'telefono' },
+                { label: 'Email de contacto',      field: 'email_contacto' },
+                { label: 'Horario apertura',       field: 'horario_apertura', placeholder: 'Ej: 08:00' },
+                { label: 'Horario cierre',         field: 'horario_cierre',   placeholder: 'Ej: 23:00' },
+              ].map(({ label, field, placeholder }) => (
+                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>{label}</label>
+                  <input
+                    type="text"
+                    value={miSedeForm[field] || ''}
+                    placeholder={placeholder || ''}
+                    onChange={e => setMiSedeForm(p => ({ ...p, [field]: e.target.value }))}
+                    style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                  />
+                </div>
+              ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Moneda</label>
+                <select value={miSedeForm.moneda || 'ARS'} onChange={e => setMiSedeForm(p => ({ ...p, moneda: e.target.value }))}
+                  style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
+                  <option value="ARS">ARS — Peso argentino</option>
+                  <option value="USD">USD — Dólar estadounidense</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="BRL">BRL — Real brasileño</option>
+                  <option value="CLP">CLP — Peso chileno</option>
+                  <option value="UYU">UYU — Peso uruguayo</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button onClick={guardarMiSede} disabled={miSedeSaving}
+                  style={{ padding: '10px 24px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                  {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar cambios'}
+                </button>
+                {miSedeMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: miSedeMsg.startsWith('✅') ? '#4ade80' : '#fca5a5' }}>{miSedeMsg}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* ── 2. Precios ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Precios</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '400px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Precio por turno (90 min)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
+                  <input type="number" min="0" value={miSedeForm.precio_turno ?? ''}
+                    onChange={e => setMiSedeForm(p => ({ ...p, precio_turno: e.target.value }))}
+                    style={{ width: '110px', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }} />
+                </div>
+              </div>
+              <button onClick={guardarMiSede} disabled={miSedeSaving}
+                style={{ padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar precio'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── 3. Canchas ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Canchas</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
+              {canchas.length === 0 ? (
+                <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '16px' }}>No hay canchas registradas para esta sede.</p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f5' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: '#555' }}>Cancha</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: '13px', fontWeight: 600, color: '#555', width: '110px' }}>Estado</th>
+                      <th style={{ padding: '8px 12px', width: '90px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {canchas.map(c => (
+                      <tr key={c.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '10px 12px', fontSize: '14px', color: '#333' }}>{c.nombre}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <span style={{
+                            padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600,
+                            background: c.estado === 'activa' ? '#dcfce7' : '#fee2e2',
+                            color:      c.estado === 'activa' ? '#16a34a' : '#dc2626',
+                          }}>
+                            {c.estado === 'activa' ? '✓ Activa' : '✗ Inactiva'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <button onClick={() => toggleCanchaEstado(c)}
+                            style={{ padding: '4px 10px', background: c.estado === 'activa' ? '#fee2e2' : '#dcfce7', color: c.estado === 'activa' ? '#dc2626' : '#16a34a', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}>
+                            {c.estado === 'activa' ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {/* Add court */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input type="text" placeholder="Ej: Cancha 3" value={nuevaCancha}
+                  onChange={e => setNuevaCancha(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') agregarCancha(); }}
+                  style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #a5b4fc', borderRadius: '6px', fontSize: '13px', color: '#333' }} />
+                <button onClick={agregarCancha}
+                  style={{ padding: '7px 16px', background: 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                  + Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </>)}
       </div>}
 
     </div>
