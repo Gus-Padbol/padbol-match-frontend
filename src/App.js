@@ -29,7 +29,18 @@ function AppContent() {
     return saved ? JSON.parse(saved) : null;
   });
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
-  const { rol, sedeId, loading: roleLoading } = useUserRole(currentCliente);
+  const { rol, sedeId, nombre: rolNombre, loading: roleLoading } = useUserRole(currentCliente);
+  const [sedeName, setSedeName] = React.useState('');
+  useEffect(() => {
+    if (!sedeId) { setSedeName(''); return; }
+    fetch(`${API_BASE_URL}/api/sedes`)
+      .then(r => r.json())
+      .then(sedes => {
+        const sede = (sedes || []).find(s => s.id === sedeId);
+        setSedeName(sede?.nombre || '');
+      })
+      .catch(() => {});
+  }, [sedeId]);
 
   // Auto-redirect admin users to /admin as soon as their role resolves
   const ADMIN_ROLES = ['super_admin', 'admin_nacional', 'admin_club'];
@@ -543,6 +554,16 @@ function AppContent() {
 
 return (
   <Routes>
+    <Route path="/reservar" element={
+      <div style={{ padding: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+            ← Volver al inicio
+          </button>
+        </div>
+        <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
+      </div>
+    } />
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
@@ -552,38 +573,74 @@ return (
 <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
 <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />} />
 <Route path="/" element={
-      <div style={{ padding: '20px' }}>
-        {ADMIN_ROLES.includes(rol) ? (
-          /* ── Admin navigation bar ── */
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            marginBottom: '20px', padding: '10px 16px',
-            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-            borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Modo Admin
+      ADMIN_ROLES.includes(rol) ? (
+        /* ── Admin Home Screen ── */
+        <div style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+          padding: '40px 20px', boxSizing: 'border-box',
+        }}>
+          {/* Logo */}
+          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '90px', marginBottom: '24px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }} />
+
+          {/* Welcome */}
+          <h1 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
+            Bienvenido, {rolNombre || currentCliente?.nombre || currentCliente?.email?.split('@')[0]}
+          </h1>
+
+          {/* Role badge + sede */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '36px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <span style={{
+              padding: '4px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+              background: rol === 'super_admin' ? 'rgba(250,204,21,0.2)' : rol === 'admin_nacional' ? 'rgba(52,211,153,0.2)' : 'rgba(147,197,253,0.2)',
+              color: rol === 'super_admin' ? '#fde68a' : rol === 'admin_nacional' ? '#6ee7b7' : '#bfdbfe',
+              border: `1px solid ${rol === 'super_admin' ? 'rgba(250,204,21,0.35)' : rol === 'admin_nacional' ? 'rgba(52,211,153,0.35)' : 'rgba(147,197,253,0.35)'}`,
+            }}>
+              {rol === 'super_admin' ? '👑 Super Admin' : rol === 'admin_nacional' ? '🌎 Admin Nacional' : '🏠 Admin Club'}
             </span>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button onClick={() => navigate('/admin')} style={{ padding: '8px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                📊 Dashboard
-              </button>
-              <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                🎾 Reservar Cancha
-              </button>
-              <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                👤 Mi Perfil Jugador
-              </button>
-              <button onClick={() => navigate('/rankings')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                🏆 Rankings
-              </button>
-              <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                Cerrar Sesión
-              </button>
-            </div>
+            {rol === 'admin_club' && sedeName && (
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>— {sedeName}</span>
+            )}
           </div>
-        ) : (
-          /* ── Regular user navigation bar ── */
+
+          {/* Action cards 2×2 grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px', width: '100%', maxWidth: '380px' }}>
+            {[
+              { icon: '📊', label: 'Dashboard',         action: () => navigate('/admin') },
+              { icon: '🎾', label: 'Reservar Cancha',   action: () => navigate('/reservar') },
+              { icon: '👤', label: 'Mi Perfil Jugador', action: () => navigate('/perfil') },
+              { icon: '🏆', label: 'Rankings',          action: () => navigate('/rankings') },
+            ].map(({ icon, label, action }) => (
+              <button key={label} onClick={action} style={{
+                minHeight: '140px', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '10px',
+                background: 'white', border: 'none', borderRadius: '14px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.25)', cursor: 'pointer',
+                transition: 'transform 0.1s, box-shadow 0.1s',
+                padding: '20px',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)'; }}
+              >
+                <span style={{ fontSize: '2.2rem' }}>{icon}</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#1e1b4b', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Logout */}
+          <button onClick={handleLogout} style={{
+            padding: '10px 28px', background: '#dc2626', color: 'white',
+            border: 'none', borderRadius: '8px', cursor: 'pointer',
+            fontWeight: '600', fontSize: '14px',
+          }}>
+            Cerrar Sesión
+          </button>
+        </div>
+      ) : (
+        /* ── Regular user: reservation form ── */
+        <div style={{ padding: '20px' }}>
           <div style={{ textAlign: 'right', marginBottom: '20px' }}>
             <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
               🏆 Rankings
@@ -595,9 +652,9 @@ return (
               Cerrar sesión
             </button>
           </div>
-        )}
-        <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
-      </div>
+          <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
+        </div>
+      )
     } />
   </Routes>
 );
