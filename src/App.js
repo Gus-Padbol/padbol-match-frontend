@@ -31,6 +31,14 @@ function AppContent() {
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
   const { rol, sedeId, loading: roleLoading } = useUserRole(currentCliente);
 
+  // Auto-redirect admin users to /admin as soon as their role resolves
+  const ADMIN_ROLES = ['super_admin', 'admin_nacional', 'admin_club'];
+  useEffect(() => {
+    if (currentCliente && rol && ADMIN_ROLES.includes(rol)) {
+      navigate('/admin');
+    }
+  }, [rol, currentCliente]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Restore session from Supabase Auth on mount (handles page refresh / returning users)
   useEffect(() => {
     if (currentCliente) return; // already restored from localStorage
