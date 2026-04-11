@@ -174,23 +174,32 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const loadConfigFromStorage = () => {
     try {
       const raw = localStorage.getItem('config_puntos');
-      return raw ? JSON.parse(raw) : { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT };
-    } catch { return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT }; }
+      return raw ? JSON.parse(raw) : { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] };
+    } catch { return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] }; }
   };
 
-  const [configNiveles,    setConfigNiveles]    = useState(() => loadConfigFromStorage().niveles);
-  const [configPosiciones, setConfigPosiciones] = useState(() => loadConfigFromStorage().posiciones);
-  const [configSaving,     setConfigSaving]     = useState(false);
-  const [configMsg,        setConfigMsg]        = useState('');
+  const [configNiveles,     setConfigNiveles]     = useState(() => loadConfigFromStorage().niveles);
+  const [configPosiciones,  setConfigPosiciones]  = useState(() => loadConfigFromStorage().posiciones);
+  const [configTiposCustom, setConfigTiposCustom] = useState(() => loadConfigFromStorage().tipos_custom || []);
+  const [configSaving,      setConfigSaving]      = useState(false);
+  const [configMsg,         setConfigMsg]         = useState('');
+  const [nuevoTipo,         setNuevoTipo]         = useState({ nombre: '', puntos: 0 });
+  const [editandoTipoId,    setEditandoTipoId]    = useState(null);
+  const [editandoTipoData,  setEditandoTipoData]  = useState({ nombre: '', puntos: 0 });
 
   useEffect(() => {
     if (!isSuperAdmin) return;
     fetch(`${apiBaseUrl}/api/config/puntos`)
       .then(r => r.json())
       .then(data => {
-        if (data.niveles)    { setConfigNiveles(data.niveles);       }
-        if (data.posiciones) { setConfigPosiciones(data.posiciones); }
-        localStorage.setItem('config_puntos', JSON.stringify({ niveles: data.niveles, posiciones: data.posiciones }));
+        if (data.niveles)      { setConfigNiveles(data.niveles);               }
+        if (data.posiciones)   { setConfigPosiciones(data.posiciones);         }
+        if (data.tipos_custom) { setConfigTiposCustom(data.tipos_custom);      }
+        localStorage.setItem('config_puntos', JSON.stringify({
+          niveles:      data.niveles,
+          posiciones:   data.posiciones,
+          tipos_custom: data.tipos_custom || [],
+        }));
       })
       .catch(() => {});
   }, [isSuperAdmin, apiBaseUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -199,7 +208,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     setConfigSaving(true);
     setConfigMsg('');
     try {
-      const body = { niveles: configNiveles, posiciones: configPosiciones };
+      const body = { niveles: configNiveles, posiciones: configPosiciones, tipos_custom: configTiposCustom };
       localStorage.setItem('config_puntos', JSON.stringify(body));
       const res = await fetch(`${apiBaseUrl}/api/config/puntos`, {
         method: 'PUT',
@@ -1009,7 +1018,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         </div>
 
         {/* Save button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '40px' }}>
           <button
             onClick={guardarConfig}
             disabled={configSaving}
@@ -1033,6 +1042,95 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
               {configMsg}
             </span>
           )}
+        </div>
+
+        {/* Tipos de Torneo personalizados */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '32px' }}>
+          <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '6px', fontSize: '16px' }}>
+            Tipos de Torneo personalizados
+          </h3>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', marginBottom: '18px', marginTop: 0 }}>
+            Aparecen en el formulario de creación junto a los tipos estándar. Guardá con el botón de arriba.
+          </p>
+
+          {configTiposCustom.length > 0 && (
+            <table style={{ width: '100%', maxWidth: '520px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', marginBottom: '16px' }}>
+              <thead>
+                <tr style={{ background: '#3b2f6e', color: 'white' }}>
+                  <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Nombre</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '90px' }}>Puntos</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '100px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {configTiposCustom.map((tipo, i) => (
+                  <tr key={tipo.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
+                    {editandoTipoId === tipo.id ? (
+                      <>
+                        <td style={{ padding: '8px 12px' }}>
+                          <input type="text" value={editandoTipoData.nombre}
+                            onChange={e => setEditandoTipoData(p => ({ ...p, nombre: e.target.value }))}
+                            style={{ width: '100%', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <input type="number" min="0" value={editandoTipoData.puntos}
+                            onChange={e => setEditandoTipoData(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+                            style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', textAlign: 'center' }} />
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <button onClick={() => { setConfigTiposCustom(prev => prev.map(t => t.id === tipo.id ? { ...t, ...editandoTipoData } : t)); setEditandoTipoId(null); }}
+                            style={{ padding: '4px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '4px' }}>✅</button>
+                          <button onClick={() => setEditandoTipoId(null)}
+                            style={{ padding: '4px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{tipo.nombre}</td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#3b2f6e' }}>{tipo.puntos}</td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                          <button onClick={() => { setEditandoTipoId(tipo.id); setEditandoTipoData({ nombre: tipo.nombre, puntos: tipo.puntos }); }}
+                            style={{ padding: '4px 10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '4px' }}>✏️</button>
+                          <button onClick={() => setConfigTiposCustom(prev => prev.filter(t => t.id !== tipo.id))}
+                            style={{ padding: '4px 10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🗑️</button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* Add form */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', maxWidth: '520px' }}>
+            <input
+              type="text"
+              placeholder="Nombre del tipo (ej: FIPA Qualifier)"
+              value={nuevoTipo.nombre}
+              onChange={e => setNuevoTipo(p => ({ ...p, nombre: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter' && nuevoTipo.nombre.trim()) { setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); } }}
+              style={{ flex: 1, minWidth: '200px', padding: '9px 12px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white' }}
+            />
+            <input
+              type="number"
+              placeholder="Pts"
+              min="0"
+              value={nuevoTipo.puntos || ''}
+              onChange={e => setNuevoTipo(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+              style={{ width: '72px', padding: '9px 10px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', textAlign: 'center' }}
+            />
+            <button
+              onClick={() => {
+                if (!nuevoTipo.nombre.trim()) return;
+                setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]);
+                setNuevoTipo({ nombre: '', puntos: 0 });
+              }}
+              style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}
+            >
+              + Agregar
+            </button>
+          </div>
         </div>
       </div>}
 

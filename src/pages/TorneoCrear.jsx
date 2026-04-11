@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function TorneoCrear({ apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const [sedes, setSedes] = useState([]);
+  const [tiposCustom, setTiposCustom] = useState([]);
   const [formData, setFormData] = useState({
     nombre: '',
     sede_id: '',
@@ -25,6 +26,11 @@ export default function TorneoCrear({ apiBaseUrl = 'https://padbol-backend.onren
       .then(res => res.json())
       .then(data => setSedes(data || []))
       .catch(err => setError('Error al cargar sedes'));
+
+    try {
+      const cfg = JSON.parse(localStorage.getItem('config_puntos') || '{}');
+      setTiposCustom(cfg.tipos_custom || []);
+    } catch { /* ignore */ }
   }, []);
 
   const handleChange = (e) => {
@@ -110,8 +116,15 @@ export default function TorneoCrear({ apiBaseUrl = 'https://padbol-backend.onren
             <label>Nivel *</label>
             <select name="nivel_torneo" value={formData.nivel_torneo} onChange={handleChange}>
               <option value="club">Club</option>
+              <option value="club_no_oficial">Club No Oficial</option>
+              <option value="club_oficial">Club Oficial</option>
               <option value="nacional">Nacional</option>
               <option value="internacional">Internacional</option>
+              <option value="mundial">Mundial</option>
+              {tiposCustom.length > 0 && <option disabled>──────────</option>}
+              {tiposCustom.map(t => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
             </select>
           </div>
 
