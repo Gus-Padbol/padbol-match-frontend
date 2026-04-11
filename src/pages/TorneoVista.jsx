@@ -60,89 +60,78 @@ export default function TorneoVista() {
     fetchData();
   }, [torneoId]);
 
-  const calcularEstadisticas = () => {
+  // Calculates W/L/pts/sets/games stats for a given set of equipos + partidos.
+  // Works for the full torneo or a single group slice.
+  const calcularStats = (equiposList, partidosList) => {
     const stats = {};
-    equipos.forEach(eq => {
-      stats[eq.id] = {
-        jj: 0,
-        g: 0,
-        p: 0,
-        pts: 0,
-        sg: 0,
-        sp: 0,
-        gg: 0,
-        gp: 0
-      };
+    equiposList.forEach(eq => {
+      stats[eq.id] = { jj: 0, g: 0, p: 0, pts: 0, sg: 0, sp: 0, gg: 0, gp: 0 };
     });
-
-    partidos.forEach(partido => {
-      if (partido.estado === 'finalizado' && partido.resultado) {
-        const resultado = JSON.parse(partido.resultado);
-        const sets = [resultado.set1, resultado.set2, resultado.set3].filter(s => s);
-
-        let setsGanados_A = 0, setsGanados_B = 0;
-        let gamesGanados_A = 0, gamesGanados_B = 0;
-
-        sets.forEach(set => {
-          const [a, b] = set.split('-').map(Number);
-          gamesGanados_A += a;
-          gamesGanados_B += b;
-          if (a > b) setsGanados_A++;
-          else setsGanados_B++;
-        });
-
-        const eqA = stats[partido.equipo_a_id];
-        const eqB = stats[partido.equipo_b_id];
-
-        eqA.jj++;
-        eqB.jj++;
-        eqA.sg += setsGanados_A;
-        eqA.sp += setsGanados_B;
-        eqA.gg += gamesGanados_A;
-        eqA.gp += gamesGanados_B;
-        eqB.sg += setsGanados_B;
-        eqB.sp += setsGanados_A;
-        eqB.gg += gamesGanados_B;
-        eqB.gp += gamesGanados_A;
-
-        if (setsGanados_A > setsGanados_B) {
-          eqA.g++;
-          eqB.p++;
-          eqA.pts += 3;
-        } else {
-          eqB.g++;
-          eqA.p++;
-          eqB.pts += 3;
-        }
-      }
+    partidosList.forEach(partido => {
+      if (partido.estado !== 'finalizado' || !partido.resultado) return;
+      const res = typeof partido.resultado === 'string' ? JSON.parse(partido.resultado) : partido.resultado;
+      const sets = [res.set1, res.set2, res.set3].filter(s => s);
+      let sgA = 0, sgB = 0, ggA = 0, ggB = 0;
+      sets.forEach(set => {
+        const [a, b] = set.split('-').map(Number);
+        ggA += a; ggB += b;
+        if (a > b) sgA++; else sgB++;
+      });
+      const eqA = stats[partido.equipo_a_id];
+      const eqB = stats[partido.equipo_b_id];
+      if (!eqA || !eqB) return;
+      eqA.jj++; eqB.jj++;
+      eqA.sg += sgA; eqA.sp += sgB; eqA.gg += ggA; eqA.gp += ggB;
+      eqB.sg += sgB; eqB.sp += sgA; eqB.gg += ggB; eqB.gp += ggA;
+      if (sgA > sgB) { eqA.g++; eqB.p++; eqA.pts += 3; }
+      else           { eqB.g++; eqA.p++; eqB.pts += 3; }
     });
-
     return stats;
   };
 
-  const stats = calcularEstadisticas();
+  // Builds a sorted tabla de posiciones from a subset of equipos + partidos.
+  const buildTabla = (equiposList, partidosList) => {
+    const stats = calcularStats(equiposList, partidosList);
+    return equiposList.map(eq => ({
+      id: eq.id,
+      nombre: eq.nombre,
+      jugadores: eq.jugadores || [],
+      puntos_ranking: eq.puntos_ranking || 0,
+      jj:  stats[eq.id].jj,
+      g:   stats[eq.id].g,
+      p:   stats[eq.id].p,
+      pts: stats[eq.id].pts,
+      sg:  stats[eq.id].sg,
+      sp:  stats[eq.id].sp,
+      gg:  stats[eq.id].gg,
+      gp:  stats[eq.id].gp,
+      djuegos: (stats[eq.id].gg - stats[eq.id].gp) || 0,
+      dif:     (stats[eq.id].sg - stats[eq.id].sp) || 0,
+    })).sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if ((b.sg - b.sp) !== (a.sg - a.sp)) return (b.sg - b.sp) - (a.sg - a.sp);
+      if ((b.gg - b.gp) !== (a.gg - a.gp)) return (b.gg - b.gp) - (a.gg - a.gp);
+      return 0;
+    });
+  };
 
-  const tablaPosiciones = equipos.map(eq => ({
-    id: eq.id,
-    nombre: eq.nombre,
-    jugadores: eq.jugadores || [],
-    puntos_ranking: eq.puntos_ranking || 0,
-    jj: stats[eq.id].jj,
-    g: stats[eq.id].g,
-    p: stats[eq.id].p,
-    pts: stats[eq.id].pts,
-    sg: stats[eq.id].sg,
-    sp: stats[eq.id].sp,
-    gg: stats[eq.id].gg,
-    gp: stats[eq.id].gp,
-    djuegos: (stats[eq.id].gg - stats[eq.id].gp) || 0,
-    dif: (stats[eq.id].sg - stats[eq.id].sp) || 0
-  })).sort((a, b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    if ((b.sg - b.sp) !== (a.sg - a.sp)) return (b.sg - b.sp) - (a.sg - a.sp);
-    if ((b.gg - b.gp) !== (a.gg - a.gp)) return (b.gg - b.gp) - (a.gg - a.gp);
-    return 0;
+  // Derive equipo → grupo: prefer equipo.grupo (set by backend), fallback to partidos
+  const equipoGrupoMap = {};
+  equipos.forEach(eq => { if (eq.grupo) equipoGrupoMap[eq.id] = eq.grupo; });
+  partidos.forEach(p => {
+    if (p.grupo) {
+      if (p.equipo_a_id && !equipoGrupoMap[p.equipo_a_id]) equipoGrupoMap[p.equipo_a_id] = p.grupo;
+      if (p.equipo_b_id && !equipoGrupoMap[p.equipo_b_id]) equipoGrupoMap[p.equipo_b_id] = p.grupo;
+    }
   });
+
+  const esGruposKnockout = torneo?.tipo_torneo === 'grupos_knockout';
+  const grupos = esGruposKnockout
+    ? [...new Set(Object.values(equipoGrupoMap))].sort()
+    : [];
+
+  // For non-grupo layout (or as fallback)
+  const tablaPosiciones = buildTabla(equipos, partidos);
 
   const abrirModal = (partido) => {
     if (partido.estado === 'finalizado') {
@@ -336,46 +325,30 @@ export default function TorneoVista() {
         )}
       </div>
 
-      <div className="contenedor-dos-columnas">
-        <div className="tabla-posiciones-box">
-          <h2>📊 Tabla de Posiciones</h2>
+      {/* ── Reusable tabla component ── */}
+      {(() => {
+        const TablaPosicionesTable = ({ tabla }) => (
           <table className="tabla-posiciones">
             <thead>
               <tr>
-                <th>#</th>
-                <th>EQUIPO</th>
-                <th>JJ</th>
-                <th>G</th>
-                <th>P</th>
-                <th>PTS</th>
-                <th>SG</th>
-                <th>SP</th>
-                <th>GG</th>
-                <th>GP</th>
-                <th>DJUEGOS</th>
-                <th>DIF</th>
+                <th>#</th><th>EQUIPO</th><th>JJ</th><th>G</th><th>P</th>
+                <th>PTS</th><th>SG</th><th>SP</th><th>GG</th><th>GP</th>
+                <th>DJUEGOS</th><th>DIF</th>
               </tr>
             </thead>
             <tbody>
-              {tablaPosiciones.map((eq, idx) => (
+              {tabla.map((eq, idx) => (
                 <tr key={eq.id}>
                   <td>{idx + 1}</td>
                   <td className="equipo-nombre">
                     {eq.nombre}
                     {eq.jugadores.length > 0 && (
-                      <span className="jugadores-nombres">
-                        {eq.jugadores.map(j => j.nombre).join(' · ')}
-                      </span>
+                      <span className="jugadores-nombres">{eq.jugadores.map(j => j.nombre).join(' · ')}</span>
                     )}
                   </td>
-                  <td>{eq.jj}</td>
-                  <td>{eq.g}</td>
-                  <td>{eq.p}</td>
+                  <td>{eq.jj}</td><td>{eq.g}</td><td>{eq.p}</td>
                   <td className="pts">{eq.pts}</td>
-                  <td>{eq.sg}</td>
-                  <td>{eq.sp}</td>
-                  <td>{eq.gg}</td>
-                  <td>{eq.gp}</td>
+                  <td>{eq.sg}</td><td>{eq.sp}</td><td>{eq.gg}</td><td>{eq.gp}</td>
                   <td className={eq.djuegos > 0 ? 'positivo' : eq.djuegos < 0 ? 'negativo' : ''}>
                     {eq.djuegos > 0 ? '+' : ''}{eq.djuegos}
                   </td>
@@ -386,15 +359,12 @@ export default function TorneoVista() {
               ))}
             </tbody>
           </table>
-        </div>
+        );
 
-        <div className="partidos-box">
-          <h2>📋 Partidos</h2>
-          {partidos.length === 0 ? (
-            <p className="sin-partidos">Sin partidos aún</p>
-          ) : (
+        const PartidosList = ({ lista }) => (
+          lista.length === 0 ? <p className="sin-partidos">Sin partidos aún</p> : (
             <div className="lista-partidos">
-              {partidos.map(partido => {
+              {lista.map(partido => {
                 const eqA = equipos.find(e => e.id === partido.equipo_a_id);
                 const eqB = equipos.find(e => e.id === partido.equipo_b_id);
                 return (
@@ -403,18 +373,14 @@ export default function TorneoVista() {
                       <span className="equipo-a">
                         {eqA?.nombre || 'Equipo A'}
                         {eqA?.jugadores?.length > 0 && (
-                          <span className="jugadores-nombres">
-                            {eqA.jugadores.map(j => j.nombre).join(' · ')}
-                          </span>
+                          <span className="jugadores-nombres">{eqA.jugadores.map(j => j.nombre).join(' · ')}</span>
                         )}
                       </span>
                       <span className="vs">vs</span>
                       <span className="equipo-b">
                         {eqB?.nombre || 'Equipo B'}
                         {eqB?.jugadores?.length > 0 && (
-                          <span className="jugadores-nombres">
-                            {eqB.jugadores.map(j => j.nombre).join(' · ')}
-                          </span>
+                          <span className="jugadores-nombres">{eqB.jugadores.map(j => j.nombre).join(' · ')}</span>
                         )}
                       </span>
                     </div>
@@ -425,9 +391,61 @@ export default function TorneoVista() {
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
+          )
+        );
+
+        // ── grupos_knockout: one section per group ──
+        if (esGruposKnockout && grupos.length > 0) {
+          return (
+            <div className="grupos-container">
+              {grupos.map(grupo => {
+                const grupoEquipos  = equipos.filter(eq => equipoGrupoMap[eq.id] === grupo);
+                const grupoPartidos = partidos.filter(p => p.grupo === grupo);
+                const tablaGrupo    = buildTabla(grupoEquipos, grupoPartidos);
+                // Partidos without a grupo (knockout phase) shown separately below all groups
+                return (
+                  <div key={grupo} className="grupo-section">
+                    <div className="grupo-header">Grupo {grupo}</div>
+                    <div className="contenedor-dos-columnas">
+                      <div className="tabla-posiciones-box">
+                        <h2>📊 Posiciones</h2>
+                        <TablaPosicionesTable tabla={tablaGrupo} />
+                      </div>
+                      <div className="partidos-box">
+                        <h2>📋 Partidos</h2>
+                        <PartidosList lista={grupoPartidos} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Knockout phase partidos (no grupo assigned) */}
+              {partidos.some(p => !p.grupo) && (
+                <div className="grupo-section">
+                  <div className="grupo-header grupo-header-knockout">⚔️ Fase Eliminatoria</div>
+                  <div className="partidos-box" style={{ background: 'white', borderRadius: '16px', padding: '25px' }}>
+                    <PartidosList lista={partidos.filter(p => !p.grupo)} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ── Default: single tabla + partidos ──
+        return (
+          <div className="contenedor-dos-columnas">
+            <div className="tabla-posiciones-box">
+              <h2>📊 Tabla de Posiciones</h2>
+              <TablaPosicionesTable tabla={tablaPosiciones} />
+            </div>
+            <div className="partidos-box">
+              <h2>📋 Partidos</h2>
+              <PartidosList lista={partidos} />
+            </div>
+          </div>
+        );
+      })()}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

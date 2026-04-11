@@ -116,6 +116,44 @@
   cursor: not-allowed;
 }
 
+.grupos-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.grupo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.grupo-header {
+  background: linear-gradient(135deg, #3b2f6e 0%, #5b21b6 100%);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 12px 12px 0 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.grupo-header-knockout {
+  background: linear-gradient(135deg, #dc2626 0%, #9b1c1c 100%);
+}
+
+.grupo-section .contenedor-dos-columnas {
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.grupo-section .tabla-posiciones-box,
+.grupo-section .partidos-box {
+  border-radius: 0;
+}
+
 .contenedor-dos-columnas {
   display: grid;
   grid-template-columns: 1fr 1fr;
