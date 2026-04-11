@@ -458,11 +458,34 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             {torneos.map(torneo => {
               const sede = sedesMap[torneo.sede_id];
               const flag = sedeFlag(sede);
-              const estadoBadge = {
+              const NIVEL_COLOR = {
+                nacional:        { bg: '#f3f4f6', color: '#374151' },
+                club_no_oficial: { bg: '#f5f3ff', color: '#6d28d9' },
+                club_oficial:    { bg: '#ede9fe', color: '#5b21b6' },
+                internacional:   { bg: '#dbeafe', color: '#1e40af' },
+                mundial:         { bg: '#fef3c7', color: '#92400e' },
+              };
+              const FORMATO_COLOR = {
+                round_robin:     { bg: '#ede9fe', color: '#5b21b6' },
+                knockout:        { bg: '#fee2e2', color: '#991b1b' },
+                grupos_knockout: { bg: '#e0e7ff', color: '#3730a3' },
+              };
+              const nivelColor   = NIVEL_COLOR[torneo.nivel_torneo]  || { bg: '#f3f4f6', color: '#374151' };
+              const formatoColor = FORMATO_COLOR[torneo.tipo_torneo]  || { bg: '#f3f4f6', color: '#374151' };
+              const estadoBadge  = {
                 planificacion: { bg: '#e5e7eb', color: '#374151', label: 'Planificación' },
                 en_curso:      { bg: '#dbeafe', color: '#1d4ed8', label: 'En curso'      },
                 finalizado:    { bg: '#fef3c7', color: '#92400e', label: 'Finalizado'    },
               }[torneo.estado] || { bg: '#e5e7eb', color: '#374151', label: torneo.estado };
+              // Shared badge style — fixed 120px, centered
+              const badge = (bg, col) => ({
+                background: bg, color: col,
+                borderRadius: '10px', padding: '3px 0',
+                fontSize: '11px', fontWeight: '600',
+                width: '120px', display: 'block',
+                textAlign: 'center',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              });
 
               const isEditingThis = editandoTorneoId === torneo.id;
               const inp = { padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', width: '100%', boxSizing: 'border-box' };
@@ -531,7 +554,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                     </div>
                   ) : (
                     /* ── Compact view: CSS grid keeps columns aligned across all cards ── */
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 140px 110px 175px auto', gap: '0 14px', alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px 120px 130px auto', gap: '0 12px', alignItems: 'center' }}>
 
                       {/* Col 1 — name, sede, status summary */}
                       <div style={{ minWidth: 0 }}>
@@ -565,29 +588,30 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                       {/* Col 2 — nivel */}
                       <div>
                         {torneo.nivel_torneo
-                          ? <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '600', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{torneo.nivel_torneo}</span>
-                          : <span style={{ color: '#ddd', fontSize: '11px' }}>—</span>}
+                          ? <span style={badge(nivelColor.bg, nivelColor.color)}>{torneo.nivel_torneo}</span>
+                          : <span style={{ color: '#ddd', fontSize: '11px', display: 'block', width: '120px', textAlign: 'center' }}>—</span>}
                       </div>
 
                       {/* Col 3 — formato */}
                       <div>
                         {torneo.tipo_torneo
-                          ? <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '600', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{torneo.tipo_torneo.replace('_', ' ')}</span>
-                          : <span style={{ color: '#ddd', fontSize: '11px' }}>—</span>}
+                          ? <span style={badge(formatoColor.bg, formatoColor.color)}>{torneo.tipo_torneo.replace(/_/g, ' ')}</span>
+                          : <span style={{ color: '#ddd', fontSize: '11px', display: 'block', width: '120px', textAlign: 'center' }}>—</span>}
                       </div>
 
-                      {/* Col 4 — estado badge */}
+                      {/* Col 4 — estado */}
                       <div>
-                        <span style={{ background: estadoBadge.bg, color: estadoBadge.color, borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }}>
-                          {estadoBadge.label}
-                        </span>
+                        <span style={badge(estadoBadge.bg, estadoBadge.color)}>{estadoBadge.label}</span>
                       </div>
 
-                      {/* Col 5 — dates */}
-                      <div style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                      {/* Col 5 — dates (2 lines) */}
+                      <div style={{ fontSize: '11px', lineHeight: '1.5' }}>
                         {torneo.fecha_inicio
-                          ? <>{formatFecha(torneo.fecha_inicio)}{torneo.fecha_fin ? <><br /><span style={{ color: '#aaa' }}>→ {formatFecha(torneo.fecha_fin)}</span></> : ''}</>
-                          : <span style={{ color: '#ddd' }}>—</span>}
+                          ? <>
+                              <div style={{ color: '#374151' }}>{formatFecha(torneo.fecha_inicio)}</div>
+                              {torneo.fecha_fin && <div style={{ color: '#aaa' }}>→ {formatFecha(torneo.fecha_fin)}</div>}
+                            </>
+                          : <div style={{ color: '#ddd' }}>—</div>}
                       </div>
 
                       {/* Col 6 — actions */}
