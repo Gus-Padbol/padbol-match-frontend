@@ -487,7 +487,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   };
 
   // ── Mi Sede (admin_club + admin_nacional only) ──
-  const puedeVerMiSede = (esAdminClub || esAdminNacional) && sedeId;
+  const puedeVerMiSede = (esAdminClub || esAdminNacional || isSuperAdmin) && sedeId;
   const [miSede,        setMiSede]        = useState(null);
   const [miSedeLoading, setMiSedeLoading] = useState(false);
   const [miSedeForm,    setMiSedeForm]    = useState({});
@@ -495,6 +495,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [miSedeMsg,     setMiSedeMsg]     = useState('');
   const [canchas,       setCanchas]       = useState([]);
   const [nuevaCancha,   setNuevaCancha]   = useState('');
+  const [licenciaForm,  setLicenciaForm]  = useState({ numero_licencia: '', fecha_licencia: '', licencia_activa: true });
+  const [licenciaSaving,setLicenciaSaving]= useState(false);
+  const [licenciaMsg,   setLicenciaMsg]   = useState('');
 
   useEffect(() => {
     if (activeTab !== 'mi_sede' || !sedeId) return;
@@ -516,6 +519,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           horario_cierre:   sedeData.horario_cierre   || '',
           precio_turno:     sedeData.precio_turno     ?? '',
           moneda:           sedeData.moneda           || 'ARS',
+        });
+        setLicenciaForm({
+          numero_licencia: sedeData.numero_licencia || '',
+          fecha_licencia:  sedeData.fecha_licencia  || '',
+          licencia_activa: sedeData.licencia_activa ?? true,
         });
       }
       setCanchas(canchasData || []);
@@ -540,6 +548,18 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     setMiSedeSaving(false);
     setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
     setTimeout(() => setMiSedeMsg(''), 3000);
+  };
+
+  const guardarLicencia = async () => {
+    setLicenciaSaving(true); setLicenciaMsg('');
+    const { error } = await supabase.from('sedes').update({
+      numero_licencia: licenciaForm.numero_licencia || null,
+      fecha_licencia:  licenciaForm.fecha_licencia  || null,
+      licencia_activa: licenciaForm.licencia_activa,
+    }).eq('id', sedeId);
+    setLicenciaSaving(false);
+    setLicenciaMsg(error ? `⚠️ ${error.message}` : '✅ Licencia actualizada');
+    setTimeout(() => setLicenciaMsg(''), 3000);
   };
 
   const agregarCancha = async () => {
@@ -1364,6 +1384,86 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         ) : !miSede ? (
           <p style={{ color: '#f87171' }}>No se encontró información de la sede.</p>
         ) : (<>
+
+          {/* ── 0. Licencia PADBOL ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>🔐 Licencia PADBOL</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
+              {isSuperAdmin ? (
+                /* Editable for super_admin */
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Número de licencia</label>
+                    <input
+                      type="text"
+                      value={licenciaForm.numero_licencia}
+                      placeholder="Ej: FIPA-ARG-001"
+                      onChange={e => setLicenciaForm(p => ({ ...p, numero_licencia: e.target.value }))}
+                      style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', fontFamily: 'monospace' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Fecha de otorgamiento</label>
+                    <input
+                      type="date"
+                      value={licenciaForm.fecha_licencia}
+                      onChange={e => setLicenciaForm(p => ({ ...p, fecha_licencia: e.target.value }))}
+                      style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Estado</label>
+                    <select
+                      value={licenciaForm.licencia_activa ? 'activa' : 'suspendida'}
+                      onChange={e => setLicenciaForm(p => ({ ...p, licencia_activa: e.target.value === 'activa' }))}
+                      style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                    >
+                      <option value="activa">✅ Activa</option>
+                      <option value="suspendida">❌ Suspendida</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button onClick={guardarLicencia} disabled={licenciaSaving}
+                      style={{ padding: '10px 24px', background: licenciaSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: licenciaSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
+                      {licenciaSaving ? '⏳ Guardando...' : '💾 Guardar licencia'}
+                    </button>
+                    {licenciaMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: licenciaMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{licenciaMsg}</span>}
+                  </div>
+                </>
+              ) : (
+                /* Read-only for admin_club / admin_nacional */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Número de licencia</span>
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: '#1e1b4b', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                      {licenciaForm.numero_licencia || <span style={{ color: '#aaa', fontFamily: 'inherit', fontWeight: 400 }}>—</span>}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Fecha de otorgamiento</span>
+                    <span style={{ fontSize: '14px', color: '#333' }}>
+                      {licenciaForm.fecha_licencia
+                        ? new Date(licenciaForm.fecha_licencia + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : <span style={{ color: '#aaa' }}>—</span>}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Estado</span>
+                    <span style={{
+                      padding: '4px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 700,
+                      background: licenciaForm.licencia_activa ? '#dcfce7' : '#fee2e2',
+                      color:      licenciaForm.licencia_activa ? '#16a34a' : '#dc2626',
+                    }}>
+                      {licenciaForm.licencia_activa ? '✅ Activa' : '❌ Suspendida'}
+                    </span>
+                  </div>
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                    🔒 Solo un Super Admin puede modificar estos datos.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* ── 1. Info General ── */}
           <div style={{ marginBottom: '32px' }}>
