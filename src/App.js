@@ -553,22 +553,49 @@ return (
 <Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />} />
 <Route path="/" element={
       <div style={{ padding: '20px' }}>
-        <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-          {isAdmin && (
-            <button onClick={() => navigate('/admin')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              📊 Admin Dashboard
+        {ADMIN_ROLES.includes(rol) ? (
+          /* ── Admin navigation bar ── */
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '20px', padding: '10px 16px',
+            background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+            borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Modo Admin
+            </span>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button onClick={() => navigate('/admin')} style={{ padding: '8px 16px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                📊 Dashboard
+              </button>
+              <button onClick={() => navigate('/')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                🎾 Reservar Cancha
+              </button>
+              <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                👤 Mi Perfil Jugador
+              </button>
+              <button onClick={() => navigate('/rankings')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                🏆 Rankings
+              </button>
+              <button onClick={handleLogout} style={{ padding: '8px 16px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ── Regular user navigation bar ── */
+          <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+            <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              🏆 Rankings
             </button>
-          )}
-          <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-            🏆 Rankings
-          </button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-            👤 Mi Perfil
-          </button>
-          <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            Cerrar sesión
-          </button>
-        </div>
+            <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              👤 Mi Perfil
+            </button>
+            <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+              Cerrar sesión
+            </button>
+          </div>
+        )}
         <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
       </div>
     } />
