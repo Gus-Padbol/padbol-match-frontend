@@ -81,12 +81,27 @@ function sedeFlag(sede) {
   return FLAG_MAP[pais.toLowerCase()] || '';
 }
 
-export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
+export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com', rol = null, sedeId = null }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
-  const isSuperAdmin = currentEmail === 'padbolinternacional@gmail.com';
-  const isAdmin = ['padbolinternacional@gmail.com', 'admin@padbol.com', 'sm@padbol.com', 'juanpablo@padbol.com'].includes(currentEmail);
+
+  // Legacy email-based flags (kept for backward compatibility while roles roll out)
+  const isSuperAdmin = rol === 'super_admin' || currentEmail === 'padbolinternacional@gmail.com';
+  const isAdmin = isSuperAdmin || rol === 'admin_nacional' || rol === 'admin_club' ||
+    ['admin@padbol.com', 'sm@padbol.com', 'juanpablo@padbol.com'].includes(currentEmail);
+
+  // Role-based access flags
+  const esAdminNacional = rol === 'admin_nacional';
+  const esAdminClub     = rol === 'admin_club';
+  const puedeVerConfig  = isSuperAdmin;
+  const puedeCrearTorneosOficiales = isSuperAdmin || (!esAdminClub);
+
+  const ROLE_BADGE = {
+    super_admin:    '👑 Super Admin',
+    admin_nacional: '🌎 Admin Nacional',
+    admin_club:     '🏠 Admin Club',
+  };
 
   const [reservas, setReservas] = useState([]);
   const [torneos, setTorneos] = useState([]);
@@ -351,6 +366,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`);
         if (sedesRes.ok) {
           sedesData = await sedesRes.json() || [];
+
+          // Filter sedes by role scope
+          if (esAdminClub && sedeId) {
+            sedesData = sedesData.filter(s => s.id === sedeId);
+          }
+          // admin_nacional: filter by pais (stored in user_role_data)
+          const roleData = (() => { try { return JSON.parse(localStorage.getItem('user_role_data') || '{}'); } catch { return {}; } })();
+          if (esAdminNacional && roleData.pais) {
+            sedesData = sedesData.filter(s => s.pais && s.pais.includes(roleData.pais.replace(/^[\p{Emoji_Presentation}\s]*/u, '').trim()));
+          }
+
           const map = {};
           sedesData.forEach(s => { map[s.id] = s; });
           setSedesMap(map);
@@ -363,9 +389,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         if (s.nombre && s.moneda) sedeMonedaMap[s.nombre.trim().toLowerCase()] = s.moneda;
       });
 
+      // Set of allowed sede IDs for non-super-admin filtering
+      const allowedSedeIds = new Set(sedesData.map(s => s.id));
+
       // Cargar reservas
       const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
-      const resData = await resRes.json();
+      let resData = await resRes.json();
+
+      // Filter reservas by allowed sedes (for admin_nacional and admin_club)
+      if (!isSuperAdmin && sedesData.length > 0) {
+        resData = resData.filter(r => r.sede_id == null || allowedSedeIds.has(r.sede_id));
+      }
       setReservas(resData);
 
       const totales = { ARS: 0, USD: 0, EUR: 0 };
@@ -380,9 +414,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       });
       setIngresos(totales);
 
-      // Cargar torneos
+      // Cargar torneos (filter by sede scope for non-super-admin)
       const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
-      const tornData = await tornRes.json();
+      let tornData = await tornRes.json();
+      if (!isSuperAdmin && sedesData.length > 0) {
+        tornData = tornData.filter(t => t.sede_id == null || allowedSedeIds.has(t.sede_id));
+      }
       setTorneos(tornData);
 
       setLoading(false);
@@ -455,14 +492,28 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     { id: 'torneos',      label: '🏆 Torneos' },
     { id: 'reservas',     label: '📅 Reservas' },
     { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
-    ...(isSuperAdmin ? [{ id: 'config', label: '⚙️ Config' }] : []),
+    ...(puedeVerConfig ? [{ id: 'config', label: '⚙️ Config' }] : []),
   ];
 
   return (
     <div className="admin-dashboard">
       <div className="admin-header">
-        <h1>🏆 PADBOL MATCH - ADMIN</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h1 style={{ margin: 0 }}>🏆 PADBOL MATCH - ADMIN</h1>
+          {rol && ROLE_BADGE[rol] && (
+            <span style={{
+              padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700,
+              background: rol === 'super_admin' ? 'rgba(250,204,21,0.25)' : rol === 'admin_nacional' ? 'rgba(52,211,153,0.2)' : 'rgba(147,197,253,0.2)',
+              color: rol === 'super_admin' ? '#fde68a' : rol === 'admin_nacional' ? '#6ee7b7' : '#bfdbfe',
+              border: `1px solid ${rol === 'super_admin' ? 'rgba(250,204,21,0.4)' : rol === 'admin_nacional' ? 'rgba(52,211,153,0.35)' : 'rgba(147,197,253,0.35)'}`,
+              whiteSpace: 'nowrap',
+            }}>
+              {ROLE_BADGE[rol]}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>{currentEmail}</span>
           <button onClick={() => navigate('/')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
             ← Inicio
           </button>
@@ -986,7 +1037,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         })()}
       </div>}
 
-      {activeTab === 'config' && isSuperAdmin && <div className="section">
+      {activeTab === 'config' && puedeVerConfig && <div className="section">
         <h2>⚙️ Configuración de Puntos</h2>
 
         {/* Niveles de torneo + tipos custom unificados */}

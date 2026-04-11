@@ -11,6 +11,7 @@ import TorneoVista from './pages/TorneoVista';
 import Rankings from './pages/Rankings';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
+import useUserRole from './hooks/useUserRole';
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
@@ -28,6 +29,7 @@ function AppContent() {
     return saved ? JSON.parse(saved) : null;
   });
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
+  const { rol, sedeId, loading: roleLoading } = useUserRole(currentCliente);
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -201,6 +203,7 @@ function AppContent() {
   const handleLogout = () => {
     setCurrentCliente(null);
     localStorage.removeItem('currentCliente');
+    localStorage.removeItem('user_role_data');
     navigate('/');
   };
 
@@ -490,12 +493,12 @@ return (
   <Routes>
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
-    <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
-    <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
+    <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
+    <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/equipos" element={<FormEquipos apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
-<Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} />} />
+<Route path="/admin" element={<AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />} />
 <Route path="/" element={
       <div style={{ padding: '20px' }}>
         <div style={{ textAlign: 'right', marginBottom: '20px' }}>
