@@ -121,9 +121,10 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [validacionState, setValidacionState] = useState({});
 
   useEffect(() => {
+    console.log('[AdminDashboard] fetchData triggered — rol:', rol, 'sedeId:', sedeId);
     fetchData();
     fetchPendientes();
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, rol]); // rol in deps: re-fetch after role resolves from null → actual value
 
   const fetchPendientes = async () => {
     setPendientesLoading(true);

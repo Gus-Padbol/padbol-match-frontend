@@ -21,12 +21,7 @@ export default function useUserRole(currentCliente) {
       return;
     }
 
-    // If we already have role data for this email, no need to re-fetch
-    if (roleData?.email === currentCliente.email) {
-      setLoading(false);
-      return;
-    }
-
+    // Always re-fetch from DB on email change to avoid stale cached roles
     setLoading(true);
     supabase
       .from('user_roles')
@@ -37,6 +32,7 @@ export default function useUserRole(currentCliente) {
         if (error) {
           console.error('useUserRole fetch error:', error.message);
         }
+        console.log('[useUserRole] query result for', currentCliente.email, '→', data);
         const result = data
           ? {
               email: currentCliente.email,
@@ -47,6 +43,7 @@ export default function useUserRole(currentCliente) {
               torneosOficialesHabilitados: data.torneos_oficiales_habilitados ?? false,
             }
           : null;
+        console.log('[useUserRole] resolved roleData:', result);
         setRoleData(result);
         if (result) localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
         else localStorage.removeItem(STORAGE_KEY);
