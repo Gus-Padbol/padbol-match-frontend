@@ -49,12 +49,14 @@ function EstadoBadge({ reserva }) {
   return <span style={{ background: '#ede9fe', color: '#3b2f6e', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
 }
 
-// Returns true if the reserva's fecha+hora is in the future
+// Returns true if the reserva's fecha+hora is in the future (Argentina timezone UTC-3, no DST)
 function esFutura(reserva) {
   if (!reserva.fecha) return false;
-  const [y, m, d] = reserva.fecha.split('-').map(Number);
-  const [hh = 23, mm = 59] = (reserva.hora || '23:59').split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm) > new Date();
+  // hora may be stored as "18:00" or "18:00 - 19:30" — use start time only
+  const startHora = (reserva.hora || '23:59').split(' - ')[0].trim();
+  const timePart = /^\d{1,2}:\d{2}/.test(startHora) ? startHora.substring(0, 5) : '23:59';
+  // Parse as Argentina wall-clock time (UTC-3) so comparison works from any browser timezone
+  return new Date(`${reserva.fecha}T${timePart}:00-03:00`) > new Date();
 }
 
 // Build a lookup: country name (lowercase) → flag emoji
@@ -807,16 +809,16 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
           return (
             <div className="reservas-table-wrap">
-            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '968px', marginTop: 0 }}>
+            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '988px', marginTop: 0 }}>
               <colgroup>
                 <col style={{ width: '52px' }} /> {/* Date label */}
-                <col style={{ width: '110px' }} />{/* Sede */}
+                <col style={{ width: '108px' }} />{/* Sede */}
                 <col style={{ width: '112px' }} />{/* Horario */}
                 <col style={{ width: '80px' }} /> {/* Cancha */}
-                <col style={{ width: '120px' }} />{/* Nombre */}
-                <col style={{ width: '160px' }} />{/* Email */}
+                <col style={{ width: '116px' }} />{/* Nombre */}
+                <col style={{ width: '200px' }} />{/* Email */}
                 <col style={{ width: '88px' }} /> {/* Precio */}
-                <col style={{ width: '116px' }} />{/* Estado */}
+                <col style={{ width: '102px' }} />{/* Estado */}
                 <col style={{ width: '130px' }} />{/* Acciones */}
               </colgroup>
               <thead>
