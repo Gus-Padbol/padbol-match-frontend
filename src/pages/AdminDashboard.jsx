@@ -566,12 +566,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                         {(() => {
                           const st = torneoStats[torneo.id];
                           if (!st) return <div style={{ fontSize: '11px', color: '#ddd', marginTop: '3px' }}>···</div>;
-                          if (torneo.estado === 'planificacion') return st.equipos_count >= 6
-                            ? (
-                              <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '3px' }}>
-                                🔧 <strong>{st.equipos_count}</strong> equipos inscriptos
-                              </div>
-                            ) : null;
+                          if (torneo.estado === 'planificacion') return (
+                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '3px' }}>
+                              🔧 <strong>{st.equipos_count}</strong> equipo{st.equipos_count !== 1 ? 's' : ''} inscripto{st.equipos_count !== 1 ? 's' : ''}
+                            </div>
+                          );
                           if (torneo.estado === 'en_curso') return (
                             <div style={{ fontSize: '11px', color: '#1d4ed8', marginTop: '3px' }}>
                               ⚔️ <strong>{st.partidos_jugados}/{st.total_partidos}</strong> partidos
