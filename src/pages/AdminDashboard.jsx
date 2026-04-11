@@ -838,34 +838,40 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 {orderedDays.map(dia => {
                   const rows = dayMap[dia];
                   const upcoming = esFutura(rows[0]);
-                  const accentColor = upcoming ? '#22c55e' : '#94a3b8';
-                  const dateBg     = upcoming ? 'rgba(34,197,94,0.05)' : 'rgba(148,163,184,0.07)';
-                  const dateColor  = upcoming ? '#15803d' : '#64748b';
-                  const dayTopBorder = `2px solid ${upcoming ? 'rgba(34,197,94,0.4)' : 'rgba(148,163,184,0.35)'}`;
+                  const accentColor  = upcoming ? '#16a34a' : '#94a3b8';
+                  const accentLight  = upcoming ? 'rgba(22,163,74,0.18)' : 'rgba(148,163,184,0.18)';
+                  const dateBg       = upcoming ? '#f0fdf4' : 'rgba(148,163,184,0.08)';
+                  const rowBg        = upcoming ? '#f0fdf4' : undefined;
+                  const dateColor    = upcoming ? '#15803d' : '#64748b';
+                  const dayTopBorder = `2px solid ${upcoming ? 'rgba(22,163,74,0.45)' : 'rgba(148,163,184,0.35)'}`;
                   return (
                     <React.Fragment key={dia}>
                       {rows.map((r, idx) => (
-                        <tr key={r.id}>
+                        <tr key={r.id} style={rowBg ? { background: rowBg } : undefined}>
                           {/* Date cell: spans all rows for this day */}
                           {idx === 0 && (
                             <td rowSpan={rows.length} style={{
                               borderLeft: `4px solid ${accentColor}`,
+                              borderRight: `2px solid ${accentLight}`,
                               borderTop: dayTopBorder,
-                              borderBottom: '2px solid #ccc',
+                              borderBottom: `2px solid ${accentLight}`,
                               background: dateBg,
                               padding: '6px 2px',
                               verticalAlign: 'middle',
                               textAlign: 'center',
                             }}>
                               <span style={{
-                                display: 'block',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
                                 writingMode: 'vertical-rl',
                                 transform: 'rotate(180deg)',
                                 fontSize: '11px',
-                                fontWeight: '600',
+                                fontWeight: '700',
                                 color: dateColor,
                                 letterSpacing: '0.04em',
                                 whiteSpace: 'nowrap',
+                                width: '100%',
                               }}>
                                 {shortDate(dia)}
                               </span>
