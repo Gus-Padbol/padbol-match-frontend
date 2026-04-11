@@ -38,10 +38,13 @@ function EstadoBadge({ reserva }) {
   if (reserva.estado === 'cancelada' || reserva.cancelada) {
     return <span style={{ background: '#fee2e2', color: '#991b1b', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>❌ Cancelada</span>;
   }
-  if (esFutura(reserva)) {
-    return <span style={{ background: '#ede9fe', color: '#3b2f6e', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
+  if (reserva.estado === 'reservada') {
+    return <span style={{ background: '#f1f5f9', color: '#64748b', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>📋 Reservada</span>;
   }
-  return <span style={{ background: '#f1f5f9', color: '#64748b', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>✅ Completada</span>;
+  if (reserva.estado === 'completada' || !esFutura(reserva)) {
+    return <span style={{ background: '#e2e8f0', color: '#475569', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>✅ Completada</span>;
+  }
+  return <span style={{ background: '#ede9fe', color: '#3b2f6e', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
 }
 
 // Returns true if the reserva's fecha+hora is in the future
@@ -335,7 +338,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
   const iniciarEdicion = (reserva) => {
     setEditandoId(reserva.id);
-    setEditFormData({ ...reserva });
+    setEditFormData({ ...reserva, estado: reserva.estado || 'reservada' });
     setMensajeExito('');
   };
 
@@ -834,7 +837,18 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                               <td><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
                               <td><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
                               <td><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td><EstadoBadge reserva={r} /></td>
+                              <td>
+                                <select
+                                  value={editFormData.estado || 'reservada'}
+                                  onChange={e => setEditFormData({ ...editFormData, estado: e.target.value })}
+                                  style={{ padding: '5px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '12px' }}
+                                >
+                                  <option value="reservada">📋 Reservada</option>
+                                  <option value="confirmada">🟢 Confirmada</option>
+                                  <option value="completada">✅ Completada</option>
+                                  <option value="cancelada">❌ Cancelada</option>
+                                </select>
+                              </td>
                               <td style={{ textAlign: 'center' }}>
                                 <button onClick={() => guardarEdicion(r.id)} style={{ padding: '5px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✅ Guardar</button>
                                 <button onClick={cancelarEdicion} style={{ padding: '5px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>✕ Cancelar</button>
