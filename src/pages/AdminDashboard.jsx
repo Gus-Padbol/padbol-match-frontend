@@ -1123,7 +1123,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   <tr style={{ background: '#3b2f6e', color: 'white' }}>
                     <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Posición</th>
                     <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '110px' }}>% del total</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '130px' }}>Pts (de {totalPts} totales)</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '13px', fontWeight: 600, width: '100px', whiteSpace: 'nowrap' }}>Puntos</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1141,7 +1141,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                             style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
                           <span style={{ fontSize: '12px', color: '#999', marginLeft: '3px' }}>%</span>
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc' }}>
+                        <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc', whiteSpace: 'nowrap' }}>
                           {pts > 0 ? pts : '—'}
                         </td>
                       </tr>
