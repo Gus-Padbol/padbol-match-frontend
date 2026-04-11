@@ -168,8 +168,10 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [torneoStats, setTorneoStats] = useState({});
 
   // ── Config puntos (superAdmin only) ──
-  const CONFIG_NIVELES_DEFAULT    = { club_no_oficial: 10, club_oficial: 30, nacional: 100, internacional: 300, mundial: 1000 };
-  const CONFIG_POSICIONES_DEFAULT = { 1: 100, 2: 60, 3: 40, 4: 25, 5: 15, 6: 10, 7: 5, 8: 5, 9: 5, 10: 5 };
+  const CONFIG_NIVELES_DEFAULT       = { club_no_oficial: 10, club_oficial: 30, nacional: 100, internacional: 300, mundial: 1000 };
+  const CONFIG_POSICIONES_DEFAULT    = { 1: 100, 2: 60, 3: 40, 4: 25, 5: 15, 6: 10, 7: 5, 8: 5, 9: 5, 10: 5 };
+  const CONFIG_NIVELES_LABELS_DEFAULT = { club_no_oficial: 'Club No Oficial', club_oficial: 'Club Oficial', nacional: 'Nacional', internacional: 'Internacional', mundial: 'Mundial' };
+  const STANDARD_KEYS = ['club_no_oficial', 'club_oficial', 'nacional', 'internacional', 'mundial'];
 
   const loadConfigFromStorage = () => {
     try {
@@ -178,27 +180,34 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     } catch { return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] }; }
   };
 
-  const [configNiveles,     setConfigNiveles]     = useState(() => loadConfigFromStorage().niveles);
-  const [configPosiciones,  setConfigPosiciones]  = useState(() => loadConfigFromStorage().posiciones);
-  const [configTiposCustom, setConfigTiposCustom] = useState(() => loadConfigFromStorage().tipos_custom || []);
-  const [configSaving,      setConfigSaving]      = useState(false);
-  const [configMsg,         setConfigMsg]         = useState('');
-  const [nuevoTipo,         setNuevoTipo]         = useState({ nombre: '', puntos: 0 });
-  const [editandoTipoId,    setEditandoTipoId]    = useState(null);
-  const [editandoTipoData,  setEditandoTipoData]  = useState({ nombre: '', puntos: 0 });
+  const [configNiveles,      setConfigNiveles]      = useState(() => loadConfigFromStorage().niveles);
+  const [configPosiciones,   setConfigPosiciones]   = useState(() => loadConfigFromStorage().posiciones);
+  const [configTiposCustom,  setConfigTiposCustom]  = useState(() => loadConfigFromStorage().tipos_custom || []);
+  const [configNivelesLabels,setConfigNivelesLabels]= useState(() => ({ ...CONFIG_NIVELES_LABELS_DEFAULT, ...(loadConfigFromStorage().niveles_labels || {}) }));
+  const [configNivelesHidden,setConfigNivelesHidden]= useState(() => new Set(loadConfigFromStorage().niveles_hidden || []));
+  const [previewNivel,       setPreviewNivel]       = useState('nacional');
+  const [configSaving,       setConfigSaving]       = useState(false);
+  const [configMsg,          setConfigMsg]          = useState('');
+  const [nuevoTipo,          setNuevoTipo]          = useState({ nombre: '', puntos: 0 });
+  const [editandoTipoId,     setEditandoTipoId]     = useState(null);
+  const [editandoTipoData,   setEditandoTipoData]   = useState({ nombre: '', puntos: 0 });
 
   useEffect(() => {
     if (!isSuperAdmin) return;
     fetch(`${apiBaseUrl}/api/config/puntos`)
       .then(r => r.json())
       .then(data => {
-        if (data.niveles)      { setConfigNiveles(data.niveles);               }
-        if (data.posiciones)   { setConfigPosiciones(data.posiciones);         }
-        if (data.tipos_custom) { setConfigTiposCustom(data.tipos_custom);      }
+        if (data.niveles)        { setConfigNiveles(data.niveles); }
+        if (data.posiciones)     { setConfigPosiciones(data.posiciones); }
+        if (data.tipos_custom)   { setConfigTiposCustom(data.tipos_custom); }
+        if (data.niveles_labels) { setConfigNivelesLabels(prev => ({ ...CONFIG_NIVELES_LABELS_DEFAULT, ...data.niveles_labels })); }
+        if (data.niveles_hidden) { setConfigNivelesHidden(new Set(data.niveles_hidden)); }
         localStorage.setItem('config_puntos', JSON.stringify({
-          niveles:      data.niveles,
-          posiciones:   data.posiciones,
-          tipos_custom: data.tipos_custom || [],
+          niveles:        data.niveles,
+          posiciones:     data.posiciones,
+          tipos_custom:   data.tipos_custom   || [],
+          niveles_labels: data.niveles_labels || {},
+          niveles_hidden: data.niveles_hidden || [],
         }));
       })
       .catch(() => {});
@@ -208,7 +217,13 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     setConfigSaving(true);
     setConfigMsg('');
     try {
-      const body = { niveles: configNiveles, posiciones: configPosiciones, tipos_custom: configTiposCustom };
+      const body = {
+        niveles:        configNiveles,
+        posiciones:     configPosiciones,
+        tipos_custom:   configTiposCustom,
+        niveles_labels: configNivelesLabels,
+        niveles_hidden: [...configNivelesHidden],
+      };
       localStorage.setItem('config_puntos', JSON.stringify(body));
       const res = await fetch(`${apiBaseUrl}/api/config/puntos`, {
         method: 'PUT',
@@ -960,22 +975,47 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
               </tr>
             </thead>
             <tbody>
-              {/* Standard rows — no edit/delete */}
-              {[
-                { key: 'club_no_oficial', label: 'Club No Oficial' },
-                { key: 'club_oficial',    label: 'Club Oficial' },
-                { key: 'nacional',        label: 'Nacional' },
-                { key: 'internacional',   label: 'Internacional' },
-                { key: 'mundial',         label: 'Mundial' },
-              ].map(({ key, label }, i) => (
+              {/* Standard rows — editable names and deletable */}
+              {STANDARD_KEYS.filter(key => !configNivelesHidden.has(key)).map((key, i) => (
                 <tr key={key} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
-                  <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{label}</td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                    <input type="number" min="0" value={configNiveles[key] ?? 0}
-                      onChange={e => setConfigNiveles(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
-                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
-                  </td>
-                  <td />{/* no actions for standard rows */}
+                  {editandoTipoId === key ? (
+                    <>
+                      <td style={{ padding: '7px 12px' }}>
+                        <input type="text" value={editandoTipoData.nombre}
+                          onChange={e => setEditandoTipoData(p => ({ ...p, nombre: e.target.value }))}
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #c4b5fd', borderRadius: '4px', fontSize: '13px', color: '#1e1b4b', boxSizing: 'border-box' }} />
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                        <input type="number" min="0" value={editandoTipoData.puntos}
+                          onChange={e => setEditandoTipoData(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '72px', padding: '5px 8px', border: '1px solid #c4b5fd', borderRadius: '4px', fontSize: '13px', textAlign: 'center', color: '#1e1b4b' }} />
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                        <button onClick={() => {
+                          setConfigNivelesLabels(prev => ({ ...prev, [key]: editandoTipoData.nombre }));
+                          setConfigNiveles(prev => ({ ...prev, [key]: editandoTipoData.puntos }));
+                          setEditandoTipoId(null);
+                        }} style={{ padding: '3px 8px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '3px' }}>✅</button>
+                        <button onClick={() => setEditandoTipoId(null)}
+                          style={{ padding: '3px 8px', background: '#999', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{configNivelesLabels[key]}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <input type="number" min="0" value={configNiveles[key] ?? 0}
+                          onChange={e => setConfigNiveles(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
+                      </td>
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <button onClick={() => { setEditandoTipoId(key); setEditandoTipoData({ nombre: configNivelesLabels[key], puntos: configNiveles[key] ?? 0 }); }}
+                          style={{ padding: '3px 8px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '3px' }}>✏️</button>
+                        <button onClick={() => { if (window.confirm(`¿Eliminar el nivel "${configNivelesLabels[key]}"? Se ocultará de los torneos nuevos.`)) setConfigNivelesHidden(prev => new Set([...prev, key])); }}
+                          style={{ padding: '3px 8px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🗑️</button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
 
@@ -1049,38 +1089,63 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         </div>
 
         {/* Distribución por posición */}
-        <div style={{ marginBottom: '28px' }}>
-          <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
-            Distribución de puntos por posición (%)
-          </h3>
-          <table style={{ width: '100%', maxWidth: '480px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-            <thead>
-              <tr style={{ background: '#3b2f6e', color: 'white' }}>
-                <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600 }}>Posición</th>
-                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>% de puntos base</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1,2,3,4,5,6,7,8,9,10].map((pos, i) => (
-                <tr key={pos} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
-                  <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>
-                    {pos === 1 ? '🥇 1ro' : pos === 2 ? '🥈 2do' : pos === 3 ? '🥉 3ro' : `${pos}°`}
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={configPosiciones[pos] ?? 0}
-                      onChange={e => setConfigPosiciones(prev => ({ ...prev, [pos]: parseInt(e.target.value) || 0 }))}
-                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {(() => {
+          const todosNiveles = STANDARD_KEYS
+            .filter(key => !configNivelesHidden.has(key))
+            .map(key => ({ value: key, label: configNivelesLabels[key] || key, pts: configNiveles[key] ?? 0 }))
+            .concat(configTiposCustom.map(t => ({ value: t.id, label: t.nombre, pts: t.puntos })));
+          const basePts = todosNiveles.find(n => n.value === previewNivel)?.pts
+            ?? todosNiveles[0]?.pts ?? 0;
+          return (
+            <div style={{ marginBottom: '28px' }}>
+              <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
+                Distribución de puntos por posición
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <label style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  Previsualizar con:
+                </label>
+                <select value={previewNivel} onChange={e => setPreviewNivel(e.target.value)}
+                  style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '13px', fontWeight: '600', color: '#3b2f6e', background: 'white', cursor: 'pointer' }}>
+                  {todosNiveles.map(n => (
+                    <option key={n.value} value={n.value}>{n.label} ({n.pts} pts base)</option>
+                  ))}
+                </select>
+              </div>
+              <table style={{ width: '100%', maxWidth: '520px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                <thead>
+                  <tr style={{ background: '#3b2f6e', color: 'white' }}>
+                    <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Posición</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '110px' }}>% base</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '120px' }}>Pts ({basePts} base)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1,2,3,4,5,6,7,8,9,10].map((pos, i) => {
+                    const pct = configPosiciones[pos] ?? 0;
+                    const pts = Math.round(basePts * pct / 100);
+                    return (
+                      <tr key={pos} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
+                        <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>
+                          {pos === 1 ? '🥇 1ro' : pos === 2 ? '🥈 2do' : pos === 3 ? '🥉 3ro' : `${pos}°`}
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                          <input type="number" min="0" max="100" value={pct}
+                            onChange={e => setConfigPosiciones(prev => ({ ...prev, [pos]: parseInt(e.target.value) || 0 }))}
+                            style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
+                          <span style={{ fontSize: '12px', color: '#999', marginLeft: '3px' }}>%</span>
+                        </td>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc' }}>
+                          {pts > 0 ? pts : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {/* Save button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '40px' }}>
