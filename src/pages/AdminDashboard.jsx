@@ -498,6 +498,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [licenciaForm,  setLicenciaForm]  = useState({ numero_licencia: '', fecha_licencia: '', licencia_activa: true });
   const [licenciaSaving,setLicenciaSaving]= useState(false);
   const [licenciaMsg,   setLicenciaMsg]   = useState('');
+  const [logoUrl,        setLogoUrl]        = useState('');
+  const [logoUploading,  setLogoUploading]  = useState(false);
+  const [logoMsg,        setLogoMsg]        = useState('');
+  const [fotosUrls,      setFotosUrls]      = useState([]);
+  const [fotosUploading, setFotosUploading] = useState(false);
+  const [fotosMsg,       setFotosMsg]       = useState('');
 
   useEffect(() => {
     if (activeTab !== 'mi_sede' || !sedeId) return;
@@ -525,6 +531,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           fecha_licencia:  sedeData.fecha_licencia  || '',
           licencia_activa: sedeData.licencia_activa ?? true,
         });
+        setLogoUrl(sedeData.logo_url || '');
+        setFotosUrls(Array.isArray(sedeData.fotos_urls) ? sedeData.fotos_urls : []);
       }
       setCanchas(canchasData || []);
       setMiSedeLoading(false);
@@ -560,6 +568,52 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     setLicenciaSaving(false);
     setLicenciaMsg(error ? `⚠️ ${error.message}` : '✅ Licencia actualizada');
     setTimeout(() => setLicenciaMsg(''), 3000);
+  };
+
+  const subirLogo = async (file) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setLogoMsg('⚠️ El archivo supera los 2MB'); return; }
+    setLogoUploading(true); setLogoMsg('');
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `${sedeId}/logo.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('sedes').upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) { setLogoMsg(`⚠️ ${uploadError.message}`); setLogoUploading(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from('sedes').getPublicUrl(path);
+    await supabase.from('sedes').update({ logo_url: publicUrl }).eq('id', sedeId);
+    setLogoUrl(`${publicUrl}?t=${Date.now()}`);
+    setLogoUploading(false);
+    setLogoMsg('✅ Logo actualizado');
+    setTimeout(() => setLogoMsg(''), 3000);
+  };
+
+  const subirFoto = async (file) => {
+    if (!file) return;
+    if (fotosUrls.length >= 4) { setFotosMsg('⚠️ Máximo 4 fotos permitidas'); return; }
+    if (file.size > 2 * 1024 * 1024) { setFotosMsg('⚠️ El archivo supera los 2MB'); return; }
+    setFotosUploading(true); setFotosMsg('');
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${sedeId}/fotos/${Date.now()}_${safeName}`;
+    const { error: uploadError } = await supabase.storage.from('sedes').upload(path, file, { contentType: file.type });
+    if (uploadError) { setFotosMsg(`⚠️ ${uploadError.message}`); setFotosUploading(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from('sedes').getPublicUrl(path);
+    const newFotos = [...fotosUrls, publicUrl];
+    await supabase.from('sedes').update({ fotos_urls: newFotos }).eq('id', sedeId);
+    setFotosUrls(newFotos);
+    setFotosUploading(false);
+    setFotosMsg('✅ Foto agregada');
+    setTimeout(() => setFotosMsg(''), 3000);
+  };
+
+  const eliminarFoto = async (url) => {
+    const marker = '/public/sedes/';
+    const idx = url.indexOf(marker);
+    if (idx !== -1) {
+      const storagePath = decodeURIComponent(url.substring(idx + marker.length).split('?')[0]);
+      await supabase.storage.from('sedes').remove([storagePath]);
+    }
+    const newFotos = fotosUrls.filter(u => u !== url);
+    await supabase.from('sedes').update({ fotos_urls: newFotos }).eq('id', sedeId);
+    setFotosUrls(newFotos);
   };
 
   const agregarCancha = async () => {
@@ -1582,6 +1636,107 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   + Agregar
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* ── 4. Fotos ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>📸 Fotos</h3>
+
+            {/* Logo */}
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px', marginBottom: '20px' }}>
+              <p style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: 700, color: '#1e1b4b' }}>Logo del club</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Logo del club"
+                    style={{ width: '100px', height: '100px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#f9fafb' }}
+                  />
+                ) : (
+                  <div style={{ width: '100px', height: '100px', borderRadius: '10px', border: '2px dashed #d1d5db', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '28px' }}>🏟️</span>
+                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>Sin logo</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{
+                    display: 'inline-block', padding: '9px 18px',
+                    background: logoUploading ? '#e5e7eb' : 'linear-gradient(135deg, #4f46e5, #3730a3)',
+                    color: logoUploading ? '#9ca3af' : 'white',
+                    borderRadius: '8px', cursor: logoUploading ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: '13px',
+                  }}>
+                    {logoUploading ? '⏳ Subiendo...' : '📤 Subir logo'}
+                    <input
+                      type="file" accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'none' }}
+                      disabled={logoUploading}
+                      onChange={e => subirLogo(e.target.files[0])}
+                    />
+                  </label>
+                  <span style={{ fontSize: '12px', color: '#9ca3af' }}>JPG, PNG o WEBP · máx. 2MB</span>
+                  {logoMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: logoMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{logoMsg}</span>}
+                </div>
+              </div>
+            </div>
+
+            {/* Fotos de canchas */}
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1e1b4b' }}>
+                  Fotos de las canchas
+                  <span style={{ fontSize: '12px', fontWeight: 400, color: '#9ca3af', marginLeft: '8px' }}>({fotosUrls.length}/4)</span>
+                </p>
+                {fotosUrls.length < 4 && (
+                  <label style={{
+                    display: 'inline-block', padding: '7px 16px',
+                    background: fotosUploading ? '#e5e7eb' : 'linear-gradient(135deg, #4f46e5, #3730a3)',
+                    color: fotosUploading ? '#9ca3af' : 'white',
+                    borderRadius: '8px', cursor: fotosUploading ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: '13px',
+                  }}>
+                    {fotosUploading ? '⏳ Subiendo...' : '+ Agregar foto'}
+                    <input
+                      type="file" accept="image/jpeg,image/png,image/webp"
+                      style={{ display: 'none' }}
+                      disabled={fotosUploading}
+                      onChange={e => subirFoto(e.target.files[0])}
+                    />
+                  </label>
+                )}
+              </div>
+              {fotosUrls.length === 0 ? (
+                <p style={{ color: '#aaa', fontSize: '13px', margin: 0 }}>No hay fotos cargadas aún.</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  {fotosUrls.map((url, i) => (
+                    <div key={url} style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', aspectRatio: '4/3', background: '#f1f5f9' }}>
+                      <img
+                        src={url}
+                        alt={`Cancha ${i + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                      <button
+                        onClick={() => eliminarFoto(url)}
+                        style={{
+                          position: 'absolute', top: '6px', right: '6px',
+                          width: '26px', height: '26px', borderRadius: '50%',
+                          background: 'rgba(220,38,38,0.85)', color: 'white',
+                          border: 'none', cursor: 'pointer', fontSize: '14px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          lineHeight: 1,
+                        }}
+                        title="Eliminar foto"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {fotosMsg && <p style={{ margin: '12px 0 0', fontSize: '13px', fontWeight: 600, color: fotosMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{fotosMsg}</p>}
+              <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#9ca3af' }}>JPG, PNG o WEBP · máx. 2MB por foto</p>
             </div>
           </div>
 
