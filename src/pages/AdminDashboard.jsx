@@ -49,14 +49,21 @@ function EstadoBadge({ reserva }) {
   return <span style={{ background: '#ede9fe', color: '#3b2f6e', borderRadius: '12px', padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap' }}>🟢 Confirmada</span>;
 }
 
-// Returns true if the reserva's fecha+hora is in the future (Argentina timezone UTC-3, no DST)
+// Returns true if the reserva's fecha+hora is in the future.
+// Both sides are built as Argentina wall-clock Dates (no offset arithmetic), so the
+// comparison is correct regardless of the browser's local timezone.
 function esFutura(reserva) {
   if (!reserva.fecha) return false;
   // hora may be stored as "18:00" or "18:00 - 19:30" — use start time only
   const startHora = (reserva.hora || '23:59').split(' - ')[0].trim();
   const timePart = /^\d{1,2}:\d{2}/.test(startHora) ? startHora.substring(0, 5) : '23:59';
-  // Parse as Argentina wall-clock time (UTC-3) so comparison works from any browser timezone
-  return new Date(`${reserva.fecha}T${timePart}:00-03:00`) > new Date();
+  // Current moment expressed as an Argentina wall-clock Date (parsed as local, no tz offset)
+  const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  // Reservation datetime expressed the same way — use the date-only part of fecha to avoid
+  // any embedded time/timezone that could be on the raw DB value
+  const fechaSolo = reserva.fecha.substring(0, 10); // "YYYY-MM-DD"
+  const reservaDate = new Date(`${fechaSolo} ${timePart}`);
+  return reservaDate > ahora;
 }
 
 // Build a lookup: country name (lowercase) → flag emoji
