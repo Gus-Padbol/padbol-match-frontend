@@ -946,19 +946,21 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       {activeTab === 'config' && isSuperAdmin && <div className="section">
         <h2>⚙️ Configuración de Puntos</h2>
 
-        {/* Niveles de torneo */}
+        {/* Niveles de torneo + tipos custom unificados */}
         <div style={{ marginBottom: '32px' }}>
           <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
             Puntos base por nivel de torneo
           </h3>
-          <table style={{ width: '100%', maxWidth: '480px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+          <table style={{ width: '100%', maxWidth: '560px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
             <thead>
               <tr style={{ background: '#3b2f6e', color: 'white' }}>
-                <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600 }}>Nivel</th>
-                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>Puntos</th>
+                <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Nivel</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '100px' }}>Puntos</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '90px' }}></th>
               </tr>
             </thead>
             <tbody>
+              {/* Standard rows — no edit/delete */}
               {[
                 { key: 'club_no_oficial', label: 'Club No Oficial' },
                 { key: 'club_oficial',    label: 'Club Oficial' },
@@ -969,16 +971,79 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 <tr key={key} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
                   <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{label}</td>
                   <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      value={configNiveles[key] ?? 0}
+                    <input type="number" min="0" value={configNiveles[key] ?? 0}
                       onChange={e => setConfigNiveles(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
-                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }}
-                    />
+                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
                   </td>
+                  <td />{/* no actions for standard rows */}
                 </tr>
               ))}
+
+              {/* Custom rows — with edit/delete */}
+              {configTiposCustom.length > 0 && (
+                <tr>
+                  <td colSpan="3" style={{ padding: '6px 16px 2px', fontSize: '11px', fontWeight: '600', color: '#7c3aed', background: '#f5f3ff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Tipos personalizados
+                  </td>
+                </tr>
+              )}
+              {configTiposCustom.map((tipo, i) => (
+                <tr key={tipo.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fdf8ff' : 'white' }}>
+                  {editandoTipoId === tipo.id ? (
+                    <>
+                      <td style={{ padding: '7px 12px' }}>
+                        <input type="text" value={editandoTipoData.nombre}
+                          onChange={e => setEditandoTipoData(p => ({ ...p, nombre: e.target.value }))}
+                          style={{ width: '100%', padding: '5px 8px', border: '1px solid #c4b5fd', borderRadius: '4px', fontSize: '13px', color: '#1e1b4b', boxSizing: 'border-box' }} />
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                        <input type="number" min="0" value={editandoTipoData.puntos}
+                          onChange={e => setEditandoTipoData(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+                          style={{ width: '72px', padding: '5px 8px', border: '1px solid #c4b5fd', borderRadius: '4px', fontSize: '13px', textAlign: 'center', color: '#1e1b4b' }} />
+                      </td>
+                      <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                        <button onClick={() => { setConfigTiposCustom(prev => prev.map(t => t.id === tipo.id ? { ...t, ...editandoTipoData } : t)); setEditandoTipoId(null); }}
+                          style={{ padding: '3px 8px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '3px' }}>✅</button>
+                        <button onClick={() => setEditandoTipoId(null)}
+                          style={{ padding: '3px 8px', background: '#999', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{tipo.nombre}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#3b2f6e' }}>{tipo.puntos}</td>
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <button onClick={() => { setEditandoTipoId(tipo.id); setEditandoTipoData({ nombre: tipo.nombre, puntos: tipo.puntos }); }}
+                          style={{ padding: '3px 8px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '3px' }}>✏️</button>
+                        <button onClick={() => setConfigTiposCustom(prev => prev.filter(t => t.id !== tipo.id))}
+                          style={{ padding: '3px 8px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🗑️</button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+
+              {/* Add row */}
+              <tr style={{ background: '#f9f7ff', borderTop: '2px dashed #e9d5ff' }}>
+                <td style={{ padding: '8px 12px' }}>
+                  <input type="text" placeholder="Ej: FIPA Qualifier" value={nuevoTipo.nombre}
+                    onChange={e => setNuevoTipo(p => ({ ...p, nombre: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter' && nuevoTipo.nombre.trim()) { setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); } }}
+                    style={{ width: '100%', padding: '6px 10px', border: '1.5px solid #c4b5fd', borderRadius: '5px', fontSize: '13px', color: '#1e1b4b', background: 'white', boxSizing: 'border-box' }} />
+                </td>
+                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                  <input type="number" placeholder="Pts" min="0" value={nuevoTipo.puntos || ''}
+                    onChange={e => setNuevoTipo(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+                    style={{ width: '72px', padding: '6px 8px', border: '1.5px solid #c4b5fd', borderRadius: '5px', fontSize: '13px', color: '#1e1b4b', textAlign: 'center', background: 'white' }} />
+                </td>
+                <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                  <button
+                    onClick={() => { if (!nuevoTipo.nombre.trim()) return; setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); }}
+                    style={{ padding: '5px 12px', background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                    + Agregar
+                  </button>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1044,104 +1109,6 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           )}
         </div>
 
-        {/* Tipos de Torneo personalizados */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '32px' }}>
-          <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '6px', fontSize: '16px' }}>
-            Tipos de Torneo personalizados
-          </h3>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', marginBottom: '18px', marginTop: 0 }}>
-            Aparecen en el formulario de creación junto a los tipos estándar. Guardá con el botón de arriba.
-          </p>
-
-          {configTiposCustom.length > 0 && (
-            <table style={{ width: '100%', maxWidth: '520px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', marginBottom: '16px' }}>
-              <thead>
-                <tr style={{ background: '#3b2f6e', color: 'white' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Nombre</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '90px' }}>Puntos</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '100px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {configTiposCustom.map((tipo, i) => (
-                  <tr key={tipo.id} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
-                    {editandoTipoId === tipo.id ? (
-                      <>
-                        <td style={{ padding: '8px 12px' }}>
-                          <input type="text" value={editandoTipoData.nombre}
-                            onChange={e => setEditandoTipoData(p => ({ ...p, nombre: e.target.value }))}
-                            style={{ width: '100%', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }} />
-                        </td>
-                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                          <input type="number" min="0" value={editandoTipoData.puntos}
-                            onChange={e => setEditandoTipoData(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
-                            style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', textAlign: 'center' }} />
-                        </td>
-                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                          <button onClick={() => { setConfigTiposCustom(prev => prev.map(t => t.id === tipo.id ? { ...t, ...editandoTipoData } : t)); setEditandoTipoId(null); }}
-                            style={{ padding: '4px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '4px' }}>✅</button>
-                          <button onClick={() => setEditandoTipoId(null)}
-                            style={{ padding: '4px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>✕</button>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{tipo.nombre}</td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#3b2f6e' }}>{tipo.puntos}</td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                          <button onClick={() => { setEditandoTipoId(tipo.id); setEditandoTipoData({ nombre: tipo.nombre, puntos: tipo.puntos }); }}
-                            style={{ padding: '4px 10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '4px' }}>✏️</button>
-                          <button onClick={() => setConfigTiposCustom(prev => prev.filter(t => t.id !== tipo.id))}
-                            style={{ padding: '4px 10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>🗑️</button>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* Add form */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', maxWidth: '560px' }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginBottom: '5px' }}>
-                Nombre del tipo
-              </label>
-              <input
-                type="text"
-                placeholder="Ej: FIPA Qualifier"
-                value={nuevoTipo.nombre}
-                onChange={e => setNuevoTipo(p => ({ ...p, nombre: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter' && nuevoTipo.nombre.trim()) { setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); } }}
-                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #c4b5fd', borderRadius: '6px', fontSize: '13px', background: 'white', color: '#1e1b4b', boxSizing: 'border-box', outline: 'none' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginBottom: '5px' }}>
-                Puntos base
-              </label>
-              <input
-                type="number"
-                placeholder="Ej: 150"
-                min="0"
-                value={nuevoTipo.puntos || ''}
-                onChange={e => setNuevoTipo(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
-                style={{ width: '100px', padding: '9px 10px', border: '1.5px solid #c4b5fd', borderRadius: '6px', fontSize: '13px', background: 'white', color: '#1e1b4b', textAlign: 'center' }}
-              />
-            </div>
-            <button
-              onClick={() => {
-                if (!nuevoTipo.nombre.trim()) return;
-                setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]);
-                setNuevoTipo({ nombre: '', puntos: 0 });
-              }}
-              style={{ padding: '9px 20px', background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', marginBottom: '1px' }}
-            >
-              + Agregar
-            </button>
-          </div>
-        </div>
       </div>}
 
     </div>
