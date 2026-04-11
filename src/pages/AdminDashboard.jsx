@@ -26,7 +26,8 @@ function formatFechaDia(str) {
 // "18:00" + 90 → "18:00 - 19:30"
 function horaRango(hora, duracion) {
   if (!hora) return '—';
-  const dur = parseInt(duracion) || 90; // default 90 min when not stored
+  if (hora.includes(' - ')) return hora; // already stored as a range — return as-is
+  const dur = parseInt(duracion) || 90;  // default 90 min when not stored
   const [hh, mm] = hora.split(':').map(Number);
   const mins = (mm || 0) + dur;
   const endH = String(hh + Math.floor(mins / 60)).padStart(2, '0');
@@ -806,17 +807,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
           return (
             <div className="reservas-table-wrap">
-            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '860px', marginTop: 0 }}>
+            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '900px', marginTop: 0 }}>
               <colgroup>
-                <col style={{ width: '38px' }} /> {/* Date label */}
-                <col style={{ width: '110px' }} />{/* Sede */}
+                <col style={{ width: '52px' }} /> {/* Date label */}
+                <col style={{ width: '108px' }} />{/* Sede */}
                 <col style={{ width: '112px' }} />{/* Horario */}
-                <col style={{ width: '36px' }} /> {/* N° */}
-                <col style={{ width: '130px' }} />{/* Nombre */}
+                <col style={{ width: '62px' }} /> {/* Cancha */}
+                <col style={{ width: '126px' }} />{/* Nombre */}
                 <col />                            {/* Email flexible */}
-                <col style={{ width: '80px' }} /> {/* Precio */}
+                <col style={{ width: '78px' }} /> {/* Precio */}
                 <col style={{ width: '112px' }} />{/* Estado */}
-                <col style={{ width: '120px' }} />{/* Acciones */}
+                <col style={{ width: '118px' }} />{/* Acciones */}
               </colgroup>
               <thead>
                 <tr>
@@ -838,6 +839,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   const accentColor = upcoming ? '#22c55e' : '#94a3b8';
                   const dateBg     = upcoming ? 'rgba(34,197,94,0.05)' : 'rgba(148,163,184,0.07)';
                   const dateColor  = upcoming ? '#15803d' : '#64748b';
+                  const dayTopBorder = `2px solid ${upcoming ? 'rgba(34,197,94,0.4)' : 'rgba(148,163,184,0.35)'}`;
                   return (
                     <React.Fragment key={dia}>
                       {rows.map((r, idx) => (
@@ -846,6 +848,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           {idx === 0 && (
                             <td rowSpan={rows.length} style={{
                               borderLeft: `4px solid ${accentColor}`,
+                              borderTop: dayTopBorder,
                               borderBottom: '2px solid #ccc',
                               background: dateBg,
                               padding: '6px 2px',
@@ -868,18 +871,18 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           )}
                           {editandoId === r.id ? (
                             <>
-                              <td style={{ padding: '6px 8px' }}><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
-                              <td style={{ padding: '6px 8px' }}>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}>
                                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                                   <input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ padding: '4px', flex: 1, minWidth: 0 }} />
                                   <input type="number" placeholder="min" value={editFormData.duracion || ''} onChange={e => setEditFormData({ ...editFormData, duracion: e.target.value })} style={{ padding: '4px', width: '46px' }} title="Duración en minutos" />
                                 </div>
                               </td>
-                              <td style={{ padding: '6px 8px' }}><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
-                              <td style={{ padding: '6px 8px' }}><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
-                              <td style={{ padding: '6px 8px' }}><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
-                              <td style={{ padding: '6px 8px' }}><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
-                              <td style={{ padding: '6px 8px' }}>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}>
                                 <select value={editFormData.estado || 'reservada'} onChange={e => setEditFormData({ ...editFormData, estado: e.target.value })} style={{ padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', width: '100%' }}>
                                   <option value="reservada">📋 Reservada</option>
                                   <option value="confirmada">🟢 Confirmada</option>
@@ -887,7 +890,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                                   <option value="cancelada">❌ Cancelada</option>
                                 </select>
                               </td>
-                              <td style={{ padding: '6px 8px' }}>
+                              <td style={{ padding: '6px 8px', borderTop: idx === 0 ? dayTopBorder : undefined }}>
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <button onClick={() => guardarEdicion(r.id)} style={BTN({ background: '#4caf50' })}>✅ Guardar</button>
                                   <button onClick={cancelarEdicion} style={BTN({ background: '#999' })}>✕</button>
@@ -896,14 +899,14 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                             </>
                           ) : (
                             <>
-                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sede}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
-                              <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{r.cancha}</td>
-                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
-                              <td style={{ wordBreak: 'break-all', fontSize: '12px' }}>{r.email}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
-                              <td><EstadoBadge reserva={r} /></td>
-                              <td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.sede}</td>
+                              <td style={{ whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{horaRango(r.hora, r.duracion)}</td>
+                              <td style={{ textAlign: 'center', whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.cancha}</td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.nombre}</td>
+                              <td style={{ wordBreak: 'break-all', fontSize: '12px', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.email}</td>
+                              <td style={{ whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                              <td style={{ borderTop: idx === 0 ? dayTopBorder : undefined }}><EstadoBadge reserva={r} /></td>
+                              <td style={{ borderTop: idx === 0 ? dayTopBorder : undefined }}>
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <button onClick={() => iniciarEdicion(r)} style={BTN({ background: '#667eea' })}>✏️ Editar</button>
                                   <button onClick={() => cancelarReserva(r.id)} style={BTN({ background: '#d32f2f' })}>🗑️</button>
