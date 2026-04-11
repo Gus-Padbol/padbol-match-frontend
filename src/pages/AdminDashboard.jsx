@@ -26,11 +26,12 @@ function formatFechaDia(str) {
 // "18:00" + 90 → "18:00 - 19:30"
 function horaRango(hora, duracion) {
   if (!hora) return '—';
+  const dur = parseInt(duracion) || 90; // default 90 min when not stored
   const [hh, mm] = hora.split(':').map(Number);
-  const mins = (mm || 0) + (parseInt(duracion) || 0);
+  const mins = (mm || 0) + dur;
   const endH = String(hh + Math.floor(mins / 60)).padStart(2, '0');
   const endM = String(mins % 60).padStart(2, '0');
-  return duracion ? `${hora} - ${endH}:${endM}` : hora;
+  return `${hora} - ${endH}:${endM}`;
 }
 
 // Returns a JSX status badge for a reserva
@@ -822,7 +823,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   <th style={{ padding: '10px 4px', fontSize: '10px', textAlign: 'center', color: '#888' }}></th>
                   <th>Sede</th>
                   <th>Horario</th>
-                  <th style={{ textAlign: 'center' }}>N°</th>
+                  <th style={{ textAlign: 'center' }}>Cancha</th>
                   <th>Nombre</th>
                   <th>Email</th>
                   <th>Precio</th>
@@ -855,8 +856,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                                 display: 'block',
                                 writingMode: 'vertical-rl',
                                 transform: 'rotate(180deg)',
-                                fontSize: '10px',
-                                fontWeight: '700',
+                                fontSize: '11px',
+                                fontWeight: '600',
                                 color: dateColor,
                                 letterSpacing: '0.04em',
                                 whiteSpace: 'nowrap',
