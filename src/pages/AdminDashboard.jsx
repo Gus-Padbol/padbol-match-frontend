@@ -158,6 +158,43 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [editandoTorneoId, setEditandoTorneoId] = useState(null);
   const [editTorneoForm, setEditTorneoForm] = useState({});
   const [savingTorneo, setSavingTorneo] = useState(false);
+  const [torneoStats, setTorneoStats] = useState({});
+
+  useEffect(() => {
+    if (activeTab !== 'torneos' || torneos.length === 0) return;
+    let cancelled = false;
+    const fetchTorneoStats = async () => {
+      const results = await Promise.all(
+        torneos.map(async (t) => {
+          try {
+            const [eqRes, partRes] = await Promise.all([
+              fetch(`${apiBaseUrl}/api/torneos/${t.id}/equipos`),
+              fetch(`${apiBaseUrl}/api/torneos/${t.id}/partidos`),
+            ]);
+            const equipos  = eqRes.ok  ? await eqRes.json()  : [];
+            const partidos = partRes.ok ? await partRes.json() : [];
+            const jugados  = partidos.filter(p => p.estado === 'finalizado').length;
+            // winner: equipo with highest puntos_ranking (finalizado) or puntos_totales (en_curso)
+            const sorted = [...equipos].sort((a, b) =>
+              t.estado === 'finalizado'
+                ? (b.puntos_ranking || 0) - (a.puntos_ranking || 0)
+                : (b.puntos_totales || 0) - (a.puntos_totales || 0)
+            );
+            return { id: t.id, equipos_count: equipos.length, partidos_jugados: jugados, total_partidos: partidos.length, winner: sorted[0] || null };
+          } catch {
+            return { id: t.id, equipos_count: 0, partidos_jugados: 0, total_partidos: 0, winner: null };
+          }
+        })
+      );
+      if (!cancelled) {
+        const map = {};
+        results.forEach(r => { map[r.id] = r; });
+        setTorneoStats(map);
+      }
+    };
+    fetchTorneoStats();
+    return () => { cancelled = true; };
+  }, [activeTab, torneos.length, apiBaseUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const abrirEditTorneo = (torneo) => {
     setEditandoTorneoId(torneo.id);
@@ -502,6 +539,26 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                           <strong style={{ fontSize: '14px', color: '#111' }}>{torneo.nombre}</strong>
                         </div>
                         {sede && <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{sede.nombre}</div>}
+                        {(() => {
+                          const st = torneoStats[torneo.id];
+                          if (!st) return <div style={{ fontSize: '11px', color: '#ccc', marginTop: '3px' }}>···</div>;
+                          if (torneo.estado === 'planificacion') return (
+                            <div style={{ fontSize: '11px', color: '#92400e', marginTop: '3px' }}>
+                              🔧 En formación · <strong>{st.equipos_count}</strong> equipo{st.equipos_count !== 1 ? 's' : ''} inscripto{st.equipos_count !== 1 ? 's' : ''}
+                            </div>
+                          );
+                          if (torneo.estado === 'en_curso') return (
+                            <div style={{ fontSize: '11px', color: '#1d4ed8', marginTop: '3px' }}>
+                              ⚔️ En curso · <strong>{st.partidos_jugados}/{st.total_partidos}</strong> partidos
+                            </div>
+                          );
+                          if (torneo.estado === 'finalizado') return (
+                            <div style={{ fontSize: '11px', color: '#5b21b6', marginTop: '3px' }}>
+                              🏆 Finalizado · <strong>{st.winner?.nombre || '—'}</strong>
+                            </div>
+                          );
+                          return null;
+                        })()}
                       </div>
 
                       {/* Meta pills */}
