@@ -970,7 +970,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             <thead>
               <tr style={{ background: '#3b2f6e', color: 'white' }}>
                 <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Nivel</th>
-                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '100px' }}>Puntos</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '130px' }}>Pts totales torneo</th>
                 <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '90px' }}></th>
               </tr>
             </thead>
@@ -1003,10 +1003,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   ) : (
                     <>
                       <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{configNivelesLabels[key]}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
                         <input type="number" min="0" value={configNiveles[key] ?? 0}
                           onChange={e => setConfigNiveles(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
                           style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
+                        <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px' }}>pts totales</div>
                       </td>
                       <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                         <button onClick={() => { setEditandoTipoId(key); setEditandoTipoData({ nombre: configNivelesLabels[key], puntos: configNiveles[key] ?? 0 }); }}
@@ -1051,7 +1052,10 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   ) : (
                     <>
                       <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{tipo.nombre}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#3b2f6e' }}>{tipo.puntos}</td>
+                      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#3b2f6e' }}>{tipo.puntos}</div>
+                        <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px' }}>pts totales</div>
+                      </td>
                       <td style={{ padding: '10px 16px', textAlign: 'center' }}>
                         <button onClick={() => { setEditandoTipoId(tipo.id); setEditandoTipoData({ nombre: tipo.nombre, puntos: tipo.puntos }); }}
                           style={{ padding: '3px 8px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '3px' }}>✏️</button>
@@ -1094,8 +1098,10 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             .filter(key => !configNivelesHidden.has(key))
             .map(key => ({ value: key, label: configNivelesLabels[key] || key, pts: configNiveles[key] ?? 0 }))
             .concat(configTiposCustom.map(t => ({ value: t.id, label: t.nombre, pts: t.puntos })));
-          const basePts = todosNiveles.find(n => n.value === previewNivel)?.pts
+          const totalPts = todosNiveles.find(n => n.value === previewNivel)?.pts
             ?? todosNiveles[0]?.pts ?? 0;
+          const pctSum = [1,2,3,4,5,6,7,8,9,10].reduce((acc, pos) => acc + (configPosiciones[pos] ?? 0), 0);
+          const pctDiff = pctSum - 100;
           return (
             <div style={{ marginBottom: '28px' }}>
               <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
@@ -1108,7 +1114,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 <select value={previewNivel} onChange={e => setPreviewNivel(e.target.value)}
                   style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', fontSize: '13px', fontWeight: '600', color: '#3b2f6e', background: 'white', cursor: 'pointer' }}>
                   {todosNiveles.map(n => (
-                    <option key={n.value} value={n.value}>{n.label} ({n.pts} pts base)</option>
+                    <option key={n.value} value={n.value}>{n.label} ({n.pts} pts totales)</option>
                   ))}
                 </select>
               </div>
@@ -1116,14 +1122,14 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 <thead>
                   <tr style={{ background: '#3b2f6e', color: 'white' }}>
                     <th style={{ padding: '10px 16px', textAlign: 'left',   fontSize: '13px', fontWeight: 600 }}>Posición</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '110px' }}>% base</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '120px' }}>Pts ({basePts} base)</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '110px' }}>% del total</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600, width: '130px' }}>Pts (de {totalPts} totales)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[1,2,3,4,5,6,7,8,9,10].map((pos, i) => {
                     const pct = configPosiciones[pos] ?? 0;
-                    const pts = Math.round(basePts * pct / 100);
+                    const pts = Math.round((pct / 100) * totalPts);
                     return (
                       <tr key={pos} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
                         <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>
@@ -1143,6 +1149,20 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   })}
                 </tbody>
               </table>
+              {/* Percentage sum indicator */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                marginTop: '10px', padding: '7px 14px', borderRadius: '8px',
+                background: pctDiff === 0 ? 'rgba(22,163,74,0.15)' : pctDiff > 0 ? 'rgba(220,38,38,0.12)' : 'rgba(234,88,12,0.12)',
+                border: `1.5px solid ${pctDiff === 0 ? '#16a34a' : pctDiff > 0 ? '#dc2626' : '#ea580c'}`,
+              }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: pctDiff === 0 ? '#16a34a' : pctDiff > 0 ? '#dc2626' : '#ea580c' }}>
+                  Total: {pctSum}%
+                </span>
+                <span style={{ fontSize: '12px', color: pctDiff === 0 ? '#16a34a' : pctDiff > 0 ? '#dc2626' : '#ea580c' }}>
+                  {pctDiff === 0 ? '✓ Distribución completa' : pctDiff > 0 ? `⚠ Excede por ${pctDiff}%` : `Faltan ${-pctDiff}%`}
+                </span>
+              </div>
             </div>
           );
         })()}
