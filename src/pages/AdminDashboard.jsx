@@ -807,17 +807,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
           return (
             <div className="reservas-table-wrap">
-            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '900px', marginTop: 0 }}>
+            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '968px', marginTop: 0 }}>
               <colgroup>
                 <col style={{ width: '52px' }} /> {/* Date label */}
-                <col style={{ width: '108px' }} />{/* Sede */}
+                <col style={{ width: '110px' }} />{/* Sede */}
                 <col style={{ width: '112px' }} />{/* Horario */}
-                <col style={{ width: '62px' }} /> {/* Cancha */}
-                <col style={{ width: '126px' }} />{/* Nombre */}
-                <col />                            {/* Email flexible */}
-                <col style={{ width: '78px' }} /> {/* Precio */}
-                <col style={{ width: '112px' }} />{/* Estado */}
-                <col style={{ width: '118px' }} />{/* Acciones */}
+                <col style={{ width: '80px' }} /> {/* Cancha */}
+                <col style={{ width: '120px' }} />{/* Nombre */}
+                <col style={{ width: '160px' }} />{/* Email */}
+                <col style={{ width: '88px' }} /> {/* Precio */}
+                <col style={{ width: '116px' }} />{/* Estado */}
+                <col style={{ width: '130px' }} />{/* Acciones */}
               </colgroup>
               <thead>
                 <tr>
@@ -903,7 +903,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                               <td style={{ whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{horaRango(r.hora, r.duracion)}</td>
                               <td style={{ textAlign: 'center', whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.cancha}</td>
                               <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.nombre}</td>
-                              <td style={{ wordBreak: 'break-all', fontSize: '12px', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.email}</td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', borderTop: idx === 0 ? dayTopBorder : undefined }}>{r.email}</td>
                               <td style={{ whiteSpace: 'nowrap', borderTop: idx === 0 ? dayTopBorder : undefined }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
                               <td style={{ borderTop: idx === 0 ? dayTopBorder : undefined }}><EstadoBadge reserva={r} /></td>
                               <td style={{ borderTop: idx === 0 ? dayTopBorder : undefined }}>
