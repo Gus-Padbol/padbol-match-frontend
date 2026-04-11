@@ -1156,13 +1156,15 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                         <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>
                           {pos === 1 ? '🥇 1ro' : pos === 2 ? '🥈 2do' : pos === 3 ? '🥉 3ro' : `${pos}°`}
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center' }}>
-                          <input type="number" min="0" max="100" value={pct}
-                            onChange={e => setConfigPosiciones(prev => ({ ...prev, [pos]: parseInt(e.target.value) || 0 }))}
-                            style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
-                          <span style={{ fontSize: '12px', color: '#999', marginLeft: '3px' }}>%</span>
+                        <td style={{ padding: '10px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <input type="number" min="0" max="100" value={pct}
+                              onChange={e => setConfigPosiciones(prev => ({ ...prev, [pos]: parseInt(e.target.value) || 0 }))}
+                              style={{ width: '70px', padding: '5px 24px 5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'right', fontWeight: 'bold', color: '#3b2f6e' }} />
+                            <span style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', color: '#999', pointerEvents: 'none' }}>%</span>
+                          </div>
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'right', width: '100px', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '10px 16px', textAlign: 'right', width: '100px', verticalAlign: 'middle', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc', whiteSpace: 'nowrap' }}>
                           {pts > 0 ? pts : '—'}
                         </td>
                       </tr>
