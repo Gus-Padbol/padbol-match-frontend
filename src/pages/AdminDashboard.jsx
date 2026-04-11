@@ -789,14 +789,14 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             return (
               <table className="reservas-table" style={{ marginBottom: 0, tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
-                  <col style={{ width: '140px' }} />{/* Sede */}
-                  <col style={{ width: '130px' }} />{/* Horario */}
-                  <col style={{ width: '80px' }} /> {/* Cancha */}
-                  <col style={{ width: '160px' }} />{/* Nombre */}
+                  <col style={{ width: '130px' }} />{/* Sede */}
+                  <col style={{ width: '120px' }} />{/* Horario */}
+                  <col style={{ width: '52px' }} /> {/* Cancha */}
+                  <col style={{ width: '150px' }} />{/* Nombre */}
                   <col />{/* Email — flexible */}
-                  <col style={{ width: '100px' }} />{/* Precio */}
-                  <col style={{ width: '120px' }} />{/* Estado */}
-                  <col style={{ width: '160px' }} />{/* Acciones */}
+                  <col style={{ width: '90px' }} /> {/* Precio */}
+                  <col style={{ width: '118px' }} />{/* Estado */}
+                  <col style={{ width: '148px' }} />{/* Acciones */}
                 </colgroup>
                 <thead>
                   <tr>
@@ -859,23 +859,27 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                                   <option value="cancelada">❌ Cancelada</option>
                                 </select>
                               </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button onClick={() => guardarEdicion(r.id)} style={{ padding: '5px 10px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✅ Guardar</button>
-                                <button onClick={cancelarEdicion} style={{ padding: '5px 10px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>✕ Cancelar</button>
+                              <td>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
+                                  <button onClick={() => guardarEdicion(r.id)} style={{ padding: '4px 8px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✅ Guardar</button>
+                                  <button onClick={cancelarEdicion} style={{ padding: '4px 8px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✕</button>
+                                </div>
                               </td>
                             </>
                           ) : (
                             <>
-                              <td>{r.sede}</td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sede}</td>
                               <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
-                              <td>Cancha {r.cancha}</td>
-                              <td>{r.nombre}</td>
-                              <td>{r.email}</td>
-                              <td>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>C{r.cancha}</td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
+                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
                               <td><EstadoBadge reserva={r} /></td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button onClick={() => iniciarEdicion(r)} style={{ padding: '5px 10px', background: '#667eea', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' }}>✏️ Editar</button>
-                                <button onClick={() => cancelarReserva(r.id)} style={{ padding: '5px 10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>🗑️ Cancelar</button>
+                              <td>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
+                                  <button onClick={() => iniciarEdicion(r)} style={{ padding: '4px 8px', background: '#667eea', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✏️ Editar</button>
+                                  <button onClick={() => cancelarReserva(r.id)} style={{ padding: '4px 8px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>🗑️</button>
+                                </div>
                               </td>
                             </>
                           )}
@@ -901,7 +905,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   borderLeft: '4px solid #a78bfa',
                   paddingLeft: '10px',
                 }}>
-                  📅 Próximas reservas
+                  Próximas reservas
                 </h3>
                 <ReservasTable lista={proximas} accentColor="#3b2f6e" emptyText="Sin reservas próximas." />
               </div>
@@ -917,7 +921,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   borderLeft: '4px solid #64748b',
                   paddingLeft: '10px',
                 }}>
-                  ✅ Reservas completadas
+                  Reservas completadas
                 </h3>
                 <ReservasTable lista={completadas} accentColor="#4a4a6a" emptyText="Sin reservas completadas." />
               </div>
