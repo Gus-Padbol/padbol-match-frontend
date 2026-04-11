@@ -1162,7 +1162,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                             style={{ width: '70px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }} />
                           <span style={{ fontSize: '12px', color: '#999', marginLeft: '3px' }}>%</span>
                         </td>
-                        <td style={{ padding: '10px 16px', textAlign: 'right', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '10px 16px', textAlign: 'right', width: '100px', fontSize: '15px', fontWeight: 'bold', color: pts > 0 ? '#3b2f6e' : '#ccc', whiteSpace: 'nowrap' }}>
                           {pts > 0 ? pts : '—'}
                         </td>
                       </tr>
