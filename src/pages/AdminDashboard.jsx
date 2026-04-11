@@ -173,10 +173,30 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const CONFIG_NIVELES_LABELS_DEFAULT = { club_no_oficial: 'Club No Oficial', club_oficial: 'Club Oficial', nacional: 'Nacional', internacional: 'Internacional', mundial: 'Mundial' };
   const STANDARD_KEYS = ['club_no_oficial', 'club_oficial', 'nacional', 'internacional', 'mundial'];
 
+  // ── localStorage keys used in this component ──
+  // 'config_puntos'  — superAdmin points config (niveles, posiciones, tipos_custom, niveles_labels, niveles_hidden)
+  // 'currentCliente' — logged-in user object (email, nombre, etc.)
+  // 'adminActiveTab' — last active tab so browser-back preserves position
+
+  // Migrate old posiciones data: old system stored point-multipliers (pos 1 = 100).
+  // New system stores percentages summing to 100 (pos 1 = 30). Detect and reset.
+  const migratePositions = (posiciones) => {
+    if (!posiciones || posiciones[1] !== 30) return CONFIG_POSICIONES_DEFAULT;
+    return posiciones;
+  };
+
   const loadConfigFromStorage = () => {
     try {
       const raw = localStorage.getItem('config_puntos');
-      return raw ? JSON.parse(raw) : { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] };
+      if (!raw) return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] };
+      const parsed = JSON.parse(raw);
+      const migratedPos = migratePositions(parsed.posiciones);
+      if (migratedPos !== parsed.posiciones) {
+        // Write migrated value back so next load is clean
+        parsed.posiciones = migratedPos;
+        localStorage.setItem('config_puntos', JSON.stringify(parsed));
+      }
+      return parsed;
     } catch { return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT, tipos_custom: [] }; }
   };
 
@@ -197,14 +217,15 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     fetch(`${apiBaseUrl}/api/config/puntos`)
       .then(r => r.json())
       .then(data => {
+        const posiciones = migratePositions(data.posiciones);
         if (data.niveles)        { setConfigNiveles(data.niveles); }
-        if (data.posiciones)     { setConfigPosiciones(data.posiciones); }
+        if (data.posiciones)     { setConfigPosiciones(posiciones); }
         if (data.tipos_custom)   { setConfigTiposCustom(data.tipos_custom); }
         if (data.niveles_labels) { setConfigNivelesLabels(prev => ({ ...CONFIG_NIVELES_LABELS_DEFAULT, ...data.niveles_labels })); }
         if (data.niveles_hidden) { setConfigNivelesHidden(new Set(data.niveles_hidden)); }
         localStorage.setItem('config_puntos', JSON.stringify({
           niveles:        data.niveles,
-          posiciones:     data.posiciones,
+          posiciones:     posiciones,
           tipos_custom:   data.tipos_custom   || [],
           niveles_labels: data.niveles_labels || {},
           niveles_hidden: data.niveles_hidden || [],
