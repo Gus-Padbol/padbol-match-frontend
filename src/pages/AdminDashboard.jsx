@@ -787,7 +787,17 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             });
 
             return (
-              <table className="reservas-table" style={{ marginBottom: 0 }}>
+              <table className="reservas-table" style={{ marginBottom: 0, tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '140px' }} />{/* Sede */}
+                  <col style={{ width: '130px' }} />{/* Horario */}
+                  <col style={{ width: '80px' }} /> {/* Cancha */}
+                  <col style={{ width: '160px' }} />{/* Nombre */}
+                  <col />{/* Email — flexible */}
+                  <col style={{ width: '100px' }} />{/* Precio */}
+                  <col style={{ width: '120px' }} />{/* Estado */}
+                  <col style={{ width: '160px' }} />{/* Acciones */}
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Sede</th>
@@ -881,19 +891,33 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           return (
             <>
               {/* Upcoming */}
-              <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'rgba(255,255,255,0.9)' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#a78bfa', display: 'inline-block' }} />
-                  Próximas reservas
+              <div style={{ marginBottom: '36px' }}>
+                <h3 style={{
+                  margin: '0 0 14px 0',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  color: 'rgba(255,255,255,0.95)',
+                  letterSpacing: '0.01em',
+                  borderLeft: '4px solid #a78bfa',
+                  paddingLeft: '10px',
+                }}>
+                  📅 Próximas reservas
                 </h3>
                 <ReservasTable lista={proximas} accentColor="#3b2f6e" emptyText="Sin reservas próximas." />
               </div>
 
               {/* Completed */}
               <div>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
-                  Reservas completadas
+                <h3 style={{
+                  margin: '0 0 14px 0',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  color: 'rgba(255,255,255,0.70)',
+                  letterSpacing: '0.01em',
+                  borderLeft: '4px solid #64748b',
+                  paddingLeft: '10px',
+                }}>
+                  ✅ Reservas completadas
                 </h3>
                 <ReservasTable lista={completadas} accentColor="#4a4a6a" emptyText="Sin reservas completadas." />
               </div>
