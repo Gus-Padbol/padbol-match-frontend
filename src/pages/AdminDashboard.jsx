@@ -458,11 +458,11 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             {torneos.map(torneo => {
               const sede = sedesMap[torneo.sede_id];
               const flag = sedeFlag(sede);
-              const estadoColor = {
-                pendiente: '#f59e0b',
-                en_curso:  '#2563eb',
-                finalizado:'#6b7280',
-              }[torneo.estado] || '#6b7280';
+              const estadoBadge = {
+                planificacion: { bg: '#e5e7eb', color: '#374151', label: 'Planificación' },
+                en_curso:      { bg: '#dbeafe', color: '#1d4ed8', label: 'En curso'      },
+                finalizado:    { bg: '#fef3c7', color: '#92400e', label: 'Finalizado'    },
+              }[torneo.estado] || { bg: '#e5e7eb', color: '#374151', label: torneo.estado };
 
               const isEditingThis = editandoTorneoId === torneo.id;
               const inp = { padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', width: '100%', boxSizing: 'border-box' };
@@ -530,61 +530,68 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                       </div>
                     </div>
                   ) : (
-                    /* ── Compact view ── */
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      {/* Name + flag */}
-                      <div style={{ flex: 1, minWidth: '160px' }}>
+                    /* ── Compact view: CSS grid keeps columns aligned across all cards ── */
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 140px 110px 175px auto', gap: '0 14px', alignItems: 'center' }}>
+
+                      {/* Col 1 — name, sede, status summary */}
+                      <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {flag && <span style={{ fontSize: '20px' }}>{flag}</span>}
-                          <strong style={{ fontSize: '14px', color: '#111' }}>{torneo.nombre}</strong>
+                          {flag && <span style={{ fontSize: '18px', flexShrink: 0 }}>{flag}</span>}
+                          <strong style={{ fontSize: '14px', color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{torneo.nombre}</strong>
                         </div>
-                        {sede && <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{sede.nombre}</div>}
+                        {sede && <div style={{ fontSize: '11px', color: '#aaa', marginTop: '1px' }}>{sede.nombre}</div>}
                         {(() => {
                           const st = torneoStats[torneo.id];
-                          if (!st) return <div style={{ fontSize: '11px', color: '#ccc', marginTop: '3px' }}>···</div>;
+                          if (!st) return <div style={{ fontSize: '11px', color: '#ddd', marginTop: '3px' }}>···</div>;
                           if (torneo.estado === 'planificacion') return (
-                            <div style={{ fontSize: '11px', color: '#92400e', marginTop: '3px' }}>
-                              🔧 En formación · <strong>{st.equipos_count}</strong> equipo{st.equipos_count !== 1 ? 's' : ''} inscripto{st.equipos_count !== 1 ? 's' : ''}
+                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '3px' }}>
+                              🔧 <strong>{st.equipos_count}</strong> equipo{st.equipos_count !== 1 ? 's' : ''} inscripto{st.equipos_count !== 1 ? 's' : ''}
                             </div>
                           );
                           if (torneo.estado === 'en_curso') return (
                             <div style={{ fontSize: '11px', color: '#1d4ed8', marginTop: '3px' }}>
-                              ⚔️ En curso · <strong>{st.partidos_jugados}/{st.total_partidos}</strong> partidos
+                              ⚔️ <strong>{st.partidos_jugados}/{st.total_partidos}</strong> partidos
                             </div>
                           );
                           if (torneo.estado === 'finalizado') return (
-                            <div style={{ fontSize: '11px', color: '#5b21b6', marginTop: '3px' }}>
-                              🏆 Finalizado · <strong>{st.winner?.nombre || '—'}</strong>
+                            <div style={{ fontSize: '11px', color: '#92400e', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              🥇 <strong>{st.winner?.nombre || '—'}</strong>
                             </div>
                           );
                           return null;
                         })()}
                       </div>
 
-                      {/* Meta pills */}
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {torneo.nivel_torneo && (
-                          <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                            {torneo.nivel_torneo}
-                          </span>
-                        )}
-                        {torneo.tipo_torneo && (
-                          <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                            {torneo.tipo_torneo}
-                          </span>
-                        )}
-                        <span style={{ background: estadoColor, color: 'white', borderRadius: '12px', padding: '2px 9px', fontSize: '11px', fontWeight: 'bold' }}>
-                          {torneo.estado}
-                        </span>
-                        {torneo.fecha_inicio && (
-                          <span style={{ color: '#6b7280', fontSize: '11px' }}>
-                            📅 {formatFecha(torneo.fecha_inicio)}{torneo.fecha_fin ? ` → ${formatFecha(torneo.fecha_fin)}` : ''}
-                          </span>
-                        )}
+                      {/* Col 2 — nivel */}
+                      <div>
+                        {torneo.nivel_torneo
+                          ? <span style={{ background: '#f3f4f6', color: '#374151', borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '600', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{torneo.nivel_torneo}</span>
+                          : <span style={{ color: '#ddd', fontSize: '11px' }}>—</span>}
                       </div>
 
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {/* Col 3 — formato */}
+                      <div>
+                        {torneo.tipo_torneo
+                          ? <span style={{ background: '#ede9fe', color: '#5b21b6', borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '600', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{torneo.tipo_torneo.replace('_', ' ')}</span>
+                          : <span style={{ color: '#ddd', fontSize: '11px' }}>—</span>}
+                      </div>
+
+                      {/* Col 4 — estado badge */}
+                      <div>
+                        <span style={{ background: estadoBadge.bg, color: estadoBadge.color, borderRadius: '10px', padding: '3px 9px', fontSize: '11px', fontWeight: '700', display: 'inline-block' }}>
+                          {estadoBadge.label}
+                        </span>
+                      </div>
+
+                      {/* Col 5 — dates */}
+                      <div style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                        {torneo.fecha_inicio
+                          ? <>{formatFecha(torneo.fecha_inicio)}{torneo.fecha_fin ? <><br /><span style={{ color: '#aaa' }}>→ {formatFecha(torneo.fecha_fin)}</span></> : ''}</>
+                          : <span style={{ color: '#ddd' }}>—</span>}
+                      </div>
+
+                      {/* Col 6 — actions */}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'flex-end' }}>
                         <button
                           onClick={() => navigate(`/torneo/${torneo.id}/vista`)}
                           style={{ padding: '6px 14px', background: '#667eea', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' }}
@@ -594,7 +601,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                         {isAdmin && (
                           <button
                             onClick={() => abrirEditTorneo(torneo)}
-                            style={{ padding: '6px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                            style={{ padding: '6px 10px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}
                             title="Editar torneo"
                           >
                             ✏️
@@ -603,7 +610,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                         {isSuperAdmin && (
                           <button
                             onClick={() => eliminarTorneo(torneo.id, torneo.nombre)}
-                            style={{ padding: '6px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                            style={{ padding: '6px 10px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}
                             title="Eliminar torneo"
                           >
                             🗑️
