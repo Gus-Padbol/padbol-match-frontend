@@ -498,6 +498,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [licenciaForm,  setLicenciaForm]  = useState({ numero_licencia: '', fecha_licencia: '', licencia_activa: true });
   const [licenciaSaving,setLicenciaSaving]= useState(false);
   const [licenciaMsg,   setLicenciaMsg]   = useState('');
+  const [sedeStatus,     setSedeStatus]     = useState(null);
   const [logoUrl,        setLogoUrl]        = useState('');
   const [logoUploading,  setLogoUploading]  = useState(false);
   const [logoMsg,        setLogoMsg]        = useState('');
@@ -538,6 +539,15 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       setMiSedeLoading(false);
     }).catch(() => setMiSedeLoading(false));
   }, [activeTab, sedeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!sedeId || !esAdminClub) return;
+    supabase.from('sedes')
+      .select('numero_licencia, licencia_activa')
+      .eq('id', sedeId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setSedeStatus(data); });
+  }, [sedeId, esAdminClub]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const guardarMiSede = async () => {
     setMiSedeSaving(true); setMiSedeMsg('');
@@ -725,7 +735,33 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
         </div>
       )}
 
-      {activeTab === 'resumen' && <div className="dashboard-grid">
+      {activeTab === 'resumen' && <>
+        {esAdminClub && sedeStatus && (() => {
+          const { numero_licencia, licencia_activa } = sedeStatus;
+          const badge = !numero_licencia
+            ? { icon: '📋', text: 'Sin licencia asignada', bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' }
+            : licencia_activa
+              ? { icon: '✅', text: 'Licencia PADBOL Activa', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' }
+              : { icon: '⚠️', text: 'Licencia Suspendida',   bg: '#fef2f2', color: '#dc2626', border: '#fecaca' };
+          return (
+            <div style={{ marginBottom: '20px' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '5px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600,
+                background: badge.bg, color: badge.color,
+                border: `1px solid ${badge.border}`,
+              }}>
+                {badge.icon} {badge.text}
+                {numero_licencia && (
+                  <span style={{ fontFamily: 'monospace', fontWeight: 400, opacity: 0.75, marginLeft: '4px' }}>
+                    · {numero_licencia}
+                  </span>
+                )}
+              </span>
+            </div>
+          );
+        })()}
+        <div className="dashboard-grid">
         <div className="card ingresos">
           <h2>Ingresos Totales</h2>
           <div className="ingresos-por-moneda">
@@ -751,7 +787,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           <h2>Total Torneos</h2>
           <p className="count">{torneos.length}</p>
         </div>
-      </div>}
+      </div>
+      </>}
 
       {activeTab === 'torneos' && <div className="section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
