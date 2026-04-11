@@ -8,6 +8,7 @@ import JugadoresCargar from './pages/JugadoresCargar';
 import FormEquipos from './pages/FormEquipos';
 import MiPerfil from './pages/MiPerfil';
 import TorneoVista from './pages/TorneoVista';
+import Rankings from './pages/Rankings';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
 
@@ -488,6 +489,7 @@ function AppContent() {
 return (
   <Routes>
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
+    <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
@@ -502,6 +504,9 @@ return (
               📊 Admin Dashboard
             </button>
           )}
+          <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+            🏆 Rankings
+          </button>
           <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
             👤 Mi Perfil
           </button>
