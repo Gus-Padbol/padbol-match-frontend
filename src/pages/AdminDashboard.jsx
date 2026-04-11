@@ -864,7 +864,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                     <>
                       <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sede}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>C{r.cancha}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>Cancha {r.cancha}</td>
                       <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
                       <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
@@ -883,22 +883,23 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           ));
 
           return (
-            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', marginTop: 0 }}>
+            <div className="reservas-table-wrap">
+            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', minWidth: '880px', marginTop: 0 }}>
               <colgroup>
-                <col style={{ width: '130px' }} />{/* Sede */}
-                <col style={{ width: '122px' }} />{/* Horario */}
-                <col style={{ width: '52px' }} /> {/* Cancha */}
-                <col style={{ width: '150px' }} />{/* Nombre */}
-                <col />                            {/* Email */}
-                <col style={{ width: '92px' }} /> {/* Precio */}
-                <col style={{ width: '116px' }} />{/* Estado */}
-                <col style={{ width: '142px' }} />{/* Acciones */}
+                <col style={{ width: '110px' }} />{/* Sede */}
+                <col style={{ width: '112px' }} />{/* Horario */}
+                <col style={{ width: '88px' }} /> {/* Cancha */}
+                <col style={{ width: '120px' }} />{/* Nombre */}
+                <col style={{ width: '140px' }} />{/* Email */}
+                <col style={{ width: '80px' }} /> {/* Precio */}
+                <col style={{ width: '112px' }} />{/* Estado */}
+                <col style={{ width: '118px' }} />{/* Acciones */}
               </colgroup>
               <thead>
                 <tr>
                   <th>Sede</th>
                   <th>Horario</th>
-                  <th style={{ textAlign: 'center' }}>C#</th>
+                  <th>Cancha</th>
                   <th>Nombre</th>
                   <th>Email</th>
                   <th>Precio</th>
@@ -918,6 +919,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   : <DataRows groups={buildGroups(completadas)} />}
               </tbody>
             </table>
+            </div>
           );
         })()}
       </div>}

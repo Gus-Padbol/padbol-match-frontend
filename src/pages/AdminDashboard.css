@@ -106,16 +106,31 @@
 
 .reservas-table th, .canchas-table th {
   background: #f5f5f5;
-  padding: 12px;
+  padding: 10px 12px;
   text-align: left;
   font-weight: 600;
   color: #333;
   border-bottom: 2px solid #667eea;
+  border-right: 1px solid rgba(0,0,0,0.07);
+}
+
+.reservas-table th:last-child, .canchas-table th:last-child {
+  border-right: none;
 }
 
 .reservas-table td, .canchas-table td {
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid #eee;
+  border-right: 1px solid rgba(0,0,0,0.05);
+}
+
+.reservas-table td:last-child, .canchas-table td:last-child {
+  border-right: none;
+}
+
+.reservas-table-wrap {
+  overflow-x: auto;
+  width: 100%;
 }
 
 .status {
