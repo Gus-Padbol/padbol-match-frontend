@@ -160,6 +160,55 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [savingTorneo, setSavingTorneo] = useState(false);
   const [torneoStats, setTorneoStats] = useState({});
 
+  // ── Config puntos (superAdmin only) ──
+  const CONFIG_NIVELES_DEFAULT    = { club_no_oficial: 10, club_oficial: 30, nacional: 100, internacional: 300, mundial: 1000 };
+  const CONFIG_POSICIONES_DEFAULT = { 1: 100, 2: 60, 3: 40, 4: 25, 5: 15, 6: 10, 7: 5, 8: 5, 9: 5, 10: 5 };
+
+  const loadConfigFromStorage = () => {
+    try {
+      const raw = localStorage.getItem('config_puntos');
+      return raw ? JSON.parse(raw) : { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT };
+    } catch { return { niveles: CONFIG_NIVELES_DEFAULT, posiciones: CONFIG_POSICIONES_DEFAULT }; }
+  };
+
+  const [configNiveles,    setConfigNiveles]    = useState(() => loadConfigFromStorage().niveles);
+  const [configPosiciones, setConfigPosiciones] = useState(() => loadConfigFromStorage().posiciones);
+  const [configSaving,     setConfigSaving]     = useState(false);
+  const [configMsg,        setConfigMsg]        = useState('');
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    fetch(`${apiBaseUrl}/api/config/puntos`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.niveles)    { setConfigNiveles(data.niveles);       }
+        if (data.posiciones) { setConfigPosiciones(data.posiciones); }
+        localStorage.setItem('config_puntos', JSON.stringify({ niveles: data.niveles, posiciones: data.posiciones }));
+      })
+      .catch(() => {});
+  }, [isSuperAdmin, apiBaseUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const guardarConfig = async () => {
+    setConfigSaving(true);
+    setConfigMsg('');
+    try {
+      const body = { niveles: configNiveles, posiciones: configPosiciones };
+      localStorage.setItem('config_puntos', JSON.stringify(body));
+      const res = await fetch(`${apiBaseUrl}/api/config/puntos`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) { setConfigMsg('✅ Configuración guardada'); }
+      else        { setConfigMsg('⚠️ Guardado local OK, error en servidor'); }
+    } catch {
+      setConfigMsg('⚠️ Sin conexión — guardado solo en local');
+    } finally {
+      setConfigSaving(false);
+      setTimeout(() => setConfigMsg(''), 3000);
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== 'torneos' || torneos.length === 0) return;
     let cancelled = false;
@@ -347,6 +396,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     { id: 'torneos',      label: '🏆 Torneos' },
     { id: 'reservas',     label: '📅 Reservas' },
     { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
+    ...(isSuperAdmin ? [{ id: 'config', label: '⚙️ Config' }] : []),
   ];
 
   return (
@@ -836,6 +886,108 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </>
           );
         })()}
+      </div>}
+
+      {activeTab === 'config' && isSuperAdmin && <div className="section">
+        <h2>⚙️ Configuración de Puntos</h2>
+
+        {/* Niveles de torneo */}
+        <div style={{ marginBottom: '32px' }}>
+          <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
+            Puntos base por nivel de torneo
+          </h3>
+          <table style={{ width: '100%', maxWidth: '480px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <thead>
+              <tr style={{ background: '#3b2f6e', color: 'white' }}>
+                <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600 }}>Nivel</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { key: 'club_no_oficial', label: 'Club No Oficial' },
+                { key: 'club_oficial',    label: 'Club Oficial' },
+                { key: 'nacional',        label: 'Nacional' },
+                { key: 'internacional',   label: 'Internacional' },
+                { key: 'mundial',         label: 'Mundial' },
+              ].map(({ key, label }, i) => (
+                <tr key={key} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
+                  <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>{label}</td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      value={configNiveles[key] ?? 0}
+                      onChange={e => setConfigNiveles(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
+                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Distribución por posición */}
+        <div style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '12px', fontSize: '16px' }}>
+            Distribución de puntos por posición (%)
+          </h3>
+          <table style={{ width: '100%', maxWidth: '480px', borderCollapse: 'collapse', background: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <thead>
+              <tr style={{ background: '#3b2f6e', color: 'white' }}>
+                <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 600 }}>Posición</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>% de puntos base</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[1,2,3,4,5,6,7,8,9,10].map((pos, i) => (
+                <tr key={pos} style={{ borderBottom: '1px solid #f0f0f0', background: i % 2 === 0 ? '#fafafa' : 'white' }}>
+                  <td style={{ padding: '10px 16px', fontSize: '14px', color: '#333' }}>
+                    {pos === 1 ? '🥇 1ro' : pos === 2 ? '🥈 2do' : pos === 3 ? '🥉 3ro' : `${pos}°`}
+                  </td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={configPosiciones[pos] ?? 0}
+                      onChange={e => setConfigPosiciones(prev => ({ ...prev, [pos]: parseInt(e.target.value) || 0 }))}
+                      style={{ width: '80px', padding: '5px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: 'bold', color: '#3b2f6e' }}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Save button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            onClick={guardarConfig}
+            disabled={configSaving}
+            style={{
+              padding: '12px 28px',
+              background: configSaving ? '#a78bfa' : 'linear-gradient(135deg, #7c3aed, #4c1d95)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: configSaving ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              fontSize: '15px',
+              boxShadow: '0 2px 8px rgba(124,58,237,0.4)',
+              opacity: configSaving ? 0.8 : 1,
+            }}
+          >
+            {configSaving ? '⏳ Guardando...' : '💾 Guardar configuración'}
+          </button>
+          {configMsg && (
+            <span style={{ fontSize: '14px', fontWeight: '600', color: configMsg.startsWith('✅') ? '#86efac' : '#fde68a' }}>
+              {configMsg}
+            </span>
+          )}
+        </div>
       </div>}
 
     </div>
