@@ -1103,30 +1103,40 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           )}
 
           {/* Add form */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', maxWidth: '520px' }}>
-            <input
-              type="text"
-              placeholder="Nombre del tipo (ej: FIPA Qualifier)"
-              value={nuevoTipo.nombre}
-              onChange={e => setNuevoTipo(p => ({ ...p, nombre: e.target.value }))}
-              onKeyDown={e => { if (e.key === 'Enter' && nuevoTipo.nombre.trim()) { setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); } }}
-              style={{ flex: 1, minWidth: '200px', padding: '9px 12px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white' }}
-            />
-            <input
-              type="number"
-              placeholder="Pts"
-              min="0"
-              value={nuevoTipo.puntos || ''}
-              onChange={e => setNuevoTipo(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
-              style={{ width: '72px', padding: '9px 10px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.1)', color: 'white', textAlign: 'center' }}
-            />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', maxWidth: '560px' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginBottom: '5px' }}>
+                Nombre del tipo
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: FIPA Qualifier"
+                value={nuevoTipo.nombre}
+                onChange={e => setNuevoTipo(p => ({ ...p, nombre: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter' && nuevoTipo.nombre.trim()) { setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]); setNuevoTipo({ nombre: '', puntos: 0 }); } }}
+                style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #c4b5fd', borderRadius: '6px', fontSize: '13px', background: 'white', color: '#1e1b4b', boxSizing: 'border-box', outline: 'none' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginBottom: '5px' }}>
+                Puntos base
+              </label>
+              <input
+                type="number"
+                placeholder="Ej: 150"
+                min="0"
+                value={nuevoTipo.puntos || ''}
+                onChange={e => setNuevoTipo(p => ({ ...p, puntos: parseInt(e.target.value) || 0 }))}
+                style={{ width: '100px', padding: '9px 10px', border: '1.5px solid #c4b5fd', borderRadius: '6px', fontSize: '13px', background: 'white', color: '#1e1b4b', textAlign: 'center' }}
+              />
+            </div>
             <button
               onClick={() => {
                 if (!nuevoTipo.nombre.trim()) return;
                 setConfigTiposCustom(prev => [...prev, { id: Date.now().toString(), nombre: nuevoTipo.nombre.trim(), puntos: nuevoTipo.puntos || 0 }]);
                 setNuevoTipo({ nombre: '', puntos: 0 });
               }}
-              style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}
+              style={{ padding: '9px 20px', background: 'linear-gradient(135deg, #7c3aed, #4c1d95)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', marginBottom: '1px' }}
             >
               + Agregar
             </button>
