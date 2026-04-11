@@ -773,159 +773,151 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
 
       {activeTab === 'reservas' && <div className="section">
         {(() => {
-          const proximas   = reservas.filter(esFutura).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
+          const proximas    = reservas.filter(esFutura).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
           const completadas = reservas.filter(r => !esFutura(r)).sort((a, b) => (a.fecha + a.hora) > (b.fecha + b.hora) ? -1 : 1);
 
-          const ReservasTable = ({ lista, accentColor, emptyText }) => {
-            if (lista.length === 0) return <p style={{ color: '#aaa', padding: '10px 0', fontSize: '13px' }}>{emptyText}</p>;
-
-            const groups = {};
-            lista.forEach(r => {
-              const key = r.fecha || 'Sin fecha';
-              if (!groups[key]) groups[key] = [];
-              groups[key].push(r);
-            });
-
-            return (
-              <table className="reservas-table" style={{ marginBottom: 0, tableLayout: 'fixed', width: '100%' }}>
-                <colgroup>
-                  <col style={{ width: '130px' }} />{/* Sede */}
-                  <col style={{ width: '120px' }} />{/* Horario */}
-                  <col style={{ width: '52px' }} /> {/* Cancha */}
-                  <col style={{ width: '150px' }} />{/* Nombre */}
-                  <col />{/* Email — flexible */}
-                  <col style={{ width: '90px' }} /> {/* Precio */}
-                  <col style={{ width: '118px' }} />{/* Estado */}
-                  <col style={{ width: '148px' }} />{/* Acciones */}
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Sede</th>
-                    <th>Horario</th>
-                    <th>Cancha</th>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Precio</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(groups).map(dia => (
-                    <React.Fragment key={dia}>
-                      <tr>
-                        <td colSpan="8" style={{ background: 'transparent', padding: '18px 0 6px 0', border: 'none' }}>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: 'rgba(59, 47, 110, 0.12)',
-                            border: '1px solid rgba(59, 47, 110, 0.25)',
-                            color: accentColor === '#3b2f6e' ? '#3b2f6e' : '#4a4a6a',
-                            borderRadius: '20px',
-                            padding: '4px 14px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            letterSpacing: '0.02em',
-                          }}>
-                            📅 {formatFechaDia(dia)}
-                          </span>
-                        </td>
-                      </tr>
-                      {groups[dia].map(r => (
-                        <tr key={r.id}>
-                          {editandoId === r.id ? (
-                            <>
-                              <td><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                  <input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ padding: '5px', flex: 1 }} />
-                                  <input type="number" placeholder="min" value={editFormData.duracion || ''} onChange={e => setEditFormData({ ...editFormData, duracion: e.target.value })} style={{ padding: '5px', width: '52px' }} title="Duración en minutos" />
-                                </div>
-                              </td>
-                              <td><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '5px' }} /></td>
-                              <td>
-                                <select
-                                  value={editFormData.estado || 'reservada'}
-                                  onChange={e => setEditFormData({ ...editFormData, estado: e.target.value })}
-                                  style={{ padding: '5px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '12px' }}
-                                >
-                                  <option value="reservada">📋 Reservada</option>
-                                  <option value="confirmada">🟢 Confirmada</option>
-                                  <option value="completada">✅ Completada</option>
-                                  <option value="cancelada">❌ Cancelada</option>
-                                </select>
-                              </td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
-                                  <button onClick={() => guardarEdicion(r.id)} style={{ padding: '4px 8px', background: '#4caf50', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✅ Guardar</button>
-                                  <button onClick={cancelarEdicion} style={{ padding: '4px 8px', background: '#999', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✕</button>
-                                </div>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sede}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>C{r.cancha}</td>
-                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
-                              <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
-                              <td><EstadoBadge reserva={r} /></td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
-                                  <button onClick={() => iniciarEdicion(r)} style={{ padding: '4px 8px', background: '#667eea', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>✏️ Editar</button>
-                                  <button onClick={() => cancelarReserva(r.id)} style={{ padding: '4px 8px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>🗑️</button>
-                                </div>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            );
+          const buildGroups = (lista) => {
+            const g = {};
+            lista.forEach(r => { const k = r.fecha || 'Sin fecha'; if (!g[k]) g[k] = []; g[k].push(r); });
+            return g;
           };
 
-          return (
-            <>
-              {/* Upcoming */}
-              <div style={{ marginBottom: '36px' }}>
-                <h3 style={{
-                  margin: '0 0 14px 0',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  color: 'rgba(255,255,255,0.95)',
-                  letterSpacing: '0.01em',
-                  borderLeft: '4px solid #a78bfa',
-                  paddingLeft: '10px',
-                }}>
-                  Próximas reservas
-                </h3>
-                <ReservasTable lista={proximas} accentColor="#3b2f6e" emptyText="Sin reservas próximas." />
-              </div>
+          const SectionHeaderRow = ({ label, color }) => (
+            <tr>
+              <td colSpan="8" style={{
+                padding: '14px 16px 10px',
+                border: 'none',
+                borderBottom: `2px solid ${color}`,
+                background: 'transparent',
+              }}>
+                <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.01em' }}>
+                  {label}
+                </span>
+              </td>
+            </tr>
+          );
 
-              {/* Completed */}
-              <div>
-                <h3 style={{
-                  margin: '0 0 14px 0',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  color: 'rgba(255,255,255,0.70)',
-                  letterSpacing: '0.01em',
-                  borderLeft: '4px solid #64748b',
-                  paddingLeft: '10px',
+          const DateRow = ({ dia }) => (
+            <tr>
+              <td colSpan="8" style={{ padding: '10px 16px 4px', border: 'none', background: 'transparent' }}>
+                <span style={{
+                  display: 'inline-block',
+                  background: 'rgba(59,47,110,0.12)',
+                  border: '1px solid rgba(59,47,110,0.25)',
+                  color: '#3b2f6e',
+                  borderRadius: '20px',
+                  padding: '3px 12px',
+                  fontSize: '12px',
+                  fontWeight: '600',
                 }}>
-                  Reservas completadas
-                </h3>
-                <ReservasTable lista={completadas} accentColor="#4a4a6a" emptyText="Sin reservas completadas." />
-              </div>
-            </>
+                  📅 {formatFechaDia(dia)}
+                </span>
+              </td>
+            </tr>
+          );
+
+          const EmptyRow = ({ text }) => (
+            <tr>
+              <td colSpan="8" style={{ padding: '10px 16px', color: '#aaa', fontSize: '13px', border: 'none' }}>{text}</td>
+            </tr>
+          );
+
+          const BTN = (extra) => ({
+            padding: '4px 10px', border: 'none', borderRadius: '3px',
+            cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap', color: 'white', ...extra,
+          });
+
+          const DataRows = ({ groups }) => Object.keys(groups).map(dia => (
+            <React.Fragment key={dia}>
+              <DateRow dia={dia} />
+              {groups[dia].map(r => (
+                <tr key={r.id}>
+                  {editandoId === r.id ? (
+                    <>
+                      <td style={{ padding: '6px 8px' }}><input type="text" value={editFormData.sede || ''} onChange={e => setEditFormData({ ...editFormData, sede: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                          <input type="time" value={editFormData.hora || ''} onChange={e => setEditFormData({ ...editFormData, hora: e.target.value })} style={{ padding: '4px', flex: 1, minWidth: 0 }} />
+                          <input type="number" placeholder="min" value={editFormData.duracion || ''} onChange={e => setEditFormData({ ...editFormData, duracion: e.target.value })} style={{ padding: '4px', width: '46px' }} title="Duración en minutos" />
+                        </div>
+                      </td>
+                      <td style={{ padding: '6px 8px' }}><input type="number" value={editFormData.cancha || ''} onChange={e => setEditFormData({ ...editFormData, cancha: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                      <td style={{ padding: '6px 8px' }}><input type="text" value={editFormData.nombre || ''} onChange={e => setEditFormData({ ...editFormData, nombre: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                      <td style={{ padding: '6px 8px' }}><input type="email" value={editFormData.email || ''} onChange={e => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                      <td style={{ padding: '6px 8px' }}><input type="number" value={editFormData.precio || ''} onChange={e => setEditFormData({ ...editFormData, precio: parseInt(e.target.value) })} style={{ width: '100%', padding: '4px 6px', boxSizing: 'border-box' }} /></td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <select value={editFormData.estado || 'reservada'} onChange={e => setEditFormData({ ...editFormData, estado: e.target.value })} style={{ padding: '4px 6px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', width: '100%' }}>
+                          <option value="reservada">📋 Reservada</option>
+                          <option value="confirmada">🟢 Confirmada</option>
+                          <option value="completada">✅ Completada</option>
+                          <option value="cancelada">❌ Cancelada</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => guardarEdicion(r.id)} style={BTN({ background: '#4caf50' })}>✅ Guardar</button>
+                          <button onClick={cancelarEdicion} style={BTN({ background: '#999' })}>✕</button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.sede}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{horaRango(r.hora, r.duracion)}</td>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>C{r.cancha}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nombre}</td>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>${(r.precio || 30000).toLocaleString('es-AR')}</td>
+                      <td><EstadoBadge reserva={r} /></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => iniciarEdicion(r)} style={BTN({ background: '#667eea' })}>✏️ Editar</button>
+                          <button onClick={() => cancelarReserva(r.id)} style={BTN({ background: '#d32f2f' })}>🗑️</button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </React.Fragment>
+          ));
+
+          return (
+            <table className="reservas-table" style={{ tableLayout: 'fixed', width: '100%', marginTop: 0 }}>
+              <colgroup>
+                <col style={{ width: '130px' }} />{/* Sede */}
+                <col style={{ width: '122px' }} />{/* Horario */}
+                <col style={{ width: '52px' }} /> {/* Cancha */}
+                <col style={{ width: '150px' }} />{/* Nombre */}
+                <col />                            {/* Email */}
+                <col style={{ width: '92px' }} /> {/* Precio */}
+                <col style={{ width: '116px' }} />{/* Estado */}
+                <col style={{ width: '142px' }} />{/* Acciones */}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Sede</th>
+                  <th>Horario</th>
+                  <th style={{ textAlign: 'center' }}>C#</th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Precio</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <SectionHeaderRow label="Próximas reservas" color="#a78bfa" />
+                {proximas.length === 0
+                  ? <EmptyRow text="Sin reservas próximas." />
+                  : <DataRows groups={buildGroups(proximas)} />}
+
+                <SectionHeaderRow label="Reservas completadas" color="#64748b" />
+                {completadas.length === 0
+                  ? <EmptyRow text="Sin reservas completadas." />
+                  : <DataRows groups={buildGroups(completadas)} />}
+              </tbody>
+            </table>
           );
         })()}
       </div>}
