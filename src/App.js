@@ -30,6 +30,28 @@ function AppContent() {
   });
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
   const { rol, sedeId, loading: roleLoading } = useUserRole(currentCliente);
+
+  // Restore session from Supabase Auth on mount (handles page refresh / returning users)
+  useEffect(() => {
+    if (currentCliente) return; // already restored from localStorage
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const email = session.user.email;
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('nombre, whatsapp, foto')
+        .eq('email', email)
+        .maybeSingle();
+      const user = {
+        email,
+        nombre:   cliente?.nombre   || email.split('@')[0],
+        whatsapp: cliente?.whatsapp || '',
+        foto:     cliente?.foto     || null,
+      };
+      setCurrentCliente(user);
+      localStorage.setItem('currentCliente', JSON.stringify(user));
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -59,27 +81,44 @@ function AppContent() {
   const [fichaFechaNacimiento, setFichaFechaNacimiento] = useState('');
   const [fichaLoading, setFichaLoading] = useState(false);
 
- const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    
+
     if (!loginEmail || !loginPassword) {
       setErrorMsg('Completa todos los campos');
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find(u => u.email === loginEmail && u.password === loginPassword);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
 
-    if (user) {
-      setCurrentCliente(user);
-      localStorage.setItem('currentCliente', JSON.stringify(user));
-      setLoginEmail('');
-      setLoginPassword('');
-      navigate('/');
-    } else {
+    if (error) {
       setErrorMsg('Email o contraseña incorrectos');
+      return;
     }
+
+    // Fetch extra profile fields from clientes table
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('nombre, whatsapp, foto')
+      .eq('email', loginEmail)
+      .maybeSingle();
+
+    const user = {
+      email:    data.user.email,
+      nombre:   cliente?.nombre   || data.user.email.split('@')[0],
+      whatsapp: cliente?.whatsapp || '',
+      foto:     cliente?.foto     || null,
+    };
+
+    setCurrentCliente(user);
+    localStorage.setItem('currentCliente', JSON.stringify(user));
+    setLoginEmail('');
+    setLoginPassword('');
+    navigate('/');
   };
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -96,26 +135,30 @@ function AppContent() {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.find(u => u.email === registerEmail)) {
-      setErrorMsg('Este email ya está registrado');
+    // Sign up with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: registerEmail,
+      password: registerPassword,
+    });
+
+    if (authError) {
+      setErrorMsg(authError.message);
       return;
     }
 
-    let fotoUrl = null;
+    const whatsapp = `${registerCodigoPais}${registerNumeroTel.replace(/[\s\-().]/g, '')}`;
 
+    let fotoUrl = null;
     if (registerFoto) {
       try {
         const fileName = `${Date.now()}_${registerFoto.name}`;
-        const { data, error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(fileName, registerFoto);
-
-        if (error) {
-          setErrorMsg('Error al subir foto: ' + error.message);
+        if (uploadError) {
+          setErrorMsg('Error al subir foto: ' + uploadError.message);
           return;
         }
-
         fotoUrl = `https://vpldffhsxhgnmitiikof.supabase.co/storage/v1/object/public/avatars/${fileName}`;
       } catch (err) {
         setErrorMsg('Error al procesar foto: ' + err.message);
@@ -123,18 +166,18 @@ function AppContent() {
       }
     }
 
-    const newUser = {
-      nombre: registerNombre,
-      email: registerEmail,
-      password: registerPassword,
-      whatsapp: `${registerCodigoPais}${registerNumeroTel.replace(/[\s\-().]/g, '')}`,
-      foto: fotoUrl,
-    };
+    // Save extra profile fields to clientes table
+    if (authData.user) {
+      await supabase.from('clientes').upsert({
+        id:       authData.user.id,
+        email:    registerEmail,
+        nombre:   registerNombre,
+        whatsapp: whatsapp,
+        foto:     fotoUrl,
+      });
+    }
 
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    setPendingUserData({ email: registerEmail, nombre: registerNombre, whatsapp: newUser.whatsapp });
+    setPendingUserData({ email: registerEmail, nombre: registerNombre, whatsapp });
 
     setRegisterNombre('');
     setRegisterEmail('');
@@ -200,7 +243,8 @@ function AppContent() {
     setShowLogin(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentCliente(null);
     localStorage.removeItem('currentCliente');
     localStorage.removeItem('user_role_data');
