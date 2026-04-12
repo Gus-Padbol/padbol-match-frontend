@@ -9,23 +9,71 @@ function formatHorario(apertura, cierre) {
   return null;
 }
 
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatKm(km) {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toFixed(1)} km`;
+}
+
 export default function SedesPublicas({ currentCliente }) {
   const navigate = useNavigate();
-  const [sedes,   setSedes]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState('');
+  const [sedes,       setSedes]       = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [search,      setSearch]      = useState('');
+  const [userPos,     setUserPos]     = useState(null);   // { lat, lon }
+  const [geoStatus,   setGeoStatus]   = useState('pending'); // pending | granted | denied
 
+  // Load sedes (include lat/lon for distance sorting)
   useEffect(() => {
     supabase
       .from('sedes')
-      .select('id, nombre, ciudad, pais, logo_url, horario_apertura, horario_cierre, descripcion')
+      .select('id, nombre, ciudad, pais, logo_url, horario_apertura, horario_cierre, descripcion, latitud, longitud')
       .eq('licencia_activa', true)
       .order('nombre', { ascending: true })
       .then(({ data }) => { setSedes(data || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  const filtered = sedes.filter(s => {
+  // Request geolocation once
+  useEffect(() => {
+    if (!navigator.geolocation) { setGeoStatus('denied'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setUserPos({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setGeoStatus('granted');
+      },
+      () => setGeoStatus('denied'),
+      { timeout: 8000 }
+    );
+  }, []);
+
+  // Attach distance to each sede, sort if geolocation available
+  const sedesWithDist = sedes.map(s => {
+    if (geoStatus === 'granted' && userPos && s.latitud != null && s.longitud != null) {
+      return { ...s, distKm: getDistanceKm(userPos.lat, userPos.lon, s.latitud, s.longitud) };
+    }
+    return { ...s, distKm: null };
+  });
+
+  const sorted = geoStatus === 'granted'
+    ? [...sedesWithDist].sort((a, b) => {
+        if (a.distKm == null && b.distKm == null) return 0;
+        if (a.distKm == null) return 1;
+        if (b.distKm == null) return -1;
+        return a.distKm - b.distKm;
+      })
+    : sedesWithDist;
+
+  const filtered = sorted.filter(s => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -61,11 +109,27 @@ export default function SedesPublicas({ currentCliente }) {
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
 
-        {/* Title + search */}
+        {/* Title + search + geo status */}
         <div style={{ marginBottom: '28px' }}>
-          <h2 style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(1.3rem, 4vw, 2rem)', margin: '0 0 20px', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
+          <h2 style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(1.3rem, 4vw, 2rem)', margin: '0 0 16px', textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
             🏟️ Canchas de PADBOL cerca tuyo
           </h2>
+
+          {/* Geo status pill */}
+          {geoStatus !== 'pending' && (
+            <div style={{ marginBottom: '16px' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+                background: geoStatus === 'granted' ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.15)',
+                color: geoStatus === 'granted' ? '#86efac' : 'rgba(255,255,255,0.7)',
+                border: `1px solid ${geoStatus === 'granted' ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.25)'}`,
+              }}>
+                {geoStatus === 'granted' ? '📍 Ordenado por distancia' : '🌍 Mostrando todas las canchas'}
+              </span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="text"
@@ -113,10 +177,22 @@ export default function SedesPublicas({ currentCliente }) {
                       <h3 style={{ margin: '0 0 4px', color: 'white', fontSize: '15px', fontWeight: 800, lineHeight: 1.25, wordBreak: 'break-word' }}>{sede.nombre}</h3>
                       {(sede.ciudad || sede.pais) && (
                         <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '12px' }}>
-                          📍 {[sede.ciudad, sede.pais].filter(Boolean).join(', ')}
+                          {[sede.ciudad, sede.pais].filter(Boolean).join(', ')}
                         </p>
                       )}
                     </div>
+                    {/* Distance badge */}
+                    {sede.distKm != null && (
+                      <span style={{
+                        flexShrink: 0, padding: '4px 8px', borderRadius: '10px',
+                        background: 'rgba(74,222,128,0.2)', color: '#86efac',
+                        fontSize: '11px', fontWeight: 700,
+                        border: '1px solid rgba(74,222,128,0.3)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        📍 {formatKm(sede.distKm)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Card body */}

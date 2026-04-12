@@ -528,6 +528,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           moneda:           sedeData.moneda           || 'ARS',
           descripcion:      sedeData.descripcion      || '',
           mp_access_token:  sedeData.mp_access_token  || '',
+          latitud:          sedeData.latitud  != null ? String(sedeData.latitud)  : '',
+          longitud:         sedeData.longitud != null ? String(sedeData.longitud) : '',
         });
         setLicenciaForm({
           numero_licencia: sedeData.numero_licencia || '',
@@ -566,6 +568,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       moneda:           miSedeForm.moneda           || 'ARS',
       descripcion:      miSedeForm.descripcion      || null,
       mp_access_token:  miSedeForm.mp_access_token  || null,
+      latitud:          miSedeForm.latitud  !== '' ? parseFloat(miSedeForm.latitud)  : null,
+      longitud:         miSedeForm.longitud !== '' ? parseFloat(miSedeForm.longitud) : null,
     }).eq('id', sedeId);
     setMiSedeSaving(false);
     setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
@@ -1573,6 +1577,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 { label: 'Email de contacto',      field: 'email_contacto' },
                 { label: 'Horario apertura',       field: 'horario_apertura', placeholder: 'Ej: 08:00' },
                 { label: 'Horario cierre',         field: 'horario_cierre',   placeholder: 'Ej: 23:00' },
+                { label: 'Latitud',                field: 'latitud',          placeholder: 'Ej: -34.6037' },
+                { label: 'Longitud',               field: 'longitud',         placeholder: 'Ej: -58.3816', hint: 'Podés obtener las coordenadas desde Google Maps (clic derecho → "¿Qué hay aquí?")' },
               ].map(({ label, field, placeholder, hint }) => (
                 <div key={field} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
                   <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', paddingTop: '8px' }}>{label}</label>
