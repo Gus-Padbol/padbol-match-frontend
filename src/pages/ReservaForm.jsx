@@ -277,6 +277,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
           precio: sedeSeleccionada.precio_por_reserva,
           moneda: sedeSeleccionada.moneda || 'ARS',
           sedeNombre: sedeSeleccionada.nombre,
+          sedeId: sedeSeleccionada.id,
           reservaData,
         }),
       });

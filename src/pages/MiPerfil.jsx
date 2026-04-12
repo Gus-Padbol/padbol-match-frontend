@@ -22,6 +22,7 @@ export default function MiPerfil({ currentCliente }) {
   const [perfil, setPerfil] = useState(null);
   const [sedes, setSedes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reservas, setReservas] = useState([]);
   const [editando, setEditando] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -49,6 +50,7 @@ export default function MiPerfil({ currentCliente }) {
     }
     fetchPerfil();
     fetchSedes();
+    fetchReservas();
   }, [currentCliente]);
 
   const fetchPerfil = async () => {
@@ -82,6 +84,20 @@ export default function MiPerfil({ currentCliente }) {
       if (res.ok) setSedes(await res.json() || []);
     } catch {
       // sedes optional — fail silently
+    }
+  };
+
+  const fetchReservas = async () => {
+    try {
+      const { data } = await supabase
+        .from('reservas')
+        .select('id, sede, fecha, hora, cancha, estado, precio, moneda')
+        .eq('email', currentCliente.email)
+        .order('fecha', { ascending: false })
+        .limit(20);
+      setReservas(data || []);
+    } catch {
+      // fail silently
     }
   };
 
@@ -412,14 +428,61 @@ export default function MiPerfil({ currentCliente }) {
         )}
       </div>
 
-      {/* Logros */}
+      {/* Stats */}
+      {reservas.length > 0 && (() => {
+        const sedeFav = (() => {
+          const counts = {};
+          reservas.forEach(r => { counts[r.sede] = (counts[r.sede] || 0) + 1; });
+          return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+        })();
+        return (
+          <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
+            <h4 style={{ margin: '0 0 14px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>📊 Estadísticas</h4>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '120px', background: 'white', borderRadius: '10px', padding: '14px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div style={{ fontSize: '28px', fontWeight: 900, color: '#d32f2f' }}>{reservas.length}</div>
+                <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>Reservas totales</div>
+              </div>
+              {sedeFav && (
+                <div style={{ flex: 2, minWidth: '160px', background: 'white', borderRadius: '10px', padding: '14px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1e1b4b', lineHeight: 1.3 }}>{sedeFav}</div>
+                  <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>Sede favorita</div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Historial de Reservas */}
       <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
-        <h4 style={{ margin: '0 0 14px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>
-          🏅 Logros
-        </h4>
-        <p style={{ color: '#aaa', textAlign: 'center', margin: '20px 0', fontSize: '14px' }}>
-          Tus logros aparecerán aquí cuando sean registrados.
-        </p>
+        <h4 style={{ margin: '0 0 14px', color: '#333', borderBottom: '1px solid #e0e0e0', paddingBottom: '8px' }}>🗓️ Mis Reservas</h4>
+        {reservas.length === 0 ? (
+          <p style={{ color: '#aaa', textAlign: 'center', margin: '20px 0', fontSize: '14px' }}>Aún no tenés reservas registradas.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {reservas.map(r => (
+              <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '13px', color: '#1e1b4b' }}>{r.sede}</div>
+                  <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>📅 {r.fecha} &nbsp;⏰ {r.hora} &nbsp;🎾 Cancha {r.cancha}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {r.precio > 0 && (
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#d32f2f' }}>
+                      {Number(r.precio).toLocaleString('es-AR')} {r.moneda || 'ARS'}
+                    </div>
+                  )}
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
+                    background: r.estado === 'confirmada' ? '#dcfce7' : r.estado === 'test' ? '#f3f4f6' : '#fef9c3',
+                    color: r.estado === 'confirmada' ? '#16a34a' : r.estado === 'test' ? '#6b7280' : '#854d0e',
+                  }}>{r.estado || 'reservada'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Historial de Torneos */}

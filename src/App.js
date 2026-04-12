@@ -11,6 +11,7 @@ import TorneoVista from './pages/TorneoVista';
 import Rankings from './pages/Rankings';
 import TorneosPublicos from './pages/TorneosPublicos';
 import SedePublica from './pages/SedePublica';
+import SedesPublicas from './pages/SedesPublicas';
 import PagoExitoso from './pages/PagoExitoso';
 import PagoFallido from './pages/PagoFallido';
 import { supabase } from './supabaseClient';
@@ -141,7 +142,8 @@ function AppContent() {
     localStorage.setItem('currentCliente', JSON.stringify(user));
     setLoginEmail('');
     setLoginPassword('');
-    navigate('/');
+    const ultimaSede = localStorage.getItem('ultima_sede');
+    navigate(ultimaSede ? `/sede/${ultimaSede}` : '/');
   };
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -571,6 +573,7 @@ return (
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
     <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} />} />
+    <Route path="/sedes" element={<SedesPublicas currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
@@ -647,6 +650,9 @@ return (
         /* ── Regular user: reservation form ── */
         <div style={{ padding: '20px' }}>
           <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+            <button onClick={() => navigate('/sedes')} style={{ padding: '10px 20px', background: '#0369a1', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+              🏟️ Canchas
+            </button>
             <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
               🏆 Torneos
             </button>

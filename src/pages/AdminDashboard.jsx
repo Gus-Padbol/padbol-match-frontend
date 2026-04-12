@@ -527,6 +527,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           precio_turno:     sedeData.precio_turno     ?? '',
           moneda:           sedeData.moneda           || 'ARS',
           descripcion:      sedeData.descripcion      || '',
+          mp_access_token:  sedeData.mp_access_token  || '',
         });
         setLicenciaForm({
           numero_licencia: sedeData.numero_licencia || '',
@@ -564,6 +565,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       precio_turno:     miSedeForm.precio_turno !== '' ? parseFloat(miSedeForm.precio_turno) : null,
       moneda:           miSedeForm.moneda           || 'ARS',
       descripcion:      miSedeForm.descripcion      || null,
+      mp_access_token:  miSedeForm.mp_access_token  || null,
     }).eq('id', sedeId);
     setMiSedeSaving(false);
     setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
@@ -1653,7 +1655,33 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </div>
           </div>
 
-          {/* ── 3. Canchas ── */}
+          {/* ── 3. Mercado Pago ── */}
+          {(esAdminClub || isSuperAdmin) && (
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>💳 Mercado Pago</h3>
+              <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
+                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                  Ingresá el Access Token de tu cuenta de Mercado Pago para recibir los pagos directamente en tu cuenta.
+                </p>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#555', marginBottom: '6px' }}>
+                  Access Token de MP
+                </label>
+                <input
+                  type="password"
+                  value={miSedeForm.mp_access_token || ''}
+                  placeholder="APP_USR-..."
+                  onChange={e => setMiSedeForm(p => ({ ...p, mp_access_token: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px' }}
+                />
+                <button onClick={guardarMiSede} disabled={miSedeSaving}
+                  style={{ padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                  {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar token'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── 4. Canchas ── */}
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Canchas</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
