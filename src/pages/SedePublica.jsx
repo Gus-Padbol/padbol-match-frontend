@@ -13,91 +13,95 @@ function Carousel({ fotos }) {
   const [idx, setIdx] = useState(0);
   const timerRef = useRef(null);
 
-  const go = (next) => {
-    setIdx((prev) => (prev + next + fotos.length) % fotos.length);
+  const go = (delta) => setIdx((prev) => (prev + delta + fotos.length) % fotos.length);
+
+  const startTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setIdx(p => (p + 1) % fotos.length), 4000);
   };
 
   useEffect(() => {
-    if (fotos.length <= 1) return;
-    timerRef.current = setInterval(() => go(1), 4000);
+    if (fotos.length > 1) startTimer();
     return () => clearInterval(timerRef.current);
   }, [fotos.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const restart = (next) => {
-    clearInterval(timerRef.current);
-    go(next);
-    timerRef.current = setInterval(() => go(1), 4000);
-  };
+  const handleNav = (delta) => { go(delta); startTimer(); };
+  const handleDot = (i) => { setIdx(i); startTimer(); };
 
   if (!fotos.length) return null;
 
+  // Show 2 photos side-by-side when there are ≥2 and viewport is wide enough
+  const showTwo = fotos.length >= 2;
+  const visible = showTwo
+    ? [fotos[idx], fotos[(idx + 1) % fotos.length]]
+    : [fotos[idx]];
+
   return (
-    <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', background: '#111', marginBottom: '24px' }}>
-      {/* Main image */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: fotos.length >= 2 ? 'repeat(2, 1fr)' : '1fr',
-        gap: '3px',
-        maxHeight: '340px',
-        overflow: 'hidden',
-      }}>
-        {/* On mobile show 1, on wider show 2 side-by-side */}
-        {[fotos[idx], fotos[(idx + 1) % fotos.length]]
-          .slice(0, fotos.length >= 2 ? 2 : 1)
-          .map((url, i) => (
-            <div key={`${url}-${i}`} style={{ aspectRatio: '4/3', overflow: 'hidden' }}>
+    <div style={{ borderRadius: '16px', overflow: 'hidden', background: '#111', marginBottom: '8px' }}>
+      {/* Image strip — relative so arrows are anchored here */}
+      <div style={{ position: 'relative' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: showTwo ? 'repeat(2, 1fr)' : '1fr',
+          gap: '3px',
+        }}>
+          {visible.map((url, i) => (
+            <div key={`${url}-${i}`} style={{ aspectRatio: '4/3', overflow: 'hidden', maxHeight: '280px' }}>
               <img
                 src={url}
                 alt={`Cancha ${idx + i + 1}`}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'opacity 0.3s' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>
           ))}
+        </div>
+
+        {/* Arrows */}
+        {fotos.length > 1 && (
+          <>
+            <button
+              onClick={() => handleNav(-1)}
+              aria-label="Anterior"
+              style={{
+                position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 2,
+              }}
+            >‹</button>
+            <button
+              onClick={() => handleNav(1)}
+              aria-label="Siguiente"
+              style={{
+                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                cursor: 'pointer', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 2,
+              }}
+            >›</button>
+          </>
+        )}
       </div>
 
-      {/* Left arrow */}
+      {/* Dots — outside the image div so they're never clipped */}
       {fotos.length > 1 && (
-        <button
-          onClick={() => restart(-1)}
-          style={{
-            position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none',
-            cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-          aria-label="Anterior"
-        >‹</button>
-      )}
-
-      {/* Right arrow */}
-      {fotos.length > 1 && (
-        <button
-          onClick={() => restart(1)}
-          style={{
-            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none',
-            cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-          aria-label="Siguiente"
-        >›</button>
-      )}
-
-      {/* Dots */}
-      {fotos.length > 1 && (
-        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
+        <div style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          gap: '6px', padding: '10px 0', background: '#111',
+        }}>
           {fotos.map((_, i) => (
             <button
               key={i}
-              onClick={() => { clearInterval(timerRef.current); setIdx(i); timerRef.current = setInterval(() => go(1), 4000); }}
-              style={{
-                width: i === idx ? '20px' : '8px', height: '8px',
-                borderRadius: '4px', border: 'none', cursor: 'pointer',
-                background: i === idx ? 'white' : 'rgba(255,255,255,0.45)',
-                transition: 'all 0.25s',
-                padding: 0,
-              }}
+              onClick={() => handleDot(i)}
               aria-label={`Foto ${i + 1}`}
+              style={{
+                width: i === idx ? '22px' : '8px', height: '8px',
+                borderRadius: '4px', border: 'none', cursor: 'pointer', padding: 0,
+                background: i === idx ? 'white' : 'rgba(255,255,255,0.35)',
+                transition: 'all 0.25s',
+              }}
             />
           ))}
         </div>
@@ -150,10 +154,9 @@ export default function SedePublica({ currentCliente }) {
   const btnBack = {
     padding: '9px 18px', border: '1px solid rgba(255,255,255,0.35)',
     borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-    background: 'rgba(255,255,255,0.15)', color: 'white', backdropFilter: 'blur(4px)',
+    background: 'rgba(0,0,0,0.35)', color: 'white', backdropFilter: 'blur(4px)',
   };
 
-  /* ── Shell (always visible) ── */
   return (
     <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
 
@@ -162,7 +165,7 @@ export default function SedePublica({ currentCliente }) {
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
         padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ height: '30px', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }} />
+        <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ height: '30px', filter: 'drop-shadow(0 1px 6px rgba(0,0,0,0.7))' }} />
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => navigate(-1)} style={btnBack}>← Volver</button>
           {currentCliente && (
@@ -173,14 +176,14 @@ export default function SedePublica({ currentCliente }) {
 
       {/* ── Loading ── */}
       {loading && (
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <p style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>Cargando sede...</p>
         </div>
       )}
 
       {/* ── Error / not found ── */}
       {!loading && (error || !sede) && (
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '20px' }}>
+        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '20px' }}>
           <p style={{ color: 'white', fontSize: '16px', fontWeight: 600, textAlign: 'center' }}>{error || 'Sede no encontrada.'}</p>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>sedeId: {sedeId ?? '(undefined)'}</p>
         </div>
@@ -195,33 +198,35 @@ export default function SedePublica({ currentCliente }) {
 
         return (
           <>
-            {/* ── HERO ── */}
+            {/* ── HERO ─────────────────────────────────────────────────── */}
             <div style={{
               position: 'relative',
-              minHeight: '340px',
-              background: sede.logo_url
-                ? `url(${sede.logo_url}) center/cover no-repeat`
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
-              paddingBottom: '36px',
+              minHeight: '320px',
+              /* Always a clean dark gradient — never use logo as bg image */
+              background: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'flex-end',
+              paddingBottom: '36px', paddingTop: '72px',
               overflow: 'hidden',
             }}>
-              {/* Dark overlay */}
+              {/* Subtle glow blob */}
               <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.72) 100%)',
+                position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
+                width: '320px', height: '320px', borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(102,126,234,0.25) 0%, transparent 70%)',
+                pointerEvents: 'none',
               }} />
 
-              {/* Logo circle */}
+              {/* Logo */}
               {sede.logo_url && (
-                <div style={{ position: 'relative', zIndex: 2, marginBottom: '16px' }}>
+                <div style={{ position: 'relative', zIndex: 2, marginBottom: '18px' }}>
                   <img
                     src={sede.logo_url}
                     alt={`Logo ${sede.nombre}`}
                     style={{
-                      width: '96px', height: '96px', objectFit: 'contain',
-                      borderRadius: '20px', background: 'white', padding: '10px',
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+                      width: '100px', height: '100px', objectFit: 'contain',
+                      borderRadius: '22px', background: 'white', padding: '10px',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
                     }}
                   />
                 </div>
@@ -230,41 +235,56 @@ export default function SedePublica({ currentCliente }) {
               {/* Club name */}
               <h1 style={{
                 position: 'relative', zIndex: 2,
-                color: 'white', fontSize: 'clamp(1.6rem, 5vw, 2.4rem)',
-                fontWeight: 900, margin: '0 0 12px', textAlign: 'center',
-                textShadow: '0 2px 12px rgba(0,0,0,0.6)', padding: '0 20px',
-                lineHeight: 1.2,
+                color: 'white',
+                /* Responsive: shrinks on narrow screens, never overflows */
+                fontSize: 'clamp(1.3rem, 6vw, 2.2rem)',
+                fontWeight: 900, margin: '0 0 14px', textAlign: 'center',
+                textShadow: '0 2px 16px rgba(0,0,0,0.6)',
+                padding: '0 24px',
+                lineHeight: 1.15,
+                maxWidth: '100%',
+                wordBreak: 'break-word',
               }}>
                 {sede.nombre || '(sin nombre)'}
               </h1>
 
-              {/* License badge */}
+              {/* ── Premium license badge ── */}
               <div style={{ position: 'relative', zIndex: 2 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 18px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
-                  background: licenciaActiva ? 'rgba(220,252,231,0.95)' : 'rgba(254,226,226,0.95)',
-                  color: licenciaActiva ? '#15803d' : '#dc2626',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                }}>
-                  {licenciaActiva ? '✅ Licencia PADBOL Activa' : '⛔ No habilitado'}
-                </span>
+                {licenciaActiva ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '7px',
+                    padding: '7px 16px 7px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 800,
+                    background: 'linear-gradient(135deg, rgba(254,243,199,0.97) 0%, rgba(253,230,138,0.97) 100%)',
+                    color: '#92400e',
+                    border: '1.5px solid #d97706',
+                    boxShadow: '0 2px 12px rgba(217,119,6,0.4), inset 0 1px 0 rgba(255,255,255,0.6)',
+                    letterSpacing: '0.1px',
+                  }}>
+                    <span style={{ fontSize: '15px' }}>⭐</span>
+                    <span>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#b45309', display: 'block', lineHeight: 1, marginBottom: '2px', letterSpacing: '1px', textTransform: 'uppercase' }}>PADBOL</span>
+                      <span style={{ lineHeight: 1 }}>Licencia Activa</span>
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '7px',
+                    padding: '7px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+                    background: 'rgba(254,226,226,0.93)', color: '#dc2626',
+                    border: '1px solid rgba(220,38,38,0.35)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}>
+                    ⛔ No habilitado
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* ── BODY ── */}
+            {/* ── BODY ─────────────────────────────────────────────────── */}
             <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
 
               {/* Info card */}
               <div style={{ background: 'white', borderRadius: '18px', padding: '24px 28px', boxShadow: '0 2px 16px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
-
-                {/* Descripción */}
-                {sede.descripcion && (
-                  <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.7, margin: '0 0 20px', borderBottom: '1px solid #f0f0f0', paddingBottom: '20px' }}>
-                    {sede.descripcion}
-                  </p>
-                )}
-
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {(sede.direccion || sede.ciudad || sede.pais) && (
                     <InfoRow icon="📍" text={[sede.direccion, sede.ciudad, sede.pais].filter(Boolean).join(', ')} />
@@ -284,11 +304,30 @@ export default function SedePublica({ currentCliente }) {
                       text={`${Number(sede.precio_turno).toLocaleString('es-AR')} ${sede.moneda || 'ARS'} por turno (90 min)`}
                     />
                   )}
-                  {!sede.descripcion && !sede.direccion && !sede.ciudad && !sede.pais && !sede.telefono && !sede.email_contacto && (
+                  {!sede.direccion && !sede.ciudad && !sede.pais && !sede.telefono && !sede.email_contacto && (
                     <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>Sin información de contacto cargada.</p>
                   )}
                 </div>
               </div>
+
+              {/* Sobre nosotros card */}
+              {sede.descripcion && (
+                <div style={{
+                  background: 'white', borderRadius: '18px', padding: '28px',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.08)', marginBottom: '20px',
+                  borderLeft: '4px solid #667eea',
+                }}>
+                  <h3 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: 700, color: '#667eea', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    Sobre nosotros
+                  </h3>
+                  <p style={{
+                    fontSize: '16px', color: '#374151', lineHeight: 1.8,
+                    margin: 0, fontStyle: 'italic', textAlign: 'center',
+                  }}>
+                    "{sede.descripcion}"
+                  </p>
+                </div>
+              )}
 
               {/* Photo carousel */}
               {fotos.length > 0 && (
