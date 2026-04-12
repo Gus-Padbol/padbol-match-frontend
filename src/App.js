@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css';
 import ReservaForm from './pages/ReservaForm';
 import AdminDashboard from './pages/AdminDashboard';
@@ -26,7 +26,6 @@ const ADMIN_EMAILS = [
 
 function AppContent() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [currentCliente, setCurrentCliente] = useState(() => {
     const saved = localStorage.getItem('currentCliente');
     return saved ? JSON.parse(saved) : null;
@@ -389,15 +388,6 @@ function AppContent() {
     );
   }
 
-  // Public routes accessible without login
-  if (!currentCliente && location.pathname.startsWith('/sede/')) {
-    return (
-      <Routes>
-        <Route path="/sede/:sedeId" element={<SedePublica currentCliente={null} />} />
-      </Routes>
-    );
-  }
-
   if (!currentCliente) {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial' }}>
@@ -579,7 +569,6 @@ return (
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
     <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} />} />
-    <Route path="/sede/:sedeId" element={<SedePublica currentCliente={currentCliente} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
@@ -679,7 +668,12 @@ return (
 function App() {
   return (
     <Router>
-      <AppContent />
+      <Routes>
+        {/* Public route — no auth required */}
+        <Route path="/sede/:sedeId" element={<SedePublica />} />
+        {/* Everything else goes through AppContent (auth logic lives there) */}
+        <Route path="*" element={<AppContent />} />
+      </Routes>
     </Router>
   );
 }
