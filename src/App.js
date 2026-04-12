@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import ReservaForm from './pages/ReservaForm';
 import AdminDashboard from './pages/AdminDashboard';
@@ -26,6 +26,7 @@ const ADMIN_EMAILS = [
 
 function AppContent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentCliente, setCurrentCliente] = useState(() => {
     const saved = localStorage.getItem('currentCliente');
     return saved ? JSON.parse(saved) : null;
@@ -385,6 +386,15 @@ function AppContent() {
           </button>
         </form>
       </div>
+    );
+  }
+
+  // Public routes accessible without login
+  if (!currentCliente && location.pathname.startsWith('/sede/')) {
+    return (
+      <Routes>
+        <Route path="/sede/:sedeId" element={<SedePublica currentCliente={null} />} />
+      </Routes>
     );
   }
 

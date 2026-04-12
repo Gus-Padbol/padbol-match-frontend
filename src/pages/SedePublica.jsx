@@ -17,15 +17,28 @@ export default function SedePublica({ currentCliente }) {
 
   useEffect(() => {
     if (!sedeId) return;
+    console.log('[SedePublica] loading sedeId:', sedeId);
     setLoading(true);
+    setError('');
     supabase
       .from('sedes')
       .select('*')
-      .eq('id', sedeId)
+      .eq('id', parseInt(sedeId, 10))
       .maybeSingle()
       .then(({ data, error: err }) => {
-        if (err || !data) setError('No se encontró la sede.');
-        else setSede(data);
+        console.log('[SedePublica] data:', data, 'error:', err);
+        if (err) {
+          setError(`Error al cargar sede: ${err.message}`);
+        } else if (!data) {
+          setError('No se encontró la sede.');
+        } else {
+          setSede(data);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('[SedePublica] catch error:', err);
+        setError('Error inesperado al cargar la sede.');
         setLoading(false);
       });
   }, [sedeId]);
@@ -42,8 +55,9 @@ export default function SedePublica({ currentCliente }) {
   );
 
   if (error || !sede) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
-      <p style={{ color: 'white', fontSize: '16px' }}>{error || 'Sede no encontrada.'}</p>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+      <p style={{ color: 'white', fontSize: '16px', textAlign: 'center' }}>{error || 'Sede no encontrada.'}</p>
+      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>sedeId: {sedeId}</p>
       <button onClick={() => navigate(-1)} style={{ ...btnBase, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)' }}>← Volver</button>
     </div>
   );
