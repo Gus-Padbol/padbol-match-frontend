@@ -1584,14 +1584,20 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 </div>
               ))}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
-                <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', paddingTop: '8px' }}>Descripción</label>
-                <textarea
-                  rows={3}
-                  value={miSedeForm.descripcion || ''}
-                  placeholder="Ej: Club de padbol con 4 canchas techadas, estacionamiento y vestuarios..."
-                  onChange={e => setMiSedeForm(p => ({ ...p, descripcion: e.target.value }))}
-                  style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', resize: 'vertical', fontFamily: 'inherit' }}
-                />
+                <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', paddingTop: '8px' }}>Descripción del club</label>
+                <div style={{ flex: 1 }}>
+                  <textarea
+                    rows={4}
+                    maxLength={300}
+                    value={miSedeForm.descripcion || ''}
+                    placeholder="Ej: Club de padbol con 4 canchas techadas, estacionamiento y vestuarios..."
+                    onChange={e => setMiSedeForm(p => ({ ...p, descripcion: e.target.value }))}
+                    style={{ width: '100%', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ textAlign: 'right', fontSize: '12px', color: (miSedeForm.descripcion || '').length >= 280 ? '#dc2626' : '#9ca3af', marginTop: '3px' }}>
+                    {(miSedeForm.descripcion || '').length}/300
+                  </div>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Moneda</label>
