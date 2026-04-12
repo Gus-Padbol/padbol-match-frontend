@@ -16,8 +16,12 @@ export default function SedePublica({ currentCliente }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!sedeId) return;
-    console.log('[SedePublica] loading sedeId:', sedeId);
+    console.log('[SedePublica] useEffect fired, sedeId:', sedeId);
+    if (!sedeId) {
+      setError('No se recibió un ID de sede.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     supabase
@@ -26,11 +30,11 @@ export default function SedePublica({ currentCliente }) {
       .eq('id', parseInt(sedeId, 10))
       .maybeSingle()
       .then(({ data, error: err }) => {
-        console.log('[SedePublica] data:', data, 'error:', err);
+        console.log('[SedePublica] query result — data:', data, 'error:', err);
         if (err) {
           setError(`Error al cargar sede: ${err.message}`);
         } else if (!data) {
-          setError('No se encontró la sede.');
+          setError(`Sede con id ${sedeId} no encontrada.`);
         } else {
           setSede(data);
         }
@@ -38,7 +42,7 @@ export default function SedePublica({ currentCliente }) {
       })
       .catch(err => {
         console.error('[SedePublica] catch error:', err);
-        setError('Error inesperado al cargar la sede.');
+        setError('Error inesperado: ' + (err?.message || String(err)));
         setLoading(false);
       });
   }, [sedeId]);
@@ -48,23 +52,7 @@ export default function SedePublica({ currentCliente }) {
     cursor: 'pointer', fontWeight: 700, fontSize: '13px',
   };
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: 'white', fontSize: '16px' }}>Cargando sede...</p>
-    </div>
-  );
-
-  if (error || !sede) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '20px' }}>
-      <p style={{ color: 'white', fontSize: '16px', textAlign: 'center' }}>{error || 'Sede no encontrada.'}</p>
-      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>sedeId: {sedeId}</p>
-      <button onClick={() => navigate(-1)} style={{ ...btnBase, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)' }}>← Volver</button>
-    </div>
-  );
-
-  const licenciaActiva = sede.licencia_activa === true && sede.numero_licencia;
-  const fotos = Array.isArray(sede.fotos_urls) ? sede.fotos_urls : [];
-
+  // ── always render the purple shell ──────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', paddingBottom: '60px' }}>
 
@@ -81,87 +69,123 @@ export default function SedePublica({ currentCliente }) {
         </div>
       </div>
 
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '28px 16px 0' }}>
-
-        {/* Logo */}
-        {sede.logo_url && (
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <img
-              src={sede.logo_url}
-              alt={`Logo ${sede.nombre}`}
-              style={{ width: '120px', height: '120px', objectFit: 'contain', borderRadius: '20px', background: 'white', padding: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
-            />
-          </div>
-        )}
-
-        {/* Name + license badge */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1 style={{ color: 'white', fontSize: '1.8rem', fontWeight: 800, margin: '0 0 12px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-            {sede.nombre}
-          </h1>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '5px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
-            background: licenciaActiva ? 'rgba(220,252,231,0.95)' : 'rgba(254,226,226,0.95)',
-            color: licenciaActiva ? '#15803d' : '#dc2626',
-          }}>
-            {licenciaActiva ? '✅ Licencia PADBOL Activa' : '⛔ No habilitado'}
-          </span>
+      {/* ── Loading ── */}
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '120px' }}>
+          <p style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>Cargando sede...</p>
         </div>
+      )}
 
-        {/* Info card */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {(sede.direccion || sede.ciudad || sede.pais) && (
-              <InfoRow icon="📍" text={[sede.direccion, sede.ciudad, sede.pais].filter(Boolean).join(', ')} />
-            )}
-            {formatHorario(sede.horario_apertura, sede.horario_cierre) && (
-              <InfoRow icon="⏰" text={`Abierto ${formatHorario(sede.horario_apertura, sede.horario_cierre)}`} />
-            )}
-            {sede.telefono && (
-              <InfoRow icon="📞" text={sede.telefono} />
-            )}
-            {sede.email_contacto && (
-              <InfoRow icon="✉️" text={sede.email_contacto} />
-            )}
-            {sede.precio_turno && (
-              <InfoRow icon="💰" text={`${Number(sede.precio_turno).toLocaleString('es-AR')} ${sede.moneda || 'ARS'} por turno (90 min)`} />
-            )}
-          </div>
+      {/* ── Error ── */}
+      {!loading && error && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '100px', gap: '12px', padding: '100px 20px 0' }}>
+          <p style={{ color: 'white', fontSize: '16px', textAlign: 'center', fontWeight: 600 }}>{error}</p>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>sedeId recibido: {sedeId ?? '(undefined)'}</p>
         </div>
+      )}
 
-        {/* Court photos */}
-        {fotos.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>📸 Las canchas</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              {fotos.map((url, i) => (
-                <div key={url} style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '4/3', background: '#e5e7eb' }}>
-                  <img src={url} alt={`Cancha ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                </div>
-              ))}
+      {/* ── Sede not found (no error string but also no data) ── */}
+      {!loading && !error && !sede && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '100px', gap: '12px' }}>
+          <p style={{ color: 'white', fontSize: '16px', fontWeight: 600 }}>Sede no encontrada.</p>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>sedeId: {sedeId}</p>
+        </div>
+      )}
+
+      {/* ── Sede loaded ── */}
+      {!loading && !error && sede && (() => {
+        console.log('[SedePublica] rendering sede:', sede);
+        const licenciaActiva = sede.licencia_activa === true && sede.numero_licencia;
+        const fotos = Array.isArray(sede.fotos_urls) ? sede.fotos_urls : [];
+
+        return (
+          <div style={{ maxWidth: '680px', margin: '0 auto', padding: '28px 16px 0' }}>
+
+            {/* Logo */}
+            {sede.logo_url && (
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <img
+                  src={sede.logo_url}
+                  alt={`Logo ${sede.nombre}`}
+                  style={{ width: '120px', height: '120px', objectFit: 'contain', borderRadius: '20px', background: 'white', padding: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}
+                />
+              </div>
+            )}
+
+            {/* Name + license badge */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <h1 style={{ color: 'white', fontSize: '1.8rem', fontWeight: 800, margin: '0 0 12px', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                {sede.nombre || '(sin nombre)'}
+              </h1>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '5px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+                background: licenciaActiva ? 'rgba(220,252,231,0.95)' : 'rgba(254,226,226,0.95)',
+                color: licenciaActiva ? '#15803d' : '#dc2626',
+              }}>
+                {licenciaActiva ? '✅ Licencia PADBOL Activa' : '⛔ No habilitado'}
+              </span>
             </div>
+
+            {/* Info card */}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {(sede.direccion || sede.ciudad || sede.pais) && (
+                  <InfoRow icon="📍" text={[sede.direccion, sede.ciudad, sede.pais].filter(Boolean).join(', ')} />
+                )}
+                {formatHorario(sede.horario_apertura, sede.horario_cierre) && (
+                  <InfoRow icon="⏰" text={`Abierto ${formatHorario(sede.horario_apertura, sede.horario_cierre)}`} />
+                )}
+                {sede.telefono && (
+                  <InfoRow icon="📞" text={sede.telefono} />
+                )}
+                {sede.email_contacto && (
+                  <InfoRow icon="✉️" text={sede.email_contacto} />
+                )}
+                {sede.precio_turno && (
+                  <InfoRow icon="💰" text={`${Number(sede.precio_turno).toLocaleString('es-AR')} ${sede.moneda || 'ARS'} por turno (90 min)`} />
+                )}
+                {!sede.direccion && !sede.ciudad && !sede.pais && !sede.telefono && !sede.email_contacto && (
+                  <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>Sin información de contacto cargada.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Court photos */}
+            {fotos.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>📸 Las canchas</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                  {fotos.map((url, i) => (
+                    <div key={url} style={{ borderRadius: '12px', overflow: 'hidden', aspectRatio: '4/3', background: '#e5e7eb' }}>
+                      <img src={url} alt={`Cancha ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reserve button */}
+            <button
+              onClick={() => navigate(`/reservar?sedeId=${sedeId}`)}
+              style={{
+                width: '100%', padding: '16px',
+                background: 'linear-gradient(135deg, #16a34a, #15803d)',
+                color: 'white', border: 'none', borderRadius: '14px',
+                cursor: 'pointer', fontWeight: 800, fontSize: '17px',
+                boxShadow: '0 4px 16px rgba(22,163,74,0.45)',
+                transition: 'transform 0.1s, box-shadow 0.1s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(22,163,74,0.55)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px rgba(22,163,74,0.45)'; }}
+            >
+              🎾 Reservar Cancha
+            </button>
+
           </div>
-        )}
+        );
+      })()}
 
-        {/* Reserve button */}
-        <button
-          onClick={() => navigate(`/reservar?sedeId=${sedeId}`)}
-          style={{
-            width: '100%', padding: '16px',
-            background: 'linear-gradient(135deg, #16a34a, #15803d)',
-            color: 'white', border: 'none', borderRadius: '14px',
-            cursor: 'pointer', fontWeight: 800, fontSize: '17px',
-            boxShadow: '0 4px 16px rgba(22,163,74,0.45)',
-            transition: 'transform 0.1s, box-shadow 0.1s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(22,163,74,0.55)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px rgba(22,163,74,0.45)'; }}
-        >
-          🎾 Reservar Cancha
-        </button>
-
-      </div>
     </div>
   );
 }
