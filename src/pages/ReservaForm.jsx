@@ -54,10 +54,12 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       .catch(err => setError('Error al cargar sedes'));
   }, [apiBaseUrl]);
 
-  // If arriving from SedePublica with ?sedeId=X, skip straight to pantalla 2
+  // If arriving from SedePublica (?sedeId=X) or remembered from last visit, skip to pantalla 2
   useEffect(() => {
-    if (!initialSedeId || sedes.length === 0) return;
-    const id = parseInt(initialSedeId);
+    const remembered = localStorage.getItem('ultima_sede');
+    const targetId = initialSedeId || remembered;
+    if (!targetId || sedes.length === 0) return;
+    const id = parseInt(targetId);
     const sede = sedes.find(s => s.id === id);
     if (!sede) return;
     const ciudadesDelPais = [...new Set(sedes.filter(s => s.pais === sede.pais).map(s => s.ciudad))].sort();
@@ -280,6 +282,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       });
       const data = await res.json();
       if (res.ok && data.init_point) {
+        localStorage.setItem('ultima_sede', String(filtros.sede_id));
         window.location.href = data.init_point;
       } else {
         setError(data.error || 'No se pudo iniciar el pago');

@@ -278,6 +278,23 @@ export default function SedePublica({ currentCliente }) {
             {/* ── BODY ── */}
             <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
 
+              {/* ── Top reservar button ── */}
+              <button
+                onClick={() => navigate(`/reservar?sedeId=${sedeId}`)}
+                style={{
+                  width: '100%', padding: '18px 24px', marginBottom: '20px',
+                  background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                  color: 'white', border: 'none', borderRadius: '14px',
+                  cursor: 'pointer', fontWeight: 800, fontSize: '17px',
+                  boxShadow: '0 4px 18px rgba(185,28,28,0.45)',
+                  letterSpacing: '0.2px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(185,28,28,0.55)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 18px rgba(185,28,28,0.45)'; }}
+              >
+                🎾 Reservar Cancha en {sede.nombre || 'esta sede'} →
+              </button>
+
               {/* ── Info card — redesigned ── */}
               <div style={{
                 background: '#f8fafc', borderRadius: '18px',
