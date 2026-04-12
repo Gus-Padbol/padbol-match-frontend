@@ -41,6 +41,8 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
+  const [reservaConfirmada, setReservaConfirmada] = useState(null); // { id, precio, moneda }
+  const [mpLoading, setMpLoading] = useState(false);
 
   useEffect(() => {
     fetch(`${apiBaseUrl}/api/sedes`)
@@ -276,21 +278,13 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       const result = await response.json();
 
       if (response.ok) {
+        const creada = Array.isArray(result) ? result[0] : result;
+        setReservaConfirmada({
+          id: creada?.id,
+          precio: sedeSeleccionada?.precio_por_reserva,
+          moneda: sedeSeleccionada?.moneda || 'ARS',
+        });
         setMensaje('✅ Reserva confirmada. Te enviaremos confirmación por WhatsApp.');
-        setTimeout(() => {
-          setPantalla(1);
-          setFiltros({ pais: '', ciudad: '', sede_id: '' });
-          setFormData({
-            fecha: '',
-            hora: '',
-            cancha: '',
-            codigoPais: '+54',
-            numeroTel: '',
-          });
-          setMensaje('');
-          setHorariosDisponibles([]);
-          setCanchasDisponibles([]);
-        }, 3000);
       } else {
         setError(result.error || result.message || 'Error al crear reserva');
       }
@@ -592,20 +586,83 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
           {error && <div className="error-message">{error}</div>}
           {mensaje && <div className="success-message">{mensaje}</div>}
 
-          <button onClick={handleSubmit} disabled={loading} style={{
-            width: '100%',
-            padding: '12px',
-            background: '#d32f2f',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            opacity: loading ? 0.6 : 1,
-          }}>
-            {loading ? 'Procesando...' : '✅ Confirmar Reserva'}
-          </button>
+          {!reservaConfirmada ? (
+            <button onClick={handleSubmit} disabled={loading} style={{
+              width: '100%',
+              padding: '12px',
+              background: '#d32f2f',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              opacity: loading ? 0.6 : 1,
+            }}>
+              {loading ? 'Procesando...' : '✅ Confirmar Reserva'}
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={async () => {
+                  setMpLoading(true);
+                  try {
+                    const res = await fetch(`${apiBaseUrl}/api/crear-preferencia`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        titulo: `Cancha de Padbol — ${sedeSeleccionada?.nombre}`,
+                        precio: reservaConfirmada.precio,
+                        moneda: reservaConfirmada.moneda,
+                        reservaId: reservaConfirmada.id,
+                        sedeNombre: sedeSeleccionada?.nombre,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.init_point) {
+                      window.location.href = data.init_point;
+                    } else {
+                      setError(data.error || 'No se pudo iniciar el pago');
+                    }
+                  } catch (err) {
+                    setError('Error al conectar con Mercado Pago');
+                  } finally {
+                    setMpLoading(false);
+                  }
+                }}
+                disabled={mpLoading}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: mpLoading ? '#aaa' : 'linear-gradient(135deg, #009ee3 0%, #0077c8 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: mpLoading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 3px 12px rgba(0,158,227,0.4)',
+                }}
+              >
+                {mpLoading ? 'Redirigiendo...' : '💳 Pagar con Mercado Pago'}
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: 'transparent',
+                  color: '#666',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Pagar después → Ir al inicio
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

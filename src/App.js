@@ -11,6 +11,8 @@ import TorneoVista from './pages/TorneoVista';
 import Rankings from './pages/Rankings';
 import TorneosPublicos from './pages/TorneosPublicos';
 import SedePublica from './pages/SedePublica';
+import PagoExitoso from './pages/PagoExitoso';
+import PagoFallido from './pages/PagoFallido';
 import { supabase } from './supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/paisesTelefono';
 import useUserRole from './hooks/useUserRole';
@@ -669,8 +671,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public route — no auth required */}
+        {/* Public routes — no auth required */}
         <Route path="/sede/:sedeId" element={<SedePublica />} />
+        <Route path="/pago-exitoso" element={<PagoExitoso />} />
+        <Route path="/pago-fallido" element={<PagoFallido />} />
         {/* Everything else goes through AppContent (auth logic lives there) */}
         <Route path="*" element={<AppContent />} />
       </Routes>
