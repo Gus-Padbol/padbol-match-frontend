@@ -259,10 +259,7 @@ export default function SedePublica({ currentCliente }) {
                     boxShadow: '0 2px 12px rgba(217,119,6,0.4), inset 0 1px 0 rgba(255,255,255,0.6)',
                   }}>
                     <span style={{ fontSize: '15px' }}>⭐</span>
-                    <span>
-                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#b45309', display: 'block', lineHeight: 1, marginBottom: '2px', letterSpacing: '1px', textTransform: 'uppercase' }}>PADBOL</span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1 }}>Licencia Activa</span>
-                    </span>
+                    <span style={{ fontSize: '13px', fontWeight: 900, letterSpacing: '0.5px' }}>Licencia PADBOL Activa</span>
                   </span>
                 ) : (
                   <span style={{
