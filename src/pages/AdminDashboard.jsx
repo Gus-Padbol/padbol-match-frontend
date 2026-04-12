@@ -526,6 +526,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           horario_cierre:   sedeData.horario_cierre   || '',
           precio_turno:     sedeData.precio_turno     ?? '',
           moneda:           sedeData.moneda           || 'ARS',
+          descripcion:      sedeData.descripcion      || '',
         });
         setLicenciaForm({
           numero_licencia: sedeData.numero_licencia || '',
@@ -562,6 +563,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       horario_cierre:   miSedeForm.horario_cierre   || null,
       precio_turno:     miSedeForm.precio_turno !== '' ? parseFloat(miSedeForm.precio_turno) : null,
       moneda:           miSedeForm.moneda           || 'ARS',
+      descripcion:      miSedeForm.descripcion      || null,
     }).eq('id', sedeId);
     setMiSedeSaving(false);
     setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
@@ -1581,6 +1583,16 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   />
                 </div>
               ))}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', paddingTop: '8px' }}>Descripción</label>
+                <textarea
+                  rows={3}
+                  value={miSedeForm.descripcion || ''}
+                  placeholder="Ej: Club de padbol con 4 canchas techadas, estacionamiento y vestuarios..."
+                  onChange={e => setMiSedeForm(p => ({ ...p, descripcion: e.target.value }))}
+                  style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Moneda</label>
                 <select value={miSedeForm.moneda || 'ARS'} onChange={e => setMiSedeForm(p => ({ ...p, moneda: e.target.value }))}
@@ -1724,6 +1736,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   />
                 </label>
                 <span style={{ fontSize: '12px', color: '#9ca3af' }}>JPG, PNG o WEBP · máx. 2MB</span>
+                <span style={{ fontSize: '11px', color: '#c4b5fd', lineHeight: 1.4 }}>💡 Recomendado: PNG transparente, mín. 300×300 px</span>
                 {logoMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: logoMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{logoMsg}</span>}
               </div>
             </div>
