@@ -24,18 +24,8 @@ export default function PagoFallido() {
           El pago no se completó
         </h1>
         <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
-          Tu reserva fue registrada pero el pago no fue procesado. Podés intentarlo de nuevo o pagar en la sede.
+          No se realizó ningún cobro y tu reserva no fue registrada. Podés intentarlo de nuevo cuando quieras.
         </p>
-
-        {externalRef && (
-          <div style={{
-            background: '#fef2f2', border: '1px solid #fecaca',
-            borderRadius: '10px', padding: '14px 18px',
-            marginBottom: '24px', textAlign: 'left',
-          }}>
-            <p style={{ margin: 0, fontSize: '13px', color: '#991b1b' }}><strong>Reserva #:</strong> {externalRef}</p>
-          </div>
-        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <button
