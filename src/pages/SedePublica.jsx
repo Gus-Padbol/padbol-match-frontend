@@ -246,8 +246,8 @@ export default function SedePublica({ currentCliente }) {
                   }}>
                     <span style={{ fontSize: '15px' }}>⭐</span>
                     <span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#b45309', display: 'block', lineHeight: 1, marginBottom: '2px', letterSpacing: '1px', textTransform: 'uppercase' }}>PADBOL</span>
-                      <span style={{ lineHeight: 1 }}>Licencia Activa</span>
+                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#b45309', display: 'block', lineHeight: 1, marginBottom: '2px', letterSpacing: '1px', textTransform: 'uppercase' }}>PADBOL</span>
+                      <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1 }}>Licencia Activa</span>
                     </span>
                   </span>
                 ) : (
@@ -282,14 +282,7 @@ export default function SedePublica({ currentCliente }) {
                   {horario && <InfoRow icon="⏰" text={`Abierto ${horario}`} />}
                   {sede.telefono && <InfoRow icon="📞" text={sede.telefono} />}
                   {sede.email_contacto && <InfoRow icon="✉️" text={sede.email_contacto} />}
-                  {sede.precio_turno && (
-                    <InfoRow
-                      icon="💰"
-                      text={`${Number(sede.precio_turno).toLocaleString('es-AR')} ${sede.moneda || 'ARS'} / turno`}
-                      highlight
-                    />
-                  )}
-                  {!hasAddress && !sede.telefono && !sede.email_contacto && !sede.precio_turno && (
+                  {!hasAddress && !sede.telefono && !sede.email_contacto && (
                     <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>Sin información de contacto cargada.</p>
                   )}
                 </div>
@@ -299,27 +292,23 @@ export default function SedePublica({ currentCliente }) {
               {sede.descripcion && (
                 <div style={{
                   background: '#0f172a', borderRadius: '18px',
-                  padding: '36px 32px',
+                  padding: '32px 32px 36px',
                   boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
                   marginBottom: '20px',
-                  textAlign: 'center',
                 }}>
-                  <p style={{
-                    fontSize: '11px', fontWeight: 700, color: '#64748b',
-                    letterSpacing: '2px', textTransform: 'uppercase',
-                    margin: '0 0 16px',
-                  }}>Sobre nosotros</p>
-                  {/* Large opening quote */}
+                  {/* Large quote — top left */}
                   <div style={{
-                    fontSize: '80px', lineHeight: 0.6, color: '#dc2626',
-                    marginBottom: '16px', fontFamily: 'Georgia, serif',
+                    fontSize: '80px', lineHeight: 0.7, color: '#dc2626',
+                    fontFamily: 'Georgia, serif',
                     userSelect: 'none',
+                    marginBottom: '8px',
                   }}>"</div>
                   <p style={{
-                    fontSize: '17px', color: '#e2e8f0',
+                    fontSize: '1.2rem', color: '#e2e8f0',
                     lineHeight: 1.8, margin: 0,
                     fontStyle: 'italic',
                     fontFamily: 'Georgia, "Times New Roman", serif',
+                    textAlign: 'center',
                   }}>
                     {sede.descripcion}
                   </p>

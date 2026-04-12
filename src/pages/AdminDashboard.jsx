@@ -1590,7 +1590,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                     rows={4}
                     maxLength={300}
                     value={miSedeForm.descripcion || ''}
-                    placeholder="Ej: Club de padbol con 4 canchas techadas, estacionamiento y vestuarios..."
+                    placeholder="Ej: Primer club de PADBOL del mundo, donde todo comenzó..."
                     onChange={e => setMiSedeForm(p => ({ ...p, descripcion: e.target.value }))}
                     style={{ width: '100%', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
                   />
