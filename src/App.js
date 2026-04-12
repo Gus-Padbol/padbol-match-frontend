@@ -649,23 +649,43 @@ return (
       ) : (
         /* ── Regular user: reservation form ── */
         <div style={{ padding: '20px' }}>
-          <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-            <button onClick={() => navigate('/sedes')} style={{ padding: '10px 20px', background: '#0369a1', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              🏟️ Canchas
-            </button>
-            <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              🏆 Torneos
-            </button>
-            <button onClick={() => navigate('/rankings')} style={{ padding: '10px 20px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              🏅 Rankings
-            </button>
-            <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-              👤 Mi Perfil
-            </button>
-            <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-              Cerrar sesión
-            </button>
-          </div>
+          {(() => {
+            const ultimaSede = localStorage.getItem('ultima_sede');
+            return (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ textAlign: 'right', marginBottom: '6px' }}>
+                  {ultimaSede ? (
+                    <button onClick={() => navigate(`/sede/${ultimaSede}`)} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+                      🎾 Reservar
+                    </button>
+                  ) : (
+                    <button onClick={() => navigate('/sedes')} style={{ padding: '10px 20px', background: '#0369a1', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+                      🏟️ Canchas
+                    </button>
+                  )}
+                  <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+                    🏆 Torneos
+                  </button>
+                  <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
+                    👤 Mi Perfil
+                  </button>
+                  <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#999', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                    Cerrar sesión
+                  </button>
+                </div>
+                {ultimaSede && (
+                  <div style={{ textAlign: 'right' }}>
+                    <button
+                      onClick={() => { localStorage.removeItem('ultima_sede'); navigate('/sedes'); }}
+                      style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                    >
+                      Cambiar cancha
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
         </div>
       )
