@@ -20,6 +20,86 @@ import useUserRole from './hooks/useUserRole';
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
+function PlayerHome({ currentCliente, onLogout }) {
+  const navigate = useNavigate();
+  const ultimaSedeId = localStorage.getItem('ultima_sede');
+  const [sedeName,  setSedeName]  = React.useState('');
+  const [sedeCiudad, setSedeCiudad] = React.useState('');
+
+  useEffect(() => {
+    if (!ultimaSedeId) return;
+    supabase
+      .from('sedes')
+      .select('nombre, ciudad')
+      .eq('id', parseInt(ultimaSedeId))
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setSedeName(data.nombre || ''); setSedeCiudad(data.ciudad || ''); }
+      });
+  }, [ultimaSedeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const cards = [
+    { icon: '🎾', label: 'Reservar Cancha',  action: () => navigate(`/sede/${ultimaSedeId}`) },
+    { icon: '🏆', label: 'Torneos',           action: () => navigate('/torneos') },
+    { icon: '👤', label: 'Mi Perfil',         action: () => navigate('/perfil') },
+    { icon: '🏟️', label: 'Cambiar Cancha',    action: () => { localStorage.removeItem('ultima_sede'); navigate('/sedes'); } },
+  ];
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+      padding: '40px 20px', boxSizing: 'border-box',
+    }}>
+      <img src="/logo-padbol-match.png" alt="Padbol Match"
+        style={{ width: '90px', marginBottom: '24px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))' }} />
+
+      <h1 style={{ color: 'white', fontSize: '2rem', fontWeight: 700, margin: '0 0 16px', textAlign: 'center' }}>
+        Bienvenido/a, {currentCliente?.nombre || currentCliente?.email?.split('@')[0]}
+      </h1>
+
+      {sedeName && (
+        <div style={{ marginBottom: '36px' }}>
+          <span style={{
+            padding: '6px 18px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
+            background: 'rgba(147,197,253,0.15)', color: '#bfdbfe',
+            border: '1px solid rgba(147,197,253,0.3)',
+          }}>
+            🏟️ {sedeName}{sedeCiudad ? ` — ${sedeCiudad}` : ''}
+          </span>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '32px', width: '100%', maxWidth: '380px' }}>
+        {cards.map(({ icon, label, action }) => (
+          <button key={label} onClick={action} style={{
+            minHeight: '140px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '10px',
+            background: 'white', border: 'none', borderRadius: '14px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.25)', cursor: 'pointer',
+            transition: 'transform 0.1s, box-shadow 0.1s', padding: '20px',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.25)'; }}
+          >
+            <span style={{ fontSize: '2.2rem' }}>{icon}</span>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1e1b4b', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      <button onClick={onLogout} style={{
+        padding: '10px 28px', background: '#dc2626', color: 'white',
+        border: 'none', borderRadius: '8px', cursor: 'pointer',
+        fontWeight: '600', fontSize: '14px',
+      }}>
+        Cerrar Sesión
+      </button>
+    </div>
+  );
+}
+
 const ADMIN_EMAILS = [
   'padbolinternacional@gmail.com',
   'admin@padbol.com',
@@ -646,48 +726,12 @@ return (
             Cerrar Sesión
           </button>
         </div>
+      ) : localStorage.getItem('ultima_sede') ? (
+        /* ── Player home screen ── */
+        <PlayerHome currentCliente={currentCliente} onLogout={handleLogout} />
       ) : (
-        /* ── Regular user: reservation form ── */
-        <div style={{ padding: '20px' }}>
-          {(() => {
-            const ultimaSede = localStorage.getItem('ultima_sede');
-            return (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ textAlign: 'right', marginBottom: '6px' }}>
-                  {ultimaSede ? (
-                    <button onClick={() => navigate(`/sede/${ultimaSede}`)} style={{ padding: '10px 20px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-                      🎾 Reservar
-                    </button>
-                  ) : (
-                    <button onClick={() => navigate('/sedes')} style={{ padding: '10px 20px', background: '#0369a1', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-                      🏟️ Canchas
-                    </button>
-                  )}
-                  <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: '#059669', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-                    🏆 Torneos
-                  </button>
-                  <button onClick={() => navigate('/perfil')} style={{ padding: '10px 20px', background: '#c41e3a', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' }}>
-                    👤 Mi Perfil
-                  </button>
-                  <button onClick={handleLogout} style={{ padding: '10px 20px', background: '#999', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                    Cerrar sesión
-                  </button>
-                </div>
-                {ultimaSede && (
-                  <div style={{ textAlign: 'right' }}>
-                    <button
-                      onClick={() => { localStorage.removeItem('ultima_sede'); navigate('/sedes'); }}
-                      style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                    >
-                      Cambiar cancha
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-          <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
-        </div>
+        /* ── No sede yet: send to sedes picker ── */
+        <SedesPublicas currentCliente={currentCliente} />
       )
     } />
   </Routes>
