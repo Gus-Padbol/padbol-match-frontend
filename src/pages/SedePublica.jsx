@@ -308,27 +308,21 @@ export default function SedePublica({ currentCliente }) {
                     <InfoRow icon="📍" text={[sede.direccion, sede.ciudad, sede.pais].filter(Boolean).join(', ')} />
                   )}
                   {horario && <InfoRow icon="⏰" text={`Abierto ${horario}`} />}
-                  {sede.telefono && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                      <div style={{ flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', marginTop: '2px' }}>📞</div>
-                      <a href={`tel:${sede.telefono}`} style={{ paddingTop: '6px', fontSize: '14px', color: '#374151', textDecoration: 'none', lineHeight: 1.6 }}
-                        onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
-                        {sede.telefono}
-                      </a>
-                    </div>
-                  )}
-                  {sede.telefono && (
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                      <div style={{ flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', marginTop: '2px' }}>💬</div>
-                      <a href={`https://wa.me/${sede.telefono.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-                        style={{ paddingTop: '6px', fontSize: '14px', color: '#25D366', fontWeight: 600, textDecoration: 'none', lineHeight: 1.6 }}
-                        onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
-                        WhatsApp
-                      </a>
-                    </div>
-                  )}
+                  {sede.telefono && (() => {
+                    const digits = sede.telefono.replace(/\D/g, '');
+                    const waNumber = digits.startsWith('0') ? '54' + digits.slice(1) : digits;
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                        <div style={{ flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', marginTop: '2px' }}>💬</div>
+                        <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noreferrer"
+                          style={{ paddingTop: '6px', fontSize: '14px', color: '#16a34a', fontWeight: 600, textDecoration: 'none', lineHeight: 1.6 }}
+                          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
+                          Escribinos por WhatsApp
+                        </a>
+                      </div>
+                    );
+                  })()}
                   {sede.email_contacto && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', marginTop: '2px' }}>✉️</div>

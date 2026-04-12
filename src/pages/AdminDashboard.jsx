@@ -1567,20 +1567,23 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                 { label: 'Dirección',              field: 'direccion' },
                 { label: 'Ciudad',                 field: 'ciudad' },
                 { label: 'País',                   field: 'pais' },
-                { label: 'Teléfono de contacto',   field: 'telefono' },
+                { label: 'WhatsApp del club',       field: 'telefono', placeholder: 'Ej: 2213032019', hint: 'Sin 0 adelante, sin 15' },
                 { label: 'Email de contacto',      field: 'email_contacto' },
                 { label: 'Horario apertura',       field: 'horario_apertura', placeholder: 'Ej: 08:00' },
                 { label: 'Horario cierre',         field: 'horario_cierre',   placeholder: 'Ej: 23:00' },
-              ].map(({ label, field, placeholder }) => (
-                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>{label}</label>
-                  <input
-                    type="text"
-                    value={miSedeForm[field] || ''}
-                    placeholder={placeholder || ''}
-                    onChange={e => setMiSedeForm(p => ({ ...p, [field]: e.target.value }))}
-                    style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
-                  />
+              ].map(({ label, field, placeholder, hint }) => (
+                <div key={field} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                  <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', paddingTop: '8px' }}>{label}</label>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      value={miSedeForm[field] || ''}
+                      placeholder={placeholder || ''}
+                      onChange={e => setMiSedeForm(p => ({ ...p, [field]: e.target.value }))}
+                      style={{ width: '100%', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333', boxSizing: 'border-box' }}
+                    />
+                    {hint && <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#9ca3af' }}>{hint}</p>}
+                  </div>
                 </div>
               ))}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
