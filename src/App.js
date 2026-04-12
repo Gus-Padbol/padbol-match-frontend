@@ -39,7 +39,7 @@ function PlayerHome({ currentCliente, onLogout }) {
   }, [ultimaSedeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cards = [
-    { icon: '🎾', label: 'Reservar Cancha',  action: () => navigate(`/sede/${ultimaSedeId}`) },
+    { icon: '🎾', label: 'Reservar Cancha',  action: () => navigate(`/reservar?sedeId=${ultimaSedeId}`) },
     { icon: '🏆', label: 'Torneos',           action: () => navigate('/torneos') },
     { icon: '👤', label: 'Mi Perfil',         action: () => navigate('/perfil') },
     { icon: '🏟️', label: 'Cambiar Cancha',    action: () => { localStorage.removeItem('ultima_sede'); navigate('/sedes'); } },
