@@ -227,12 +227,26 @@ export default function SedePublica({ currentCliente }) {
               <h1 style={{
                 position: 'relative', zIndex: 2, color: 'white',
                 fontSize: 'clamp(1.3rem, 6vw, 2.2rem)', fontWeight: 900,
-                margin: '0 0 14px', textAlign: 'center',
+                margin: '0 0 10px', textAlign: 'center',
                 textShadow: '0 2px 16px rgba(0,0,0,0.6)',
                 padding: '0 24px', lineHeight: 1.15, wordBreak: 'break-word',
               }}>
                 {sede.nombre || '(sin nombre)'}
               </h1>
+
+              {sede.descripcion && (
+                <p style={{
+                  position: 'relative', zIndex: 2,
+                  color: 'white', opacity: 0.85,
+                  fontSize: '1rem', fontStyle: 'italic',
+                  textAlign: 'center', maxWidth: '400px',
+                  margin: '0 24px 16px',
+                  lineHeight: 1.6,
+                  textShadow: '0 1px 8px rgba(0,0,0,0.4)',
+                }}>
+                  {sede.descripcion}
+                </p>
+              )}
 
               {/* Premium license badge */}
               <div style={{ position: 'relative', zIndex: 2 }}>
@@ -287,33 +301,6 @@ export default function SedePublica({ currentCliente }) {
                   )}
                 </div>
               </div>
-
-              {/* ── Sobre nosotros — dark navy quote ── */}
-              {sede.descripcion && (
-                <div style={{
-                  background: '#0f172a', borderRadius: '18px',
-                  padding: '32px 32px 36px',
-                  boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
-                  marginBottom: '20px',
-                }}>
-                  {/* Large quote — top left */}
-                  <div style={{
-                    fontSize: '80px', lineHeight: 0.7, color: '#dc2626',
-                    fontFamily: 'Georgia, serif',
-                    userSelect: 'none',
-                    marginBottom: '8px',
-                  }}>"</div>
-                  <p style={{
-                    fontSize: '1.2rem', color: '#e2e8f0',
-                    lineHeight: 1.8, margin: 0,
-                    fontStyle: 'italic',
-                    fontFamily: 'Georgia, "Times New Roman", serif',
-                    textAlign: 'center',
-                  }}>
-                    {sede.descripcion}
-                  </p>
-                </div>
-              )}
 
               {/* ── Google Maps ── */}
               {hasAddress && (
