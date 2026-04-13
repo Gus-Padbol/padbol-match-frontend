@@ -53,11 +53,11 @@ export default function UserHeader({ onLogout, title }) {
       {/* Right: Navigation buttons */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => { console.log('[UserHeader] Inicio clicked'); navigate('/'); }}
           style={btnStyle}
           title="Volver al inicio"
         >
-          🏠 Inicio
+          🏠 Inicio FIX
         </button>
         <button
           onClick={() => navigate('/torneos')}
@@ -81,11 +81,11 @@ export default function UserHeader({ onLogout, title }) {
           👤 Mi Perfil
         </button>
         <button
-          onClick={onLogout}
+          onClick={() => { console.log('[UserHeader] Salir clicked'); onLogout(); }}
           style={logoutBtnStyle}
           title="Cerrar sesión"
         >
-          🚪 Salir
+          🚪 Salir FIX
         </button>
       </div>
     </div>
