@@ -42,6 +42,10 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
   const [mpLoading, setMpLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
+
+  const IS_TEST_DOMAIN = window.location.hostname === 'padbol-match.netlify.app';
 
   useEffect(() => {
     fetch(`${apiBaseUrl}/api/sedes`)
@@ -295,6 +299,45 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     }
   };
 
+  const handleTestConfirm = async () => {
+    if (!formData.numeroTel.trim()) {
+      setError('Ingresa tu número de WhatsApp');
+      return;
+    }
+    setTestLoading(true);
+    setError('');
+    const whatsappCompleto = `${formData.codigoPais}${formData.numeroTel.replace(/[\s\-().]/g, '')}`;
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/reservas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sede: sedeSeleccionada.nombre,
+          fecha: formData.fecha,
+          hora: formData.hora,
+          cancha: parseInt(formData.cancha),
+          nombre: currentCliente.nombre,
+          email: currentCliente.email,
+          whatsapp: whatsappCompleto,
+          nivel: 'Principiante',
+          precio: sedeSeleccionada.precio_por_reserva,
+          moneda: sedeSeleccionada.moneda || 'ARS',
+          estado: 'confirmada',
+        }),
+      });
+      if (!res.ok && res.status !== 409) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error al guardar');
+      }
+      localStorage.setItem('ultima_sede', String(filtros.sede_id));
+      setTestSuccess(true);
+    } catch (err) {
+      setError('Error TEST: ' + err.message);
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   // PANTALLA 1: País, Ciudad, Sede
   if (pantalla === 1) {
     return (
@@ -523,6 +566,25 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     const precio = sedeSeleccionada?.precio_por_reserva;
     const moneda = sedeSeleccionada?.moneda || 'ARS';
 
+    if (testSuccess) {
+      return (
+        <div className="reserva-container">
+          <div className="reserva-card" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '56px', marginBottom: '16px' }}>✅</div>
+            <h2 style={{ color: '#16a34a', marginBottom: '8px' }}>Reserva confirmada (TEST)</h2>
+            <p style={{ color: '#555', marginBottom: '6px' }}>{sedeSeleccionada?.nombre}</p>
+            <p style={{ color: '#555', marginBottom: '24px' }}>📅 {formData.fecha} ⏰ {formData.hora} 🎾 Cancha {formData.cancha}</p>
+            <button
+              onClick={() => navigate('/perfil')}
+              style={{ width: '100%', padding: '12px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Ver mis reservas →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="reserva-container">
         <div className="reserva-card">
@@ -599,6 +661,18 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
           >
             {mpLoading ? 'Redirigiendo a Mercado Pago...' : '💳 Pagar con Mercado Pago'}
           </button>
+
+          {IS_TEST_DOMAIN && (
+            <div style={{ textAlign: 'center', marginTop: '14px' }}>
+              <button
+                onClick={handleTestConfirm}
+                disabled={testLoading}
+                style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                {testLoading ? 'Guardando...' : 'Confirmar sin pago (TEST)'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
