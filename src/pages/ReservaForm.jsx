@@ -548,6 +548,17 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
             )}
           </div>
 
+          {/* Cancellation policy */}
+          <div style={{
+            margin: '16px 0', padding: '12px 14px',
+            background: '#fffbeb', border: '1px solid #fcd34d',
+            borderRadius: '8px', fontSize: '13px', color: '#78350f', lineHeight: 1.6,
+          }}>
+            <strong>📋 Política de cancelación</strong><br />
+            ✅ Más de 24hs de anticipación: crédito total<br />
+            ❌ Menos de 24hs de anticipación: sin devolución
+          </div>
+
           {error && <div className="error-message">{error}</div>}
 
           <button
