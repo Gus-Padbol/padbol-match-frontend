@@ -651,9 +651,9 @@ return (
       </div>
     } />
     <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
-    <Route path="/rankings" element={<Rankings currentCliente={currentCliente} />} />
-    <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} />} />
-    <Route path="/sedes" element={<SedesPublicas currentCliente={currentCliente} />} />
+    <Route path="/rankings" element={<Rankings currentCliente={currentCliente} onLogout={handleLogout} />} />
+    <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} onLogout={handleLogout} />} />
+    <Route path="/sedes" element={<SedesPublicas currentCliente={currentCliente} onLogout={handleLogout} />} />
     <Route path="/crear-torneo" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
     <Route path="/torneo/crear" element={<TorneoCrear apiBaseUrl={API_BASE_URL} rol={rol} />} />
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />

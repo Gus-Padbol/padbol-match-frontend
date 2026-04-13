@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import UserHeader from '../components/UserHeader';
 
 const API_BASE = 'https://padbol-backend.onrender.com';
 
@@ -33,7 +34,7 @@ const ESTADO_BADGE = {
   cerrado:   { label: '⚪ Cerrado',   bg: '#f1f5f9', color: '#64748b' },
 };
 
-export default function TorneosPublicos({ currentCliente, apiBaseUrl = API_BASE }) {
+export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl = API_BASE }) {
   const navigate = useNavigate();
   const [torneos,     setTorneos]     = useState([]);
   const [sedesMap,    setSedesMap]    = useState({});
@@ -102,20 +103,7 @@ export default function TorneosPublicos({ currentCliente, apiBaseUrl = API_BASE 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '0 0 60px' }}>
 
-      {/* Top bar */}
-      <div style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(6px)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ height: '36px' }} />
-          <h1 style={{ margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 700 }}>Torneos</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => navigate('/')} style={{ ...btnBase, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)' }}>← Inicio</button>
-          <button onClick={() => navigate('/rankings')} style={{ ...btnBase, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)' }}>🏅 Rankings</button>
-          {currentCliente && (
-            <button onClick={() => navigate('/perfil')} style={{ ...btnBase, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)' }}>👤 Mi Perfil</button>
-          )}
-        </div>
-      </div>
+      <UserHeader onLogout={onLogout} title="Torneos" />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
 

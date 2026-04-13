@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
+import UserHeader from '../components/UserHeader';
 
 const API_BASE = 'https://padbol-backend.onrender.com';
 const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
@@ -25,7 +26,7 @@ const TABS = [
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-export default function Rankings({ currentCliente }) {
+export default function Rankings({ currentCliente, onLogout }) {
   const navigate = useNavigate();
   const [activeTab,          setActiveTab]          = useState('internacional');
   const [sedes,              setSedes]              = useState([]);
@@ -106,20 +107,8 @@ export default function Rankings({ currentCliente }) {
 
   return (
     <div style={containerStyle}>
+      <UserHeader onLogout={onLogout} title="" />
       <div style={innerStyle}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{ background: 'rgba(255,255,255,0.18)', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-          >
-            ← Inicio
-          </button>
-          <h1 style={{ margin: 0, color: 'white', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.02em' }}>
-            🏆 Rankings PADBOL
-          </h1>
-        </div>
 
         {/* Tab bar */}
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>

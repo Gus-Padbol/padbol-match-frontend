@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import UserHeader from '../components/UserHeader';
 
 function formatHorario(apertura, cierre) {
   if (apertura && cierre) return `${apertura} – ${cierre}`;
@@ -24,7 +25,7 @@ function formatKm(km) {
   return `${km.toFixed(1)} km`;
 }
 
-export default function SedesPublicas({ currentCliente }) {
+export default function SedesPublicas({ currentCliente, onLogout }) {
   const navigate = useNavigate();
   const [sedes,       setSedes]       = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -83,29 +84,10 @@ export default function SedesPublicas({ currentCliente }) {
     );
   });
 
-  const btnBase = {
-    padding: '9px 18px', border: '1px solid rgba(255,255,255,0.35)',
-    borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-    background: 'rgba(0,0,0,0.3)', color: 'white', backdropFilter: 'blur(4px)',
-  };
-
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', paddingBottom: '60px' }}>
 
-      {/* Top bar */}
-      <div style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(6px)', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ height: '36px' }} />
-          <h1 style={{ margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 700 }}>Canchas</h1>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button onClick={() => navigate('/')} style={btnBase}>← Inicio</button>
-          <button onClick={() => navigate('/torneos')} style={btnBase}>🏆 Torneos</button>
-          {currentCliente && (
-            <button onClick={() => navigate('/perfil')} style={btnBase}>👤 Mi Perfil</button>
-          )}
-        </div>
-      </div>
+      <UserHeader onLogout={onLogout} title="Canchas" />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
 
