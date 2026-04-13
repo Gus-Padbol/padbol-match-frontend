@@ -62,6 +62,9 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const [error, setError] = useState('');
   const [mpLoading, setMpLoading] = useState(false);
 
+  const [creditDisponible, setCreditDisponible] = useState(0);
+  const [aplicarCredito, setAplicarCredito] = useState(false);
+
   // Auto-select + auto-advance when only one court is free
   useEffect(() => {
     if (!canchasDisponibles.length || pantalla !== 2) return;
@@ -84,6 +87,14 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       .catch(err => setError('Error al cargar sedes'));
   }, [apiBaseUrl]);
 
+  useEffect(() => {
+    if (!currentCliente?.email) return;
+    fetch(`${apiBaseUrl}/api/creditos/${encodeURIComponent(currentCliente.email)}`)
+      .then(r => r.json())
+      .then(d => setCreditDisponible(d.total || 0))
+      .catch(() => {});
+  }, [currentCliente, apiBaseUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // If arriving from SedePublica (?sedeId=X) or remembered from last visit, skip to pantalla 2
   useEffect(() => {
     const remembered = localStorage.getItem('ultima_sede');
@@ -99,6 +110,13 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     setFiltros({ pais: sede.pais, ciudad: sede.ciudad, sede_id: id });
     setPantalla(2);
   }, [sedes, initialSedeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-load available time slots when date is selected
+  useEffect(() => {
+    if (formData.fecha && sedeSeleccionada) {
+      buscarHorariosDisponibles(formData.fecha);
+    }
+  }, [formData.fecha, sedeSeleccionada]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangePais = (e) => {
     const pais = e.target.value;
@@ -279,6 +297,10 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     setMpLoading(true);
     setError('');
 
+    const precio = getPrecio(sedeSeleccionada, formData.hora);
+    const creditoAplicado = aplicarCredito ? Math.min(creditDisponible, precio) : 0;
+    const precioFinal = Math.max(0, precio - creditoAplicado);
+
     const whatsappCompleto = `${formData.codigoPais}${formData.numeroTel.replace(/[\s\-().]/g, '')}`;
     const reservaData = {
       sede: sedeSeleccionada.nombre,
@@ -289,8 +311,9 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       email: currentCliente.email,
       whatsapp: whatsappCompleto,
       nivel: 'Principiante',
-      precio: getPrecio(sedeSeleccionada, formData.hora),
+      precio,
       moneda: sedeSeleccionada.moneda || 'ARS',
+      creditUsed: creditoAplicado,
     };
 
     try {
@@ -299,7 +322,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo: `Cancha ${formData.cancha} — ${sedeSeleccionada.nombre}`,
-          precio: getPrecio(sedeSeleccionada, formData.hora),
+          precio: precioFinal,
           moneda: sedeSeleccionada.moneda || 'ARS',
           sedeNombre: sedeSeleccionada.nombre,
           sedeId: sedeSeleccionada.id,
@@ -316,6 +339,51 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       }
     } catch (err) {
       setError('Error al conectar con Mercado Pago: ' + err.message);
+      setMpLoading(false);
+    }
+  };
+
+  const handleConfirmarConCreditos = async () => {
+    if (!formData.numeroTel.trim()) {
+      setError('Ingresa tu número de WhatsApp');
+      return;
+    }
+
+    setMpLoading(true);
+    setError('');
+
+    const precio = getPrecio(sedeSeleccionada, formData.hora);
+    const creditoAplicado = Math.min(creditDisponible, precio);
+    const whatsappCompleto = `${formData.codigoPais}${formData.numeroTel.replace(/[\s\-().]/g, '')}`;
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/reservas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sede: sedeSeleccionada.nombre,
+          fecha: formData.fecha,
+          hora: formData.hora,
+          cancha: parseInt(formData.cancha),
+          nombre: currentCliente.nombre,
+          email: currentCliente.email,
+          whatsapp: whatsappCompleto,
+          nivel: 'Principiante',
+          precio,
+          estado: 'reservada',
+          creditUsed: creditoAplicado,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('ultima_sede', String(filtros.sede_id));
+        navigate('/perfil');
+      } else {
+        setError(data.error || 'No se pudo confirmar la reserva');
+        setMpLoading(false);
+      }
+    } catch (err) {
+      setError('Error al confirmar: ' + err.message);
       setMpLoading(false);
     }
   };
@@ -544,6 +612,39 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
             )}
           </div>
 
+          {/* Credit usage section */}
+          {creditDisponible > 0 && (
+            <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #bae6fd' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={aplicarCredito}
+                  onChange={(e) => setAplicarCredito(e.target.checked)}
+                  style={{ width: '16px', height: '16px' }}
+                />
+                Usar créditos disponibles (${Number(creditDisponible).toLocaleString('es-AR')})
+              </label>
+            </div>
+          )}
+
+          {/* Pricing breakdown */}
+          <div style={{ background: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span>Precio original:</span>
+              <span>${Number(precio).toLocaleString('es-AR')} {moneda}</span>
+            </div>
+            {aplicarCredito && creditDisponible > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#16a34a' }}>
+                <span>Crédito aplicado:</span>
+                <span>-${Number(Math.min(creditDisponible, precio)).toLocaleString('es-AR')} {moneda}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
+              <span>Total final:</span>
+              <span>${Number(Math.max(0, precio - (aplicarCredito ? Math.min(creditDisponible, precio) : 0))).toLocaleString('es-AR')} {moneda}</span>
+            </div>
+          </div>
+
           <div className="form-group">
             <label>💬 WhatsApp para confirmación *</label>
             <div className="phone-field">
@@ -590,20 +691,28 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
           {error && <div className="error-message">{error}</div>}
 
-          <button
-            onClick={handlePagarConMP}
-            disabled={mpLoading}
-            style={{
-              width: '100%', padding: '14px',
-              background: mpLoading ? '#aaa' : 'linear-gradient(135deg, #009ee3 0%, #0077c8 100%)',
-              color: 'white', border: 'none', borderRadius: '8px',
-              fontSize: '16px', fontWeight: 'bold',
-              cursor: mpLoading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 12px rgba(0,158,227,0.4)',
-            }}
-          >
-            {mpLoading ? 'Redirigiendo a Mercado Pago...' : '💳 Pagar con Mercado Pago'}
-          </button>
+          {(() => {
+            const creditoAplicado = aplicarCredito ? Math.min(creditDisponible, precio) : 0;
+            const precioFinal = Math.max(0, precio - creditoAplicado);
+            const usarCreditos = precioFinal === 0;
+
+            return (
+              <button
+                onClick={usarCreditos ? handleConfirmarConCreditos : handlePagarConMP}
+                disabled={mpLoading}
+                style={{
+                  width: '100%', padding: '14px',
+                  background: mpLoading ? '#aaa' : (usarCreditos ? '#16a34a' : 'linear-gradient(135deg, #009ee3 0%, #0077c8 100%)'),
+                  color: 'white', border: 'none', borderRadius: '8px',
+                  fontSize: '16px', fontWeight: 'bold',
+                  cursor: mpLoading ? 'not-allowed' : 'pointer',
+                  boxShadow: usarCreditos ? '0 3px 12px rgba(22,163,74,0.4)' : '0 3px 12px rgba(0,158,227,0.4)',
+                }}
+              >
+                {mpLoading ? 'Procesando...' : (usarCreditos ? '✅ Confirmar con créditos' : '💳 Pagar con Mercado Pago')}
+              </button>
+            );
+          })()}
 
         </div>
       </div>
