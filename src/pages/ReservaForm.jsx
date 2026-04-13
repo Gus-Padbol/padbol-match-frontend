@@ -113,8 +113,10 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
   // Auto-load time slots when date is selected
   useEffect(() => {
+    console.log('[ReservaForm] Date change effect - pantalla:', pantalla, 'fecha:', formData.fecha, 'sedeId:', filtros.sede_id, 'sedeSeleccionada:', sedeSeleccionada?.nombre);
     if (pantalla !== 2 || !formData.fecha) return;
     if (!sedeSeleccionada) return;
+    console.log('[ReservaForm] Triggering buscarHorariosDisponibles for fecha:', formData.fecha);
     buscarHorariosDisponibles(formData.fecha);
   }, [formData.fecha, pantalla, filtros.sede_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -163,14 +165,19 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   };
 
   const buscarHorariosDisponibles = async (fecha) => {
-    if (!fecha || !sedeSeleccionada) return;
+    if (!fecha || !sedeSeleccionada) {
+      console.log('[ReservaForm] buscarHorariosDisponibles early return - fecha:', fecha, 'sedeSeleccionada:', sedeSeleccionada?.nombre);
+      return;
+    }
 
+    console.log('[ReservaForm] buscarHorariosDisponibles fetching for sede:', sedeSeleccionada.nombre, 'fecha:', fecha);
     setLoading(true);
     try {
       const response = await fetch(
         `${apiBaseUrl}/api/disponibilidad/${sedeSeleccionada.nombre}/${fecha}`
       );
       const reservadas = await response.json();
+      console.log('[ReservaForm] buscarHorariosDisponibles got response:', reservadas);
 
       const sedeData = sedeSeleccionada;
       const horaApertura = parseInt(sedeData.horario_apertura.split(':')[0]);
@@ -216,6 +223,9 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
   const handleChangeFecha = (e) => {
     const fecha = e.target.value;
+    console.log('[ReservaForm] handleChangeFecha called with fecha:', fecha);
+    console.log('[ReservaForm]  Current state - pantalla:', pantalla, 'filtros.sede_id:', filtros.sede_id, 'sedes.length:', sedes.length);
+    console.log('[ReservaForm]  sedeSeleccionada at call time:', sedeSeleccionada?.nombre || sedeSeleccionada);
     setFormData(prev => ({
       ...prev,
       fecha,
