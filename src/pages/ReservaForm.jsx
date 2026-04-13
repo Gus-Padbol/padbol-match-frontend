@@ -118,7 +118,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     if (!sedeSeleccionada) return;
     console.log('[ReservaForm] Triggering buscarHorariosDisponibles for fecha:', formData.fecha);
     buscarHorariosDisponibles(formData.fecha);
-  }, [formData.fecha, pantalla, filtros.sede_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [formData.fecha, pantalla, filtros.sede_id, sedes]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const handleChangePais = (e) => {
@@ -274,6 +274,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       hora: '',
       cancha: '',
     }));
+    setHorariosDisponibles([]);
     setCanchasDisponibles([]);
     buscarHorariosDisponibles(fecha);
   };
