@@ -3,6 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/ReservaForm.css';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 
+// Returns the correct price for a given sede + time slot.
+// Falls back to precio_por_reserva / precio_turno if no differentiated prices are configured.
+function getPrecio(sede, hora) {
+  const base = Number(sede?.precio_por_reserva || sede?.precio_turno || 0);
+  if (!hora || !sede) return base;
+  const h = parseInt(hora.split(':')[0], 10);
+  return h < 16
+    ? Number(sede.precio_manana || base)
+    : Number(sede.precio_tarde  || base);
+}
+
 export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padbol-backend.onrender.com' }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -278,7 +289,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       email: currentCliente.email,
       whatsapp: whatsappCompleto,
       nivel: 'Principiante',
-      precio: sedeSeleccionada.precio_por_reserva,
+      precio: getPrecio(sedeSeleccionada, formData.hora),
       moneda: sedeSeleccionada.moneda || 'ARS',
     };
 
@@ -288,7 +299,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo: `Cancha ${formData.cancha} — ${sedeSeleccionada.nombre}`,
-          precio: sedeSeleccionada.precio_por_reserva,
+          precio: getPrecio(sedeSeleccionada, formData.hora),
           moneda: sedeSeleccionada.moneda || 'ARS',
           sedeNombre: sedeSeleccionada.nombre,
           sedeId: sedeSeleccionada.id,
@@ -407,7 +418,11 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
           </div>
 
           <p style={{ color: '#666', marginBottom: '30px', textAlign: 'center' }}>
-            {sedeSeleccionada?.ciudad}, {sedeSeleccionada?.pais} • ${sedeSeleccionada?.precio_por_reserva.toLocaleString('es-AR')} {sedeSeleccionada?.moneda}
+            {sedeSeleccionada?.ciudad}, {sedeSeleccionada?.pais}
+            {sedeSeleccionada?.precio_manana && sedeSeleccionada?.precio_tarde
+              ? ` • 🌅 $${Number(sedeSeleccionada.precio_manana).toLocaleString('es-AR')} / 🌆 $${Number(sedeSeleccionada.precio_tarde).toLocaleString('es-AR')} ${sedeSeleccionada?.moneda || 'ARS'}`
+              : ` • $${Number(sedeSeleccionada?.precio_por_reserva || sedeSeleccionada?.precio_turno || 0).toLocaleString('es-AR')} ${sedeSeleccionada?.moneda || 'ARS'}`
+            }
           </p>
 
           <form>
@@ -443,6 +458,20 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
             {formData.fecha && horariosDisponibles.length === 0 && loading === false && (
               <div className="error-message">No hay horarios disponibles para esta fecha</div>
+            )}
+
+            {/* Price badge — shown as soon as a time is selected */}
+            {formData.hora && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '12px 0', padding: '10px 14px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px' }}>
+                <span style={{ fontSize: '15px', fontWeight: 800, color: '#0369a1' }}>
+                  💰 {Number(getPrecio(sedeSeleccionada, formData.hora)).toLocaleString('es-AR')} {sedeSeleccionada?.moneda || 'ARS'}
+                </span>
+                {sedeSeleccionada?.precio_manana && sedeSeleccionada?.precio_tarde && (
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                    {parseInt(formData.hora.split(':')[0], 10) < 16 ? '🌅 Tarifa mañana' : '🌆 Tarifa tarde/noche'}
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Court availability buttons — shown after hora is selected */}
@@ -485,7 +514,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
 
   // PANTALLA 4: Resumen + pago
   if (pantalla === 4) {
-    const precio = sedeSeleccionada?.precio_por_reserva;
+    const precio = getPrecio(sedeSeleccionada, formData.hora);
     const moneda = sedeSeleccionada?.moneda || 'ARS';
 
     return (

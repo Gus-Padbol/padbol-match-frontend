@@ -525,6 +525,8 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           horario_apertura: sedeData.horario_apertura || '',
           horario_cierre:   sedeData.horario_cierre   || '',
           precio_turno:     sedeData.precio_turno     ?? '',
+          precio_manana:    sedeData.precio_manana    ?? '',
+          precio_tarde:     sedeData.precio_tarde     ?? '',
           moneda:           sedeData.moneda           || 'ARS',
           descripcion:      sedeData.descripcion      || '',
           mp_access_token:  sedeData.mp_access_token  || '',
@@ -570,7 +572,9 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       email_contacto:   miSedeForm.email_contacto  || null,
       horario_apertura: miSedeForm.horario_apertura || null,
       horario_cierre:   miSedeForm.horario_cierre   || null,
-      precio_turno:     miSedeForm.precio_turno !== '' ? parseFloat(miSedeForm.precio_turno) : null,
+      precio_turno:     miSedeForm.precio_turno  !== '' ? parseFloat(miSedeForm.precio_turno)  : null,
+      precio_manana:    miSedeForm.precio_manana  !== '' ? parseFloat(miSedeForm.precio_manana) : null,
+      precio_tarde:     miSedeForm.precio_tarde   !== '' ? parseFloat(miSedeForm.precio_tarde)  : null,
       moneda:           miSedeForm.moneda           || 'ARS',
       descripcion:      miSedeForm.descripcion      || null,
       mp_access_token:  miSedeForm.mp_access_token  || null,
@@ -1666,9 +1670,41 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
                   />
                 </div>
               </div>
+              <p style={{ margin: '4px 0 18px', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                Precio base aplicado cuando no hay tarifas diferenciadas.
+              </p>
+
+              {[
+                { field: 'precio_manana', label: '🌅 Mañana (08–16hs)' },
+                { field: 'precio_tarde',  label: '🌆 Tarde/noche (16–23hs)' },
+              ].map(({ field, label }) => (
+                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '190px' }}>{label}</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={miSedeForm[field] !== '' && miSedeForm[field] !== null
+                        ? Number(miSedeForm[field]).toLocaleString('es-AR')
+                        : ''}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
+                        setMiSedeForm(p => ({ ...p, [field]: digits }));
+                      }}
+                      placeholder="Ej: 5000"
+                      style={{ width: '120px', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                Si se configuran ambas tarifas, el precio cambia automáticamente según el horario del turno.
+              </p>
+
               <button onClick={guardarMiSede} disabled={miSedeSaving}
                 style={{ padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
-                {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar precio'}
+                {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar precios'}
               </button>
             </div>
           </div>
