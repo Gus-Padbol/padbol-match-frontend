@@ -31,6 +31,8 @@ export default function MiPerfil({ currentCliente }) {
   const [fotoUploading, setFotoUploading] = useState(false);
   const fotoInputRef = useRef(null);
   const [cancelando, setCancelando] = useState(null); // reservaId being cancelled
+  const [creditTotal, setCreditTotal] = useState(0);
+  const [creditItems, setCreditItems] = useState([]);
 
   const [formData, setFormData] = useState({
     lateralidad: 'Diestro',
@@ -52,6 +54,7 @@ export default function MiPerfil({ currentCliente }) {
     fetchPerfil();
     fetchSedes();
     fetchReservas();
+    fetchCreditos();
   }, [currentCliente]);
 
   const fetchPerfil = async () => {
@@ -99,6 +102,18 @@ export default function MiPerfil({ currentCliente }) {
       setReservas(data || []);
     } catch {
       // fail silently
+    }
+  };
+
+  const fetchCreditos = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/creditos/${encodeURIComponent(currentCliente.email)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setCreditTotal(data.total || 0);
+      setCreditItems(data.creditos || []);
+    } catch {
+      // fail silently — credits are informational
     }
   };
 
@@ -452,6 +467,27 @@ export default function MiPerfil({ currentCliente }) {
           </form>
         )}
       </div>
+
+      {/* Credit balance */}
+      {creditTotal > 0 && (
+        <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
+          <h4 style={{ margin: '0 0 14px', color: '#15803d', borderBottom: '1px solid #bbf7d0', paddingBottom: '8px' }}>💰 Créditos disponibles</h4>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#16a34a', marginBottom: creditItems.length ? '14px' : 0 }}>
+            ${creditTotal.toLocaleString('es-AR')} <span style={{ fontSize: '14px', fontWeight: 600, color: '#4ade80' }}>ARS</span>
+          </div>
+          {creditItems.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {creditItems.map(c => (
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#166534', background: 'white', borderRadius: '6px', padding: '6px 10px' }}>
+                  <span>📅 {new Date(c.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                  <span style={{ fontWeight: 700 }}>+${Number(c.monto).toLocaleString('es-AR')}</span>
+                  <span style={{ color: '#86efac' }}>vence {new Date(c.vence_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       {reservas.length > 0 && (() => {
