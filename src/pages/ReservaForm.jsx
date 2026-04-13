@@ -180,27 +180,58 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       console.log('[ReservaForm] buscarHorariosDisponibles got response:', reservadas);
 
       const sedeData = sedeSeleccionada;
-      const horaApertura = parseInt(sedeData.horario_apertura.split(':')[0]);
-      const horaCierre = parseInt(sedeData.horario_cierre.split(':')[0]);
+
+      // Parse opening/closing times with defensive checks
+      let horaApertura = 10; // default: 10 AM
+      let horaCierre = 23;   // default: 11 PM
+
+      try {
+        if (sedeData.horario_apertura) {
+          const apertura = parseInt(sedeData.horario_apertura.split(':')[0], 10);
+          if (!isNaN(apertura)) horaApertura = apertura;
+        }
+      } catch (e) {
+        console.log('[ReservaForm] Could not parse horario_apertura, using default:', horaApertura);
+      }
+
+      try {
+        if (sedeData.horario_cierre) {
+          const cierre = parseInt(sedeData.horario_cierre.split(':')[0], 10);
+          if (!isNaN(cierre)) horaCierre = cierre;
+        }
+      } catch (e) {
+        console.log('[ReservaForm] Could not parse horario_cierre, using default:', horaCierre);
+      }
+
       const duracion = sedeData.duracion_reserva_minutos || 90;
       const cantidadCanchas = sedeData.cantidad_canchas || 2;
 
+      console.log('[ReservaForm] Schedule config - opening:', horaApertura, 'closing:', horaCierre, 'duration:', duracion, 'courts:', cantidadCanchas);
+
       const todosLosHorarios = [];
 
+      // Generate all possible time slots based on club schedule
       for (let h = horaApertura; h < horaCierre; h++) {
         for (let m = 0; m < 60; m += duracion) {
-          if (h + (m + duracion) / 60 <= horaCierre) {
+          // Check if slot fits within business hours
+          const slotEndMinutes = m + duracion;
+          const slotEndHours = h + Math.floor(slotEndMinutes / 60);
+          const slotEndMins = slotEndMinutes % 60;
+
+          // Only add if slot ends by closing time
+          if (slotEndHours < horaCierre || (slotEndHours === horaCierre && slotEndMins === 0)) {
             const horaInicio = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-            const minFin = m + duracion;
-            const hFin = h + Math.floor(minFin / 60);
-            const mFin = minFin % 60;
+            const hFin = slotEndHours;
+            const mFin = slotEndMins;
             const horaFin = String(hFin).padStart(2, '0') + ':' + String(mFin).padStart(2, '0');
 
-            const ocupadas = reservadas.filter(
+            // Count reservations for this time slot
+            const ocupadas = Array.isArray(reservadas) ? reservadas.filter(
               r => r.hora === horaInicio
-            ).length;
+            ).length : 0;
             const libres = cantidadCanchas - ocupadas;
 
+            // Add slot only if at least one court is available
             if (libres > 0) {
               todosLosHorarios.push({
                 horario: `${horaInicio} - ${horaFin}`,
@@ -213,8 +244,19 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
         }
       }
 
+      console.log('[ReservaForm] Generated', todosLosHorarios.length, 'available time slots');
       setHorariosDisponibles(todosLosHorarios);
+
+      // If no slots found, log full diagnostics
+      if (todosLosHorarios.length === 0) {
+        console.log('[ReservaForm] WARNING: No time slots generated. Debug info:', {
+          horaApertura, horaCierre, duracion, cantidadCanchas,
+          reservadasCount: Array.isArray(reservadas) ? reservadas.length : 'NaN',
+          fechaSelected: fecha
+        });
+      }
     } catch (err) {
+      console.error('[ReservaForm] Error in buscarHorariosDisponibles:', err);
       setError('Error al buscar disponibilidad');
     } finally {
       setLoading(false);
@@ -255,7 +297,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       );
       const reservadas = await response.json();
 
-      const ocupadas = reservadas.filter(r => r.hora === hora).map(r => r.cancha);
+      const ocupadas = Array.isArray(reservadas) ? reservadas.filter(r => r.hora === hora).map(r => r.cancha) : [];
       const total = sedeSeleccionada.cantidad_canchas || 2;
 
       setCanchasDisponibles(
