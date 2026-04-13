@@ -111,50 +111,13 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     setPantalla(2);
   }, [sedes, initialSedeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-load available time slots when date is selected
+  // Auto-load time slots when date is selected
   useEffect(() => {
-    if (!formData.fecha || !sedes || sedes.length === 0) return;
-    const sede = sedes.find(s => s.id === filtros.sede_id);
-    if (!sede) return;
+    if (pantalla !== 2 || !formData.fecha) return;
+    if (!sedeSeleccionada) return;
+    buscarHorariosDisponibles(formData.fecha);
+  }, [formData.fecha, pantalla, filtros.sede_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    setLoading(true);
-    fetch(`${apiBaseUrl}/api/disponibilidad/${sede.nombre}/${formData.fecha}`)
-      .then(res => res.json())
-      .then(reservadas => {
-        const horaApertura = parseInt(sede.horario_apertura.split(':')[0]);
-        const horaCierre = parseInt(sede.horario_cierre.split(':')[0]);
-        const duracion = sede.duracion_reserva_minutos || 90;
-        const cantidadCanchas = sede.cantidad_canchas || 2;
-        const todosLosHorarios = [];
-
-        for (let h = horaApertura; h < horaCierre; h++) {
-          for (let m = 0; m < 60; m += duracion) {
-            if (h + (m + duracion) / 60 <= horaCierre) {
-              const horaInicio = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-              const minFin = m + duracion;
-              const hFin = h + Math.floor(minFin / 60);
-              const mFin = minFin % 60;
-              const horaFin = String(hFin).padStart(2, '0') + ':' + String(mFin).padStart(2, '0');
-
-              const ocupadas = reservadas.filter(r => r.hora === horaInicio).length;
-              const libres = cantidadCanchas - ocupadas;
-
-              if (libres > 0) {
-                todosLosHorarios.push({
-                  horario: `${horaInicio} - ${horaFin}`,
-                  hora: horaInicio,
-                  libres,
-                  ocupadas,
-                });
-              }
-            }
-          }
-        }
-        setHorariosDisponibles(todosLosHorarios);
-      })
-      .catch(() => setError('Error al buscar disponibilidad'))
-      .finally(() => setLoading(false));
-  }, [formData.fecha, filtros.sede_id, sedes, apiBaseUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChangePais = (e) => {
     const pais = e.target.value;
@@ -200,7 +163,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   };
 
   const buscarHorariosDisponibles = async (fecha) => {
-    if (!fecha) return;
+    if (!fecha || !sedeSeleccionada) return;
 
     setLoading(true);
     try {
