@@ -199,8 +199,8 @@ export default function MiPerfil({ currentCliente }) {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Error al cancelar');
-      if (data.eligibleForCredit) {
-        alert(`✅ Reserva cancelada. Se acreditaron $${Number(r.precio).toLocaleString('es-AR')} en tu cuenta (válido 30 días).`);
+      if (data.credito) {
+        alert(`✅ Reserva cancelada. Se acreditaron $${Number(data.credito.monto).toLocaleString('es-AR')} en tu cuenta (válido 30 días).`);
       } else {
         alert('✅ Reserva cancelada. La cancelación fue realizada con menos de 24hs de anticipación — no genera crédito.');
       }
