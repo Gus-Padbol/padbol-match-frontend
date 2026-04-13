@@ -29,12 +29,20 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     numeroTel: '',
   });
 
-  // Pre-fill phone from profile if available
+  // Pre-fill phone from profile — split stored full number into country code + local
   useEffect(() => {
-    if (currentCliente?.whatsapp) {
-      setFormData(prev => ({ ...prev, numeroTel: currentCliente.whatsapp }));
+    if (!currentCliente?.whatsapp) return;
+    const wa = currentCliente.whatsapp;
+    const allPaises = [...PAISES_TELEFONO_PRINCIPALES, ...PAISES_TELEFONO_OTROS];
+    // Match longest country code first to avoid prefix conflicts (e.g. +1 vs +12)
+    const sorted = [...allPaises].sort((a, b) => b.codigo.length - a.codigo.length);
+    const match = sorted.find(p => wa.startsWith(p.codigo));
+    if (match) {
+      setFormData(prev => ({ ...prev, codigoPais: match.codigo, numeroTel: wa.slice(match.codigo.length) }));
+    } else {
+      setFormData(prev => ({ ...prev, numeroTel: wa }));
     }
-  }, [currentCliente]);
+  }, [currentCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [canchasDisponibles, setCanchasDisponibles] = useState([]);
@@ -46,6 +54,17 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const [testSuccess, setTestSuccess] = useState(false);
 
   const IS_TEST_DOMAIN = window.location.hostname === 'padbol-match.netlify.app';
+
+  // Auto-select + auto-advance when only one court is free
+  useEffect(() => {
+    if (!canchasDisponibles.length || pantalla !== 2) return;
+    const libres = canchasDisponibles.filter(c => c.libre);
+    if (libres.length === 1) {
+      setFormData(prev => ({ ...prev, cancha: String(libres[0].num) }));
+      setPantalla(4);
+      setError('');
+    }
+  }, [canchasDisponibles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetch(`${apiBaseUrl}/api/sedes`)
@@ -105,6 +124,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
   const handleChangeSede = (e) => {
     const sede_id = parseInt(e.target.value);
     setFiltros(prev => ({ ...prev, sede_id }));
+    if (sede_id) { setPantalla(2); setError(''); }
   };
 
   const siguientePantalla2 = () => {
@@ -199,18 +219,12 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
       );
       const reservadas = await response.json();
 
-      const cancharesReservadas = reservadas
-        .filter(r => r.hora === hora)
-        .map(r => r.cancha);
+      const ocupadas = reservadas.filter(r => r.hora === hora).map(r => r.cancha);
+      const total = sedeSeleccionada.cantidad_canchas || 2;
 
-      const libres = [];
-      for (let i = 1; i <= sedeSeleccionada.cantidad_canchas; i++) {
-        if (!cancharesReservadas.includes(i)) {
-          libres.push(i);
-        }
-      }
-
-      setCanchasDisponibles(libres);
+      setCanchasDisponibles(
+        Array.from({ length: total }, (_, i) => ({ num: i + 1, libre: !ocupadas.includes(i + 1) }))
+      );
     } catch (err) {
       setError('Error al buscar canchas disponibles');
     }
@@ -474,87 +488,38 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
               <div className="error-message">No hay horarios disponibles para esta fecha</div>
             )}
 
-            {error && <div className="error-message">{error}</div>}
-
-            {formData.fecha && formData.hora && (
-              <button type="button" onClick={siguientePantalla3} style={{
-                width: '100%',
-                padding: '12px',
-                background: '#d32f2f',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginTop: '20px',
-              }}>
-                ➜ Continuar
-              </button>
+            {/* Court availability buttons — shown after hora is selected */}
+            {formData.hora && canchasDisponibles.length > 0 && (
+              <div style={{ marginTop: '20px' }}>
+                <label style={{ display: 'block', fontWeight: 600, color: '#333', marginBottom: '10px' }}>Elegí tu cancha:</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {canchasDisponibles.map(c => (
+                    <button
+                      key={c.num}
+                      type="button"
+                      disabled={!c.libre}
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, cancha: String(c.num) }));
+                        setPantalla(4);
+                        setError('');
+                      }}
+                      style={{
+                        padding: '13px 16px', textAlign: 'left', fontWeight: 700, fontSize: '14px',
+                        borderRadius: '8px', cursor: c.libre ? 'pointer' : 'not-allowed',
+                        border: `2px solid ${c.libre ? '#16a34a' : '#dc2626'}`,
+                        background: c.libre ? '#f0fdf4' : '#fef2f2',
+                        color: c.libre ? '#15803d' : '#dc2626',
+                        opacity: c.libre ? 1 : 0.65,
+                      }}
+                    >
+                      Cancha {c.num} {c.libre ? '✅ Disponible' : '🔴 Reservada'}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // PANTALLA 3: Seleccionar Cancha
-  if (pantalla === 3) {
-    return (
-      <div className="reserva-container">
-        <div className="reserva-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1 style={{ margin: 0 }}>🏟️ Elige Cancha</h1>
-            <button onClick={volverAtras} style={{
-              padding: '8px 15px',
-              background: '#999',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-            }}>
-              ← Atrás
-            </button>
-          </div>
-
-          <p style={{ color: '#666', marginBottom: '30px', textAlign: 'center', fontSize: '14px' }}>
-            {sedeSeleccionada?.nombre} • {formData.fecha} • {formData.hora}
-          </p>
-
-          <form>
-            <div className="form-group">
-              <label>Cancha Disponible:</label>
-              <select
-                name="cancha"
-                value={formData.cancha}
-                onChange={handleChange}
-                required
-              >
-                <option value="">-- Selecciona Cancha --</option>
-                {canchasDisponibles.map(c => (
-                  <option key={c} value={c}>Cancha {c}</option>
-                ))}
-              </select>
-            </div>
 
             {error && <div className="error-message">{error}</div>}
-
-            {formData.cancha && (
-              <button type="button" onClick={siguientePantalla4} style={{
-                width: '100%',
-                padding: '12px',
-                background: '#d32f2f',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                marginTop: '20px',
-              }}>
-                ➜ Continuar
-              </button>
-            )}
           </form>
         </div>
       </div>
@@ -590,7 +555,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
         <div className="reserva-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h1 style={{ margin: 0 }}>🎾 Resumen de reserva</h1>
-            <button onClick={volverAtras} style={{
+            <button onClick={() => { setPantalla(2); setError(''); }} style={{
               padding: '8px 15px', background: '#999', color: 'white',
               border: 'none', borderRadius: '5px', cursor: 'pointer',
             }}>
@@ -669,7 +634,7 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
                 disabled={testLoading}
                 style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
               >
-                {testLoading ? 'Guardando...' : 'Confirmar sin pago (TEST)'}
+                {testLoading ? 'Guardando...' : 'Confirmar sin pago (solo pruebas)'}
               </button>
             </div>
           )}
