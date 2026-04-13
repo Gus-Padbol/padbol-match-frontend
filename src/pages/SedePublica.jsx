@@ -339,6 +339,47 @@ export default function SedePublica({ currentCliente }) {
                 </div>
               </div>
 
+              {/* ── Social media links ── */}
+              {(() => {
+                const redes = [
+                  { key: 'instagram', label: 'Instagram', bg: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', color: 'white', icon: '📸' },
+                  { key: 'facebook',  label: 'Facebook',  bg: '#1877f2', color: 'white', icon: '👍' },
+                  { key: 'tiktok',    label: 'TikTok',    bg: '#010101', color: 'white', icon: '🎵' },
+                  { key: 'twitter',   label: 'X / Twitter', bg: '#000', color: 'white', icon: '✖' },
+                  { key: 'youtube',   label: 'YouTube',   bg: '#ff0000', color: 'white', icon: '▶' },
+                  { key: 'website',   label: 'Sitio web', bg: '#374151', color: 'white', icon: '🌐' },
+                ].filter(r => sede[r.key]);
+                if (!redes.length) return null;
+                return (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h3 style={{ color: '#1e1b4b', fontSize: '15px', fontWeight: 700, marginBottom: '12px', paddingLeft: '2px' }}>🔗 Seguinos</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                      {redes.map(r => (
+                        <a
+                          key={r.key}
+                          href={sede[r.key]}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '7px',
+                            padding: '9px 16px', borderRadius: '10px', textDecoration: 'none',
+                            background: r.bg, color: r.color,
+                            fontSize: '13px', fontWeight: 700,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                            transition: 'transform 0.1s, box-shadow 0.1s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 5px 14px rgba(0,0,0,0.25)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'; }}
+                        >
+                          <span>{r.icon}</span>
+                          <span>{r.label}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Google Maps ── */}
               {hasAddress && (
                 <MapEmbed

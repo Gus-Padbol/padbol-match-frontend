@@ -530,6 +530,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
           mp_access_token:  sedeData.mp_access_token  || '',
           latitud:          sedeData.latitud  != null ? String(sedeData.latitud)  : '',
           longitud:         sedeData.longitud != null ? String(sedeData.longitud) : '',
+          instagram:        sedeData.instagram  || '',
+          facebook:         sedeData.facebook   || '',
+          tiktok:           sedeData.tiktok     || '',
+          twitter:          sedeData.twitter    || '',
+          youtube:          sedeData.youtube    || '',
+          website:          sedeData.website    || '',
         });
         setLicenciaForm({
           numero_licencia: sedeData.numero_licencia || '',
@@ -570,6 +576,12 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       mp_access_token:  miSedeForm.mp_access_token  || null,
       latitud:          miSedeForm.latitud  !== '' ? parseFloat(miSedeForm.latitud)  : null,
       longitud:         miSedeForm.longitud !== '' ? parseFloat(miSedeForm.longitud) : null,
+      instagram:        miSedeForm.instagram  || null,
+      facebook:         miSedeForm.facebook   || null,
+      tiktok:           miSedeForm.tiktok     || null,
+      twitter:          miSedeForm.twitter    || null,
+      youtube:          miSedeForm.youtube    || null,
+      website:          miSedeForm.website    || null,
     }).eq('id', sedeId);
     setMiSedeSaving(false);
     setMiSedeMsg(error ? `⚠️ ${error.message}` : '✅ Sede actualizada');
@@ -1687,7 +1699,40 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </div>
           )}
 
-          {/* ── 4. Canchas ── */}
+          {/* ── 4. Redes Sociales ── */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>📱 Redes Sociales</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
+              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                Ingresá las URLs completas (incluye https://). Solo se muestran las redes que tengas cargadas.
+              </p>
+              {[
+                { field: 'instagram', label: '📸 Instagram', placeholder: 'https://instagram.com/tusede' },
+                { field: 'facebook',  label: '👍 Facebook',  placeholder: 'https://facebook.com/tusede' },
+                { field: 'tiktok',    label: '🎵 TikTok',    placeholder: 'https://tiktok.com/@tusede' },
+                { field: 'twitter',   label: '✖ Twitter / X', placeholder: 'https://x.com/tusede' },
+                { field: 'youtube',   label: '▶ YouTube',   placeholder: 'https://youtube.com/@tusede' },
+                { field: 'website',   label: '🌐 Sitio web', placeholder: 'https://tusede.com' },
+              ].map(({ field, label, placeholder }) => (
+                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <label style={{ width: '150px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>{label}</label>
+                  <input
+                    type="url"
+                    value={miSedeForm[field] || ''}
+                    placeholder={placeholder}
+                    onChange={e => setMiSedeForm(p => ({ ...p, [field]: e.target.value }))}
+                    style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
+              <button onClick={guardarMiSede} disabled={miSedeSaving}
+                style={{ marginTop: '8px', padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
+                {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar redes'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── 5. Canchas ── */}
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Canchas</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
