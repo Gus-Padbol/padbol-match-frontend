@@ -30,6 +30,7 @@ export default function MiPerfil({ currentCliente }) {
   const [fotoPreview, setFotoPreview] = useState(null);
   const [fotoUploading, setFotoUploading] = useState(false);
   const fotoInputRef = useRef(null);
+  const [cancelando, setCancelando] = useState(null); // reservaId being cancelled
 
   const [formData, setFormData] = useState({
     lateralidad: 'Diestro',
@@ -185,6 +186,30 @@ export default function MiPerfil({ currentCliente }) {
     setSuccessMsg('✅ Perfil guardado');
     setEditando(false);
     setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const handleCancelar = async (r) => {
+    if (!window.confirm('¿Cancelar reserva? Si faltan más de 24hs recibirás un crédito.')) return;
+    setCancelando(r.id);
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/cancelar-reserva`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservaId: r.id, email: currentCliente.email }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Error al cancelar');
+      if (data.eligibleForCredit) {
+        alert(`✅ Reserva cancelada. Se acreditaron $${Number(r.precio).toLocaleString('es-AR')} en tu cuenta (válido 30 días).`);
+      } else {
+        alert('✅ Reserva cancelada. La cancelación fue realizada con menos de 24hs de anticipación — no genera crédito.');
+      }
+      await fetchReservas();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setCancelando(null);
+    }
   };
 
   const sedeNombre = (id) => {
@@ -461,26 +486,39 @@ export default function MiPerfil({ currentCliente }) {
           <p style={{ color: '#aaa', textAlign: 'center', margin: '20px 0', fontSize: '14px' }}>Aún no tenés reservas registradas.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {reservas.map(r => (
-              <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '13px', color: '#1e1b4b' }}>{r.sede}</div>
-                  <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>📅 {r.fecha} &nbsp;⏰ {r.hora} &nbsp;🎾 Cancha {r.cancha}</div>
+            {reservas.map(r => {
+              const horasHasta = (new Date(`${r.fecha}T${r.hora}:00-03:00`) - Date.now()) / (1000 * 60 * 60);
+              const canCancel = horasHasta > 2 && r.estado !== 'cancelada';
+              return (
+                <div key={r.id} style={{ background: 'white', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#1e1b4b' }}>{r.sede}</div>
+                    <div style={{ fontSize: '12px', color: '#777', marginTop: '2px' }}>📅 {r.fecha} &nbsp;⏰ {r.hora} &nbsp;🎾 Cancha {r.cancha}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    {r.precio > 0 && (
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#d32f2f' }}>
+                        {Number(r.precio).toLocaleString('es-AR')} {r.moneda || 'ARS'}
+                      </div>
+                    )}
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
+                      background: r.estado === 'confirmada' ? '#dcfce7' : r.estado === 'cancelada' ? '#fee2e2' : r.estado === 'test' ? '#f3f4f6' : '#fef9c3',
+                      color: r.estado === 'confirmada' ? '#16a34a' : r.estado === 'cancelada' ? '#dc2626' : r.estado === 'test' ? '#6b7280' : '#854d0e',
+                    }}>{r.estado || 'reservada'}</span>
+                    {canCancel && (
+                      <button
+                        onClick={() => handleCancelar(r)}
+                        disabled={cancelando === r.id}
+                        style={{ fontSize: '11px', padding: '3px 8px', border: '1px solid #fca5a5', borderRadius: '6px', background: '#fff', color: '#dc2626', cursor: 'pointer', fontWeight: 600, opacity: cancelando === r.id ? 0.6 : 1 }}
+                      >
+                        {cancelando === r.id ? 'Cancelando...' : 'Cancelar'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  {r.precio > 0 && (
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#d32f2f' }}>
-                      {Number(r.precio).toLocaleString('es-AR')} {r.moneda || 'ARS'}
-                    </div>
-                  )}
-                  <span style={{
-                    fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px',
-                    background: r.estado === 'confirmada' ? '#dcfce7' : r.estado === 'test' ? '#f3f4f6' : '#fef9c3',
-                    color: r.estado === 'confirmada' ? '#16a34a' : r.estado === 'test' ? '#6b7280' : '#854d0e',
-                  }}>{r.estado || 'reservada'}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
