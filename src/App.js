@@ -650,7 +650,7 @@ return (
         <ReservaForm currentCliente={currentCliente} apiBaseUrl={API_BASE_URL} />
       </div>
     } />
-    <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
+    <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} onLogout={handleLogout} />} />
     <Route path="/rankings" element={<Rankings currentCliente={currentCliente} onLogout={handleLogout} />} />
     <Route path="/torneos" element={<TorneosPublicos currentCliente={currentCliente} onLogout={handleLogout} />} />
     <Route path="/sedes" element={<SedesPublicas currentCliente={currentCliente} onLogout={handleLogout} />} />

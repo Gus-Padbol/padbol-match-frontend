@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
+import UserHeader from '../components/UserHeader';
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
@@ -17,7 +18,7 @@ const CATEGORIA_COLOR = {
   Elite:        '#212121',
 };
 
-export default function MiPerfil({ currentCliente }) {
+export default function MiPerfil({ currentCliente, onLogout }) {
   const navigate = useNavigate();
   const [perfil, setPerfil] = useState(null);
   const [sedes, setSedes] = useState([]);
@@ -252,20 +253,11 @@ export default function MiPerfil({ currentCliente }) {
   const categoriaColor = CATEGORIA_COLOR[perfil?.nivel] || '#999';
 
   return (
-    <div style={{ maxWidth: '520px', margin: '40px auto', padding: '20px', fontFamily: 'Arial' }}>
+    <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
 
-      {/* Top nav */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{ padding: '8px 16px', background: '#999', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-        >
-          ← Volver
-        </button>
-        <h2 style={{ margin: 0, color: '#d32f2f' }}>Ficha de Jugador</h2>
-      </div>
+      <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
 
-      {/* Hero card */}
+      <div style={{ padding: '20px' }}>
       <div style={{ background: 'white', borderRadius: '12px', padding: '30px 24px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
         {/* Photo */}
         {(() => {
@@ -569,6 +561,7 @@ export default function MiPerfil({ currentCliente }) {
         </p>
       </div>
 
+      </div>
     </div>
   );
 }
