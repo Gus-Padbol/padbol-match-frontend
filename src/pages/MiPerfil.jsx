@@ -49,7 +49,9 @@ export default function MiPerfil({ currentCliente, onLogout }) {
 
   useEffect(() => {
     if (!currentCliente?.email) {
-      navigate('/');
+      // Don't redirect immediately — auth might still be loading
+      // Just skip fetching and show loading state
+      setLoading(false);
       return;
     }
     fetchPerfil();
@@ -60,25 +62,35 @@ export default function MiPerfil({ currentCliente, onLogout }) {
 
   const fetchPerfil = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('jugadores_perfil')
-      .select('*')
-      .eq('email', currentCliente.email)
-      .single();
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout loading profile')), 8000)
+      );
+      const { data, error } = await Promise.race([
+        supabase
+          .from('jugadores_perfil')
+          .select('*')
+          .eq('email', currentCliente.email)
+          .single(),
+        timeoutPromise
+      ]);
 
-    if (!error && data) {
-      setPerfil(data);
-      setFormData({
-        lateralidad: data.lateralidad || 'Diestro',
-        nivel: data.nivel || '5ta',
-        pais: data.pais || '',
-        ciudad: data.ciudad || '',
-
-        fecha_nacimiento: data.fecha_nacimiento || '',
-        sede_id: data.sede_id ? String(data.sede_id) : '',
-        numero_fipa: data.numero_fipa || '',
-        es_federado: data.es_federado || false,
-      });
+      if (!error && data) {
+        setPerfil(data);
+        setFormData({
+          lateralidad: data.lateralidad || 'Diestro',
+          nivel: data.nivel || '5ta',
+          pais: data.pais || '',
+          ciudad: data.ciudad || '',
+          fecha_nacimiento: data.fecha_nacimiento || '',
+          sede_id: data.sede_id ? String(data.sede_id) : '',
+          numero_fipa: data.numero_fipa || '',
+          es_federado: data.es_federado || false,
+        });
+      }
+    } catch (err) {
+      // Profile is optional; silently fail if not found or network error
+      console.log('[MiPerfil] fetchPerfil error (expected if no profile yet):', err.message);
     }
     setLoading(false);
   };
@@ -243,8 +255,24 @@ export default function MiPerfil({ currentCliente, onLogout }) {
     marginBottom: '5px', color: '#333', fontSize: '13px',
   };
 
+  if (!currentCliente?.email) {
+    return (
+      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
+        <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
+        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+          Iniciando sesión... <a href="/" style={{ color: '#d32f2f', textDecoration: 'none' }}>Volver al inicio</a>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Cargando perfil...</div>;
+    return (
+      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
+        <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
+        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Cargando perfil...</div>
+      </div>
+    );
   }
 
   const paisParts = (perfil?.pais || '').split(' ');

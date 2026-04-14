@@ -276,7 +276,8 @@ export default function ReservaForm({ currentCliente, apiBaseUrl = 'https://padb
     }));
     setHorariosDisponibles([]);
     setCanchasDisponibles([]);
-    buscarHorariosDisponibles(fecha);
+    // Note: buscarHorariosDisponibles will be triggered automatically by the useEffect
+    // that watches formData.fecha; no need to call it directly here to avoid race conditions
   };
 
   const handleChangeHora = (e) => {

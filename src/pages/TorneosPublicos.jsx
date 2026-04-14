@@ -64,17 +64,32 @@ export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl =
         const lista = torneosData || [];
         setTorneos(lista);
 
-        // Fetch equipos count for each tournament in parallel
-        const counts = await Promise.all(
-          lista.map(t =>
+        // Fetch equipos count for each tournament with timeout
+        // Use Promise.allSettled to prevent one slow API from blocking all
+        const countPromises = lista.map(t =>
+          Promise.race([
             fetch(`${apiBaseUrl}/api/torneos/${t.id}/equipos`)
               .then(r => r.ok ? r.json() : [])
-              .then(eq => ({ id: t.id, count: eq.length }))
-              .catch(() => ({ id: t.id, count: 0 }))
-          )
+              .then(eq => ({ id: t.id, count: eq.length })),
+            new Promise(resolve =>
+              setTimeout(() => resolve({ id: t.id, count: 0 }), 3000)  // 3s timeout per fetch
+            )
+          ]).catch(() => ({ id: t.id, count: 0 }))
         );
+
+        const counts = await Promise.allSettled(countPromises);
         const cm = {};
-        counts.forEach(({ id, count }) => { cm[id] = count; });
+        counts.forEach(result => {
+          if (result.status === 'fulfilled') {
+            cm[result.value.id] = result.value.count;
+          } else {
+            // If promise was rejected, use 0
+            const fetchIndex = counts.indexOf(result);
+            if (fetchIndex >= 0 && lista[fetchIndex]) {
+              cm[lista[fetchIndex].id] = 0;
+            }
+          }
+        });
         setEquiposCount(cm);
       } catch (err) {
         console.error('TorneosPublicos load error:', err);

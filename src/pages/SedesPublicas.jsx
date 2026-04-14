@@ -35,13 +35,32 @@ export default function SedesPublicas({ currentCliente, onLogout }) {
 
   // Load sedes (include lat/lon for distance sorting)
   useEffect(() => {
-    supabase
-      .from('sedes')
-      .select('id, nombre, ciudad, pais, logo_url, horario_apertura, horario_cierre, descripcion, latitud, longitud')
-      .eq('licencia_activa', true)
-      .order('nombre', { ascending: true })
-      .then(({ data }) => { setSedes(data || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    const fetchSedesWithTimeout = async () => {
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Sedes fetch timeout')), 5000)
+        );
+
+        const result = await Promise.race([
+          supabase
+            .from('sedes')
+            .select('id, nombre, ciudad, pais, logo_url, horario_apertura, horario_cierre, descripcion, latitud, longitud')
+            .eq('licencia_activa', true)
+            .order('nombre', { ascending: true }),
+          timeoutPromise
+        ]);
+
+        setSedes(result.data || []);
+      } catch (err) {
+        console.error('[SedesPublicas] Error loading sedes:', err.message);
+        // Show empty list instead of hanging
+        setSedes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSedesWithTimeout();
   }, []);
 
   // Request geolocation once
