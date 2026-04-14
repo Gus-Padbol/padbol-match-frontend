@@ -249,7 +249,7 @@ console.log("SEDES MAP:", map);
           )}
 
           {/* Navigation buttons */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
             {viewMode === 'sede' && (
               <button
                 onClick={() => setViewMode('pais')}
@@ -293,8 +293,11 @@ console.log("SEDES MAP:", map);
               </>
             )}
           </div>
+        </div>
 
-          <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
+        {/* Tournament count */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
             {filtered.length} torneo{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -303,27 +306,28 @@ console.log("SEDES MAP:", map);
         {viewMode === 'global' && (
           <div style={{ marginBottom: '28px' }}>
             {/* Search bar */}
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="🔍 Buscar torneo, club o ciudad..."
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  fontSize: '14px',
-                  background: 'rgba(255,255,255,0.95)',
-                  color: '#333',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                }}
-              />
-            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="🔍 Buscar torneo, club o ciudad..."
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+                margin: '0 auto 20px auto',
+                display: 'block',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: 'none',
+                fontSize: '14px',
+                background: 'rgba(255,255,255,0.95)',
+                color: '#333',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            />
 
             {/* Filters row */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtros:</span>
 
               <select value={filterPais} onChange={e => setFilterPais(e.target.value)}
@@ -368,11 +372,13 @@ console.log("SEDES MAP:", map);
         ) : filtered.length === 0 ? (
           <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', paddingTop: '60px', fontSize: '15px' }}>No hay torneos con estos filtros.</p>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '20px',
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '20px',
+              width: '100%',
+            }}>
             {filtered.map(t => {
               const sede   = sedesMap[t.sede_id];
               const badge  = ESTADO_BADGE[t.estado] || ESTADO_BADGE.cerrado;
@@ -420,6 +426,7 @@ console.log("SEDES MAP:", map);
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
