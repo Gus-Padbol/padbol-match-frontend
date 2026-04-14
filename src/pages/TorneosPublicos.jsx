@@ -214,10 +214,10 @@ console.log("SEDES MAP:", map);
 
       <UserHeader onLogout={onLogout} title="Torneos" />
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px' }}>
 
         {/* 3-level navigation: sede → pais → global */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop: '32px', flexWrap: 'wrap' }}>
 
           {/* Current scope badge */}
           {viewMode === 'sede' && perfil?.sede_id && (
@@ -314,7 +314,7 @@ console.log("SEDES MAP:", map);
               style={{
                 width: '100%',
                 maxWidth: '600px',
-                margin: '0 auto 20px auto',
+                margin: '20px auto',
                 display: 'block',
                 padding: '12px 16px',
                 borderRadius: '10px',
