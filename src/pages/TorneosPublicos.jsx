@@ -225,7 +225,7 @@ console.log("SEDES MAP:", map);
 
       <UserHeader onLogout={onLogout} title="Torneos" />
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 20px' }}>
+      <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px' }}>
 
         {/* 3-level navigation: sede → pais → global */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop: '32px', flexWrap: 'wrap' }}>
@@ -314,8 +314,10 @@ console.log("SEDES MAP:", map);
           </div>
         </div>
 
-        {/* Tournament count */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        {/* Content wrapper */}
+        <div style={{ width: '100%' }}>
+          {/* Tournament count */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
             {filtered.length} torneo{filtered.length !== 1 ? 's' : ''}
           </span>
@@ -332,7 +334,7 @@ console.log("SEDES MAP:", map);
               placeholder="🔍 Buscar torneo, club o ciudad..."
               style={{
                 width: '100%',
-                maxWidth: isMobile ? '320px' : '600px',
+                maxWidth: '600px',
                 margin: isMobile ? '10px auto' : '20px auto',
                 display: 'block',
                 padding: '12px 16px',
@@ -347,11 +349,12 @@ console.log("SEDES MAP:", map);
 
             {/* Filters row */}
             <div style={{
+              width: '100%',
               display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
-              gap: '10px',
               justifyContent: 'center',
               alignItems: isMobile ? 'center' : 'flex-start',
+              gap: '10px',
               flexWrap: 'wrap',
               marginBottom: '20px'
             }}>
@@ -429,7 +432,7 @@ console.log("SEDES MAP:", map);
         ) : filtered.length === 0 ? (
           <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', paddingTop: '60px', fontSize: '15px' }}>No hay torneos con estos filtros.</p>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -488,6 +491,7 @@ console.log("SEDES MAP:", map);
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
