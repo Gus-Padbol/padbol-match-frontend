@@ -223,7 +223,7 @@ console.log("SEDES MAP:", map);
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}
               >
-                🌎 Ver todos los torneos
+                🌍 Ver torneos globales
               </button>
               <button
                 onClick={() => setViewMode('sede')}
