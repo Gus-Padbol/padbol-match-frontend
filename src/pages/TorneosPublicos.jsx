@@ -158,6 +158,22 @@ console.log("SEDES MAP:", map);
     cursor: 'pointer', fontWeight: '600', fontSize: '13px',
   };
 
+  const navButtonStyle = {
+    padding: '10px 18px',
+    minWidth: '200px',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '999px',
+    fontWeight: '600',
+    fontSize: '13px',
+    border: 'none',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s',
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '0 0 60px' }}>
 
@@ -198,27 +214,11 @@ console.log("SEDES MAP:", map);
           )}
 
           {/* Navigation buttons */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {viewMode === 'sede' && (
               <button
                 onClick={() => setViewMode('pais')}
-                style={{
-                  padding: '10px 18px',
-                  minWidth: '180px',
-                  height: '42px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '999px',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'white',
-                  color: '#4f46e5',
-                  transition: 'all 0.15s',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}
+                style={{ ...navButtonStyle, background: 'white', color: '#4f46e5', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
               >
                 🌍 Ver torneos del país
               </button>
@@ -228,44 +228,13 @@ console.log("SEDES MAP:", map);
               <>
                 <button
                   onClick={() => setViewMode('global')}
-                  style={{
-                    padding: '10px 18px',
-                    minWidth: '180px',
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '999px',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: 'white',
-                    color: '#4f46e5',
-                    transition: 'all 0.15s',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}
+                  style={{ ...navButtonStyle, background: 'white', color: '#4f46e5', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
                 >
                   🌍 Ver torneos globales
                 </button>
                 <button
                   onClick={() => setViewMode('sede')}
-                  style={{
-                    padding: '10px 18px',
-                    minWidth: '180px',
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '999px',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    transition: 'all 0.15s',
-                  }}
+                  style={{ ...navButtonStyle, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.35)' }}
                 >
                   🎯 Volver a mi club
                 </button>
@@ -276,43 +245,13 @@ console.log("SEDES MAP:", map);
               <>
                 <button
                   onClick={() => setViewMode('pais')}
-                  style={{
-                    padding: '10px 18px',
-                    minWidth: '180px',
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '999px',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    transition: 'all 0.15s',
-                  }}
+                  style={{ ...navButtonStyle, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.35)' }}
                 >
                   🏠 Volver a mi país
                 </button>
                 <button
                   onClick={() => setViewMode('sede')}
-                  style={{
-                    padding: '10px 18px',
-                    minWidth: '180px',
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '999px',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.35)',
-                    transition: 'all 0.15s',
-                  }}
+                  style={{ ...navButtonStyle, background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.35)' }}
                 >
                   🎯 Volver a mi club
                 </button>
