@@ -225,10 +225,13 @@ console.log("SEDES MAP:", map);
 
       <UserHeader onLogout={onLogout} title="Torneos" />
 
-      <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px' }}>
+      {/* Global centered container */}
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        {/* Main wrapper */}
+        <div style={{ width: '100%', maxWidth: '900px', padding: '0 16px', boxSizing: 'border-box' }}>
 
-        {/* 3-level navigation: sede → pais → global */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop: '32px', flexWrap: 'wrap' }}>
+          {/* 3-level navigation: sede → pais → global */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop: '32px', flexWrap: 'wrap' }}>
 
           {/* Current scope badge */}
           {viewMode === 'sede' && perfil?.sede_id && (
@@ -334,28 +337,24 @@ console.log("SEDES MAP:", map);
               placeholder="🔍 Buscar torneo, club o ciudad..."
               style={{
                 width: '100%',
-                maxWidth: '600px',
-                margin: isMobile ? '10px auto' : '20px auto',
-                display: 'block',
+                margin: '16px 0',
                 padding: '12px 16px',
                 borderRadius: '10px',
                 border: 'none',
                 fontSize: '14px',
                 background: 'rgba(255,255,255,0.95)',
                 color: '#333',
+                boxSizing: 'border-box',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}
             />
 
             {/* Filters row */}
             <div style={{
-              width: '100%',
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              justifyContent: 'center',
-              alignItems: isMobile ? 'center' : 'flex-start',
-              gap: '10px',
               flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: '8px',
               marginBottom: '20px'
             }}>
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtros:</span>
@@ -432,14 +431,12 @@ console.log("SEDES MAP:", map);
         ) : filtered.length === 0 ? (
           <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', paddingTop: '60px', fontSize: '15px' }}>No hay torneos con estos filtros.</p>
         ) : (
-          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: '20px',
               width: '100%',
-              maxWidth: isMobile ? '340px' : 'none',
-              margin: isMobile ? '0 auto' : '0',
             }}>
             {filtered.map(t => {
               const sede   = sedesMap[t.sede_id];
@@ -492,6 +489,7 @@ console.log("SEDES MAP:", map);
           </div>
         )}
         </div>
+      </div>
       </div>
     </div>
   );
