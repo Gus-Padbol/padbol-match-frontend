@@ -168,25 +168,27 @@ console.log("SEDES MAP:", map);
               <button
                 onClick={() => setShowAll(true)}
                 style={{
-                  padding: '7px 16px', border: 'none', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '12px',
+                  padding: '8px 18px', border: 'none', borderRadius: '20px',
+                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
                   background: 'white', color: '#4f46e5', transition: 'all 0.15s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}
               >
-                🌎 Ver otros torneos
+                🌍 Ver otros torneos
               </button>
             </>
           ) : showAll ? (
             <button
               onClick={() => { setShowAll(false); setFilterSede(''); setFilterEstado(''); }}
               style={{
-                padding: '7px 16px', border: 'none', borderRadius: '20px',
-                cursor: 'pointer', fontWeight: 700, fontSize: '12px',
-                background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)',
-                border: '1px solid rgba(255,255,255,0.3)', transition: 'all 0.15s',
+                padding: '8px 18px', border: 'none', borderRadius: '20px',
+                cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                background: 'rgba(255,255,255,0.2)', color: 'white',
+                border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               }}
             >
-              ← Volver a mis torneos
+              🎯 Ver solo mis torneos
             </button>
           ) : null}
           <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
