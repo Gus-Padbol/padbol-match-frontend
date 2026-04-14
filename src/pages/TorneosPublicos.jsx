@@ -123,6 +123,13 @@ console.log("SEDES MAP:", map);
       .then(({ data }) => setPerfil(data || null));
   }, [currentCliente?.email]);
 
+  // Auto-select player's sede in dropdown when profile loads
+  useEffect(() => {
+    if (perfil?.sede_id && !verTodos) {
+      setFilterSede(String(perfil.sede_id));
+    }
+  }, [perfil?.sede_id, verTodos]);
+
   // Relevance scope: sede > pais > todos
   const relevanceScope = !perfil
     ? 'todos'
