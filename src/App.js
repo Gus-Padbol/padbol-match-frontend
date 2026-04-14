@@ -113,6 +113,8 @@ function AppContent() {
     const saved = localStorage.getItem('currentCliente');
     return saved ? JSON.parse(saved) : null;
   });
+
+  const [authReady, setAuthReady] = useState(false);
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
   const { rol, sedeId, nombre: rolNombre, loading: roleLoading } = useUserRole(currentCliente);
   const [sedeName, setSedeName] = React.useState('');
@@ -136,61 +138,64 @@ function AppContent() {
   }, [rol, currentCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore session from Supabase Auth on mount and listen for auth state changes
-useEffect(() => {
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    if (session) {
-      const email = session.user.email;
-      const { data: cliente } = await supabase
-        .from('clientes')
-        .select('nombre, whatsapp, foto')
-        .eq('email', email)
-        .maybeSingle();
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-      const user = {
-        email,
-        nombre: cliente?.nombre || email.split('@')[0],
-        whatsapp: cliente?.whatsapp || '',
-        foto: cliente?.foto || null,
-      };
+        if (session?.user) {
+          const email = session.user.email;
 
-      setCurrentCliente(user);
-      localStorage.setItem('currentCliente', JSON.stringify(user));
-    } else {
-      setCurrentCliente(null);
-      localStorage.removeItem('currentCliente');
-    }
-    setAuthReady(true);
-  });
+          const { data: cliente } = await supabase
+            .from('clientes')
+            .select('nombre, whatsapp, foto')
+            .eq('email', email)
+            .maybeSingle();
 
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (session) {
-      const email = session.user.email;
-      const { data: cliente } = await supabase
-        .from('clientes')
-        .select('nombre, whatsapp, foto')
-        .eq('email', email)
-        .maybeSingle();
+          const user = {
+            email,
+            nombre: cliente?.nombre || email.split('@')[0],
+            whatsapp: cliente?.whatsapp || '',
+            foto: cliente?.foto || null,
+          };
 
-      const user = {
-        email,
-        nombre: cliente?.nombre || email.split('@')[0],
-        whatsapp: cliente?.whatsapp || '',
-        foto: cliente?.foto || null,
-      };
+          setCurrentCliente(user);
+          localStorage.setItem('currentCliente', JSON.stringify(user));
+        } else {
+          setCurrentCliente(null);
+          localStorage.removeItem('currentCliente');
+        }
+      } catch (e) {
+        console.error('AUTH INIT ERROR:', e);
+        setCurrentCliente(null);
+      } finally {
+        setAuthReady(true);
+      }
+    };
 
-      setCurrentCliente(user);
-      localStorage.setItem('currentCliente', JSON.stringify(user));
-    } else {
-      setCurrentCliente(null);
-      localStorage.removeItem('currentCliente');
-    }
-    setAuthReady(true);
-  });
+    init();
 
-  return () => subscription.unsubscribe();
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const user = {
+          email: session.user.email,
+          nombre: session.user.email.split('@')[0],
+          whatsapp: '',
+          foto: null,
+        };
+
+        setCurrentCliente(user);
+        localStorage.setItem('currentCliente', JSON.stringify(user));
+      } else {
+        setCurrentCliente(null);
+        localStorage.removeItem('currentCliente');
+      }
+
+      setAuthReady(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
@@ -208,7 +213,6 @@ useEffect(() => {
   const [fotoPreview, setFotoPreview] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [authReady, setAuthReady] = useState(false);
 
   // Post-registration flow
   const [showPreguntaTorneo, setShowPreguntaTorneo] = useState(false);
@@ -223,43 +227,39 @@ useEffect(() => {
   const [fichaLoading, setFichaLoading] = useState(false);
 
   const handleLogin = async (e) => {
-  e.preventDefault();
-  setErrorMsg('');
+    e.preventDefault();
+    setErrorMsg('');
 
-  if (!loginEmail || !loginPassword) {
-    setErrorMsg('Completa todos los campos');
-    return;
-  }
+    if (!loginEmail || !loginPassword) {
+      setErrorMsg('Completa todos los campos');
+      return;
+    }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: loginEmail,
-    password: loginPassword,
-  });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
 
-  if (error) {
-    setErrorMsg('Email o contraseña incorrectos');
-    return;
-  }
+    if (error || !data?.user) {
+      setErrorMsg('Email o contraseña incorrectos');
+      return;
+    }
 
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('nombre, whatsapp, foto')
-    .eq('email', loginEmail)
-    .maybeSingle();
+    const user = {
+      email: data.user.email,
+      nombre: data.user.email.split('@')[0],
+      whatsapp: '',
+      foto: null,
+    };
 
-  const user = {
-    email: data.user.email,
-    nombre: cliente?.nombre || data.user.email.split('@')[0],
-    whatsapp: cliente?.whatsapp || '',
-    foto: cliente?.foto || null,
+    // FORCE React update: reset to null first so the subsequent set always triggers a re-render
+    setCurrentCliente(null);
+    setTimeout(() => {
+      setCurrentCliente(user);
+      localStorage.setItem('currentCliente', JSON.stringify(user));
+      navigate('/');
+    }, 50);
   };
-
-  setCurrentCliente(user);
-  localStorage.setItem('currentCliente', JSON.stringify(user));
-  setLoginEmail('');
-  setLoginPassword('');
-  navigate('/');
-};
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -336,10 +336,7 @@ useEffect(() => {
     setShowFichaJugador(false);
     setPendingUserData(null);
     // After declining ficha, auto-login with the registered credentials
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: registerEmail,
-      password: registerPassword,
-    });
+  
     if (error) {
       setErrorMsg('Error al iniciar sesión: ' + error.message);
       setShowLogin(true);
@@ -433,16 +430,21 @@ useEffect(() => {
     navigate('/');
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    // Clear local state immediately so the UI responds without waiting for the network
     setCurrentCliente(null);
     localStorage.removeItem('currentCliente');
     localStorage.removeItem('user_role_data');
     localStorage.removeItem('ultima_sede');
     navigate('/');
+    // Sign out from Supabase in the background
+    supabase.auth.signOut().catch(() => {});
   };
 
-  if (!currentCliente && showPreguntaTorneo) {
+if (!authReady) {
+  return <div style={{color: 'white'}}>Cargando sesión... (debug)</div>;
+}
+ if (!currentCliente && showPreguntaTorneo) {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
         <div style={{ marginBottom: '16px' }}>

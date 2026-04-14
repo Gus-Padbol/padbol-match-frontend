@@ -49,8 +49,6 @@ export default function MiPerfil({ currentCliente, onLogout }) {
 
   useEffect(() => {
     if (!currentCliente?.email) {
-      // Don't redirect immediately — auth might still be loading
-      // Just skip fetching and show loading state
       setLoading(false);
       return;
     }
@@ -58,7 +56,7 @@ export default function MiPerfil({ currentCliente, onLogout }) {
     fetchSedes();
     fetchReservas();
     fetchCreditos();
-  }, [currentCliente]);
+  }, [currentCliente?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPerfil = async () => {
     setLoading(true);
@@ -257,10 +255,10 @@ export default function MiPerfil({ currentCliente, onLogout }) {
 
   if (!currentCliente?.email) {
     return (
-      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
         <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
-        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-          Iniciando sesión... <a href="/" style={{ color: '#d32f2f', textDecoration: 'none' }}>Volver al inicio</a>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.8)' }}>
+          Iniciando sesión... <a href="/" style={{ color: '#fca5a5', textDecoration: 'none' }}>Volver al inicio</a>
         </div>
       </div>
     );
@@ -268,9 +266,9 @@ export default function MiPerfil({ currentCliente, onLogout }) {
 
   if (loading) {
     return (
-      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
         <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
-        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Cargando perfil...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.8)' }}>Cargando perfil...</div>
       </div>
     );
   }
@@ -281,11 +279,11 @@ export default function MiPerfil({ currentCliente, onLogout }) {
   const categoriaColor = CATEGORIA_COLOR[perfil?.nivel] || '#999';
 
   return (
-    <div style={{ maxWidth: '520px', margin: '0 auto', padding: '0', fontFamily: 'Arial' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
 
       <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
 
-      <div style={{ padding: '20px' }}>
+      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '20px' }}>
       <div style={{ background: 'white', borderRadius: '12px', padding: '30px 24px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
         {/* Photo */}
         {(() => {

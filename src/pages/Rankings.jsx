@@ -51,12 +51,27 @@ export default function Rankings({ currentCliente, onLogout }) {
       const params = new URLSearchParams({ scope: activeTab });
       if (activeTab === 'local' && selectedSede) params.set('sede_id', selectedSede);
       if (selectedCategoria) params.set('categoria', selectedCategoria);
-      const res  = await fetch(`${API_BASE}/api/rankings?${params}`);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      let res;
+      try {
+        res = await fetch(`${API_BASE}/api/rankings?${params}`, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al cargar rankings');
       setRankings(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message);
+      const msg = err.name === 'AbortError'
+        ? 'El servidor tardó demasiado. Intentá de nuevo.'
+        : err.message === 'Failed to fetch'
+          ? 'No se pudo conectar al servidor. Revisá tu conexión.'
+          : err.message;
+      setError(msg);
       setRankings([]);
     } finally {
       setLoading(false);

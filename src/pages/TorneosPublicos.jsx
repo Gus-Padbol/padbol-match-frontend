@@ -44,65 +44,76 @@ export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl =
   const [filterEstado,setFilterEstado]= useState('');
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
+  const load = async () => {
+    setLoading(true);
+    try {
+      // Fetch torneos directly from Supabase (critical — must not fail due to sedes)
+      const { data: torneosData } = await supabase
+        .from('torneos')
+        .select('*')
+        .in('estado', ['abierto', 'en_curso', 'finalizado'])
+        .order('fecha_inicio', { ascending: false });
+
+      const lista = torneosData || [];
+      setTorneos(lista);
+
+      // Fetch sedes independently — a failure here must not hide torneos
       try {
-        const [{ data: torneosData }, sedesRes] = await Promise.all([
-          supabase
-            .from('torneos')
-            .select('*')
-            .in('estado', ['abierto', 'en_curso', 'finalizado'])
-            .order('fecha_inicio', { ascending: false }),
+        const sedesRes = await Promise.race([
           fetch(`${apiBaseUrl}/api/sedes`),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Sedes timeout')), 5000)
+          ),
         ]);
-
-        const sedes = sedesRes.ok ? await sedesRes.json() : [];
+        const sedes = sedesRes?.ok ? await sedesRes.json() : [];
         const map = {};
-        sedes.forEach(s => { map[s.id] = s; });
-        setSedesMap(map);
+(sedes || []).forEach(s => {
+  if (s && s.id != null) {
+    map[String(s.id)] = s;
+  }
+});
+setSedesMap(map);
 
-        const lista = torneosData || [];
-        setTorneos(lista);
-
-        // Fetch equipos count for each tournament with timeout
-        // Use Promise.allSettled to prevent one slow API from blocking all
-        const countPromises = lista.map(t =>
-          Promise.race([
-            fetch(`${apiBaseUrl}/api/torneos/${t.id}/equipos`)
-              .then(r => r.ok ? r.json() : [])
-              .then(eq => ({ id: t.id, count: eq.length })),
-            new Promise(resolve =>
-              setTimeout(() => resolve({ id: t.id, count: 0 }), 3000)  // 3s timeout per fetch
-            )
-          ]).catch(() => ({ id: t.id, count: 0 }))
-        );
-
-        const counts = await Promise.allSettled(countPromises);
-        const cm = {};
-        counts.forEach(result => {
-          if (result.status === 'fulfilled') {
-            cm[result.value.id] = result.value.count;
-          } else {
-            // If promise was rejected, use 0
-            const fetchIndex = counts.indexOf(result);
-            if (fetchIndex >= 0 && lista[fetchIndex]) {
-              cm[lista[fetchIndex].id] = 0;
-            }
-          }
-        });
-        setEquiposCount(cm);
-      } catch (err) {
-        console.error('TorneosPublicos load error:', err);
+console.log("SEDES MAP:", map);
+      } catch {
+        // sedes are supplementary; torneos still show without sede names
       }
+
+      // Fetch team counts per torneo
+      const countPromises = lista.map(t =>
+        Promise.race([
+          fetch(`${apiBaseUrl}/api/torneos/${t.id}/equipos`)
+            .then(r => r.ok ? r.json() : [])
+            .then(eq => ({ id: t.id, count: eq.length })),
+          new Promise(resolve =>
+            setTimeout(() => resolve({ id: t.id, count: 0 }), 3000)
+          )
+        ]).catch(() => ({ id: t.id, count: 0 }))
+      );
+
+      const counts = await Promise.allSettled(countPromises);
+      const cm = {};
+      counts.forEach(result => {
+        if (result.status === 'fulfilled') {
+          cm[result.value.id] = result.value.count;
+        }
+      });
+      setEquiposCount(cm);
+    } catch (err) {
+      console.error('TorneosPublicos load error:', err);
+      setTorneos([]);
+    } finally {
       setLoading(false);
-    };
-    load();
-  }, [apiBaseUrl]);
+    }
+  };
+
+  load();
+}, [apiBaseUrl]);
 
   // Unique sedes present in the list for the filter dropdown
-  const sedesEnLista = [...new Set(torneos.map(t => t.sede_id).filter(Boolean))]
-    .map(id => sedesMap[id])
-    .filter(Boolean);
+ const sedesEnLista = [...new Set(torneos.map(t => String(t.sede_id)).filter(Boolean))]
+  .map(id => sedesMap[id])
+  .filter(Boolean);
 
   const filtered = torneos.filter(t => {
     if (filterSede   && String(t.sede_id) !== filterSede)   return false;

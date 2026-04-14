@@ -45,7 +45,6 @@ export default function SedesPublicas({ currentCliente, onLogout }) {
           supabase
             .from('sedes')
             .select('id, nombre, ciudad, pais, logo_url, horario_apertura, horario_cierre, descripcion, latitud, longitud')
-            .eq('licencia_activa', true)
             .order('nombre', { ascending: true }),
           timeoutPromise
         ]);
