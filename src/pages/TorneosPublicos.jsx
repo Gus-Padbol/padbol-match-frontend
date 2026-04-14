@@ -42,6 +42,8 @@ export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl =
   const [loading,     setLoading]     = useState(true);
   const [filterSede,  setFilterSede]  = useState('');
   const [filterEstado,setFilterEstado]= useState('');
+  const [perfil,      setPerfil]      = useState(null);   // jugadores_perfil: { sede_id, pais }
+  const [verTodos,    setVerTodos]    = useState(false);  // toggle relevance scope
 
   useEffect(() => {
   const load = async () => {
@@ -110,12 +112,46 @@ console.log("SEDES MAP:", map);
   load();
 }, [apiBaseUrl]);
 
-  // Unique sedes present in the list for the filter dropdown
- const sedesEnLista = [...new Set(torneos.map(t => String(t.sede_id)).filter(Boolean))]
-  .map(id => sedesMap[id])
-  .filter(Boolean);
+  // Fetch player profile (sede_id + pais) — lightweight, supplementary
+  useEffect(() => {
+    if (!currentCliente?.email) return;
+    supabase
+      .from('jugadores_perfil')
+      .select('sede_id, pais')
+      .eq('email', currentCliente.email)
+      .maybeSingle()
+      .then(({ data }) => setPerfil(data || null));
+  }, [currentCliente?.email]);
 
-  const filtered = torneos.filter(t => {
+  // Relevance scope: sede > pais > todos
+  const relevanceScope = !perfil
+    ? 'todos'
+    : perfil.sede_id
+      ? 'sede'
+      : perfil.pais
+        ? 'pais'
+        : 'todos';
+
+  // Strip leading flag emoji from stored pais ("🇦🇷 Argentina" → "Argentina")
+  const playerPaisNombre = (perfil?.pais || '').replace(/^[\p{Emoji_Presentation}\p{Emoji}\s]+/u, '').trim();
+
+  // Apply relevance pre-filter (bypassed when verTodos=true or no profile)
+  const relevantTorneos = (verTodos || relevanceScope === 'todos')
+    ? torneos
+    : relevanceScope === 'sede'
+      ? torneos.filter(t => t.sede_id === perfil.sede_id)
+      : torneos.filter(t => {
+          const sede = sedesMap[String(t.sede_id)];
+          return sede && playerPaisNombre && (sede.pais || '').includes(playerPaisNombre);
+        });
+
+  // Unique sedes present in the relevant list for the filter dropdown
+  const sedesEnLista = [...new Set(relevantTorneos.map(t => String(t.sede_id)).filter(Boolean))]
+    .map(id => sedesMap[id])
+    .filter(Boolean);
+
+  // Apply manual sede/estado filters on top of relevance scope
+  const filtered = relevantTorneos.filter(t => {
     if (filterSede   && String(t.sede_id) !== filterSede)   return false;
     if (filterEstado && t.estado !== filterEstado)           return false;
     return true;
@@ -132,6 +168,38 @@ console.log("SEDES MAP:", map);
       <UserHeader onLogout={onLogout} title="Torneos" />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
+
+        {/* Relevance toggle — only shown when the player has a profile */}
+        {relevanceScope !== 'todos' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { setVerTodos(v => !v); setFilterSede(''); setFilterEstado(''); }}
+              style={{
+                padding: '7px 16px', border: 'none', borderRadius: '20px',
+                cursor: 'pointer', fontWeight: 700, fontSize: '12px',
+                background: verTodos ? 'rgba(255,255,255,0.18)' : 'white',
+                color: verTodos ? 'rgba(255,255,255,0.85)' : '#4f46e5',
+                transition: 'all 0.15s',
+              }}
+            >
+              {verTodos ? '🌎 Ver todos' : '🎯 Torneos relevantes'}
+            </button>
+
+            {/* Active scope label */}
+            {!verTodos && (
+              <span style={{
+                padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
+                background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }}>
+                {relevanceScope === 'sede'
+                  ? `📍 ${sedesMap[String(perfil?.sede_id)]?.nombre || 'Mi sede'}`
+                  : `🌍 ${playerPaisNombre || 'Mi país'}`
+                }
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Filter bar */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '28px', alignItems: 'center' }}>
