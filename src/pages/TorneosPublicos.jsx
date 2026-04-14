@@ -223,6 +223,44 @@ console.log("SEDES MAP:", map);
           </div>
         )}
 
+        {!showAll && (
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={() => setShowAll(true)}
+              style={{
+                padding: '10px 16px',
+                background: '#1e40af',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              🌍 Ver otros torneos
+            </button>
+          </div>
+        )}
+
+        {showAll && (
+          <div style={{ marginBottom: '20px' }}>
+            <button
+              onClick={() => setShowAll(false)}
+              style={{
+                padding: '10px 16px',
+                background: '#16a34a',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              🎯 Ver solo mis torneos
+            </button>
+          </div>
+        )}
+
         {/* Grid */}
         {loading ? (
           <p style={{ color: 'rgba(255,255,255,0.8)', textAlign: 'center', paddingTop: '60px', fontSize: '16px' }}>Cargando torneos...</p>
