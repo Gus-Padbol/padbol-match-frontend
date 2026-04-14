@@ -86,9 +86,7 @@ export default function UserHeader({ onLogout, title }) {
 
         <button
           onClick={() => {
-            localStorage.clear();
             if (typeof onLogout === 'function') onLogout();
-            navigate('/');
           }}
           style={logoutBtnStyle}
           title="Cerrar sesión"

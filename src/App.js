@@ -135,27 +135,63 @@ function AppContent() {
     }
   }, [rol, currentCliente]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Restore session from Supabase Auth on mount (handles page refresh / returning users)
-  useEffect(() => {
-    if (currentCliente) return; // already restored from localStorage
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
+  // Restore session from Supabase Auth on mount and listen for auth state changes
+useEffect(() => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (session) {
       const email = session.user.email;
       const { data: cliente } = await supabase
         .from('clientes')
         .select('nombre, whatsapp, foto')
         .eq('email', email)
         .maybeSingle();
+
       const user = {
         email,
-        nombre:   cliente?.nombre   || email.split('@')[0],
+        nombre: cliente?.nombre || email.split('@')[0],
         whatsapp: cliente?.whatsapp || '',
-        foto:     cliente?.foto     || null,
+        foto: cliente?.foto || null,
       };
+
       setCurrentCliente(user);
       localStorage.setItem('currentCliente', JSON.stringify(user));
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    } else {
+      setCurrentCliente(null);
+      localStorage.removeItem('currentCliente');
+    }
+    setAuthReady(true);
+  });
+
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (session) {
+      const email = session.user.email;
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('nombre, whatsapp, foto')
+        .eq('email', email)
+        .maybeSingle();
+
+      const user = {
+        email,
+        nombre: cliente?.nombre || email.split('@')[0],
+        whatsapp: cliente?.whatsapp || '',
+        foto: cliente?.foto || null,
+      };
+
+      setCurrentCliente(user);
+      localStorage.setItem('currentCliente', JSON.stringify(user));
+    } else {
+      setCurrentCliente(null);
+      localStorage.removeItem('currentCliente');
+    }
+    setAuthReady(true);
+  });
+
+  return () => subscription.unsubscribe();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [showLogin, setShowLogin] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -172,6 +208,7 @@ function AppContent() {
   const [fotoPreview, setFotoPreview] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [authReady, setAuthReady] = useState(false);
 
   // Post-registration flow
   const [showPreguntaTorneo, setShowPreguntaTorneo] = useState(false);
@@ -186,45 +223,43 @@ function AppContent() {
   const [fichaLoading, setFichaLoading] = useState(false);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
+  e.preventDefault();
+  setErrorMsg('');
 
-    if (!loginEmail || !loginPassword) {
-      setErrorMsg('Completa todos los campos');
-      return;
-    }
+  if (!loginEmail || !loginPassword) {
+    setErrorMsg('Completa todos los campos');
+    return;
+  }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: loginEmail,
+    password: loginPassword,
+  });
 
-    if (error) {
-      setErrorMsg('Email o contraseña incorrectos');
-      return;
-    }
+  if (error) {
+    setErrorMsg('Email o contraseña incorrectos');
+    return;
+  }
 
-    // Fetch extra profile fields from clientes table
-    const { data: cliente } = await supabase
-      .from('clientes')
-      .select('nombre, whatsapp, foto')
-      .eq('email', loginEmail)
-      .maybeSingle();
+  const { data: cliente } = await supabase
+    .from('clientes')
+    .select('nombre, whatsapp, foto')
+    .eq('email', loginEmail)
+    .maybeSingle();
 
-    const user = {
-      email:    data.user.email,
-      nombre:   cliente?.nombre   || data.user.email.split('@')[0],
-      whatsapp: cliente?.whatsapp || '',
-      foto:     cliente?.foto     || null,
-    };
-
-    setCurrentCliente(user);
-    localStorage.setItem('currentCliente', JSON.stringify(user));
-    setLoginEmail('');
-    setLoginPassword('');
-    const ultimaSede = localStorage.getItem('ultima_sede');
-    navigate(ultimaSede ? `/sede/${ultimaSede}` : '/');
+  const user = {
+    email: data.user.email,
+    nombre: cliente?.nombre || data.user.email.split('@')[0],
+    whatsapp: cliente?.whatsapp || '',
+    foto: cliente?.foto || null,
   };
+
+  setCurrentCliente(user);
+  localStorage.setItem('currentCliente', JSON.stringify(user));
+  setLoginEmail('');
+  setLoginPassword('');
+  navigate('/');
+};
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -296,11 +331,36 @@ function AppContent() {
     setShowPreguntaTorneo(true);
   };
 
-  const handleElegirNo = () => {
+  const handleElegirNo = async () => {
     setShowPreguntaTorneo(false);
     setShowFichaJugador(false);
     setPendingUserData(null);
-    setShowLogin(true);
+    // After declining ficha, auto-login with the registered credentials
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: registerEmail,
+      password: registerPassword,
+    });
+    if (error) {
+      setErrorMsg('Error al iniciar sesión: ' + error.message);
+      setShowLogin(true);
+      return;
+    }
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('nombre, whatsapp, foto')
+      .eq('email', registerEmail)
+      .maybeSingle();
+    const user = {
+      email:    data.user.email,
+      nombre:   cliente?.nombre   || data.user.email.split('@')[0],
+      whatsapp: cliente?.whatsapp || '',
+      foto:     cliente?.foto     || null,
+    };
+    setCurrentCliente(user);
+    localStorage.setItem('currentCliente', JSON.stringify(user));
+    setRegisterEmail('');
+    setRegisterPassword('');
+    navigate('/');
   };
 
   const handleElegirSi = () => {
@@ -345,7 +405,32 @@ function AppContent() {
     setFichaLoading(false);
     setShowFichaJugador(false);
     setPendingUserData(null);
-    setShowLogin(true);
+    // After ficha submit, auto-login with registered credentials
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email: registerEmail,
+      password: registerPassword,
+    });
+    if (loginError) {
+      setErrorMsg('Error al iniciar sesión: ' + loginError.message);
+      setShowLogin(true);
+      return;
+    }
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('nombre, whatsapp, foto')
+      .eq('email', registerEmail)
+      .maybeSingle();
+    const user = {
+      email:    data.user.email,
+      nombre:   cliente?.nombre   || data.user.email.split('@')[0],
+      whatsapp: cliente?.whatsapp || '',
+      foto:     cliente?.foto     || null,
+    };
+    setCurrentCliente(user);
+    localStorage.setItem('currentCliente', JSON.stringify(user));
+    setRegisterEmail('');
+    setRegisterPassword('');
+    navigate('/');
   };
 
   const handleLogout = async () => {
@@ -353,6 +438,7 @@ function AppContent() {
     setCurrentCliente(null);
     localStorage.removeItem('currentCliente');
     localStorage.removeItem('user_role_data');
+    localStorage.removeItem('ultima_sede');
     navigate('/');
   };
 
@@ -726,12 +812,9 @@ return (
             Cerrar Sesión
           </button>
         </div>
-      ) : localStorage.getItem('ultima_sede') ? (
-        /* ── Player home screen ── */
-        <PlayerHome currentCliente={currentCliente} onLogout={handleLogout} />
       ) : (
-        /* ── No sede yet: send to sedes picker ── */
-        <SedesPublicas currentCliente={currentCliente} />
+        /* ── Player home screen (no auto-redirect to nearby clubs) ── */
+        <PlayerHome currentCliente={currentCliente} onLogout={handleLogout} />
       )
     } />
   </Routes>
