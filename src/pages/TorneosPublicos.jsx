@@ -203,11 +203,7 @@ console.log("SEDES MAP:", map);
   };
 
   const navButtonStyle = {
-    padding: '10px 18px',
-    minWidth: isMobile ? 'auto' : '200px',
-    width: isMobile ? '100%' : 'auto',
-    maxWidth: isMobile ? '300px' : 'none',
-    height: '44px',
+    padding: isMobile ? '8px 10px' : '10px 18px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -225,10 +221,18 @@ console.log("SEDES MAP:", map);
 
       <UserHeader onLogout={onLogout} title="Torneos" />
 
-      {/* Global centered container */}
+      {/* Global container */}
       <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-        {/* Main wrapper */}
-        <div style={{ width: '100%', maxWidth: '900px', padding: '0 16px', boxSizing: 'border-box' }}>
+        {/* Main column */}
+        <div style={{
+          width: '100%',
+          maxWidth: '700px',
+          padding: '0 16px',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
 
           {/* 3-level navigation: sede → pais → global */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', marginTop: '32px', flexWrap: 'wrap' }}>
@@ -265,11 +269,9 @@ console.log("SEDES MAP:", map);
           {/* Navigation buttons */}
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'center',
-            alignItems: isMobile ? 'center' : 'flex-start',
-            gap: isMobile ? '10px' : '12px',
             flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: '8px',
             marginBottom: '20px'
           }}>
             {viewMode === 'sede' && (
@@ -315,10 +317,7 @@ console.log("SEDES MAP:", map);
               </>
             )}
           </div>
-        </div>
 
-        {/* Content wrapper */}
-        <div style={{ width: '100%' }}>
           {/* Tournament count */}
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
@@ -351,25 +350,24 @@ console.log("SEDES MAP:", map);
 
             {/* Filters row */}
             <div style={{
+              width: '100%',
               display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: '8px',
+              flexDirection: 'column',
+              gap: '10px',
               marginBottom: '20px'
             }}>
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtros:</span>
 
               <select value={filterPais} onChange={e => setFilterPais(e.target.value)}
                 style={{
+                  width: '100%',
                   padding: '8px 12px',
                   borderRadius: '8px',
                   border: 'none',
                   fontSize: '13px',
                   background: 'rgba(255,255,255,0.95)',
                   color: '#333',
-                  width: isMobile ? '100%' : 'auto',
-                  maxWidth: isMobile ? '300px' : 'none',
-                  minWidth: isMobile ? 'auto' : '140px'
+                  boxSizing: 'border-box',
                 }}>
                 <option value="">Todos los países</option>
                 {paisesDisponibles.map(p => (
@@ -379,15 +377,14 @@ console.log("SEDES MAP:", map);
 
               <select value={filterSede} onChange={e => setFilterSede(e.target.value)}
                 style={{
+                  width: '100%',
                   padding: '8px 12px',
                   borderRadius: '8px',
                   border: 'none',
                   fontSize: '13px',
                   background: 'rgba(255,255,255,0.95)',
                   color: '#333',
-                  width: isMobile ? '100%' : 'auto',
-                  maxWidth: isMobile ? '300px' : 'none',
-                  minWidth: isMobile ? 'auto' : '160px'
+                  boxSizing: 'border-box',
                 }}>
                 <option value="">Todas las sedes</option>
                 {sedesEnLista
@@ -399,15 +396,14 @@ console.log("SEDES MAP:", map);
 
               <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}
                 style={{
+                  width: '100%',
                   padding: '8px 12px',
                   borderRadius: '8px',
                   border: 'none',
                   fontSize: '13px',
                   background: 'rgba(255,255,255,0.95)',
                   color: '#333',
-                  width: isMobile ? '100%' : 'auto',
-                  maxWidth: isMobile ? '300px' : 'none',
-                  minWidth: isMobile ? 'auto' : '140px'
+                  boxSizing: 'border-box',
                 }}>
                 <option value="">Todos los estados</option>
                 <option value="abierto">🟢 Abierto</option>
@@ -431,7 +427,7 @@ console.log("SEDES MAP:", map);
         ) : filtered.length === 0 ? (
           <p style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', paddingTop: '60px', fontSize: '15px' }}>No hay torneos con estos filtros.</p>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%' }}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -489,7 +485,6 @@ console.log("SEDES MAP:", map);
           </div>
         )}
         </div>
-      </div>
       </div>
     </div>
   );
