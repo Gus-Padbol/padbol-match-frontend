@@ -198,73 +198,127 @@ console.log("SEDES MAP:", map);
           )}
 
           {/* Navigation buttons */}
-          {viewMode === 'sede' && (
-            <button
-              onClick={() => setViewMode('pais')}
-              style={{
-                padding: '8px 18px', border: 'none', borderRadius: '20px',
-                cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                background: 'white', color: '#4f46e5', transition: 'all 0.15s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              }}
-            >
-              🌍 Ver torneos del país
-            </button>
-          )}
-
-          {viewMode === 'pais' && (
-            <>
-              <button
-                onClick={() => setViewMode('global')}
-                style={{
-                  padding: '8px 18px', border: 'none', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                  background: 'white', color: '#4f46e5', transition: 'all 0.15s',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}
-              >
-                🌍 Ver torneos globales
-              </button>
-              <button
-                onClick={() => setViewMode('sede')}
-                style={{
-                  padding: '8px 18px', border: 'none', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                  background: 'rgba(255,255,255,0.2)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
-                }}
-              >
-                🎯 Volver a mi club
-              </button>
-            </>
-          )}
-
-          {viewMode === 'global' && (
-            <>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {viewMode === 'sede' && (
               <button
                 onClick={() => setViewMode('pais')}
                 style={{
-                  padding: '8px 18px', border: 'none', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                  background: 'rgba(255,255,255,0.2)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
+                  padding: '10px 18px',
+                  minWidth: '180px',
+                  height: '42px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '999px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: 'white',
+                  color: '#4f46e5',
+                  transition: 'all 0.15s',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}
               >
-                🏠 Volver a mi país
+                🌍 Ver torneos del país
               </button>
-              <button
-                onClick={() => setViewMode('sede')}
-                style={{
-                  padding: '8px 18px', border: 'none', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                  background: 'rgba(255,255,255,0.2)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
-                }}
-              >
-                🎯 Volver a mi club
-              </button>
-            </>
-          )}
+            )}
+
+            {viewMode === 'pais' && (
+              <>
+                <button
+                  onClick={() => setViewMode('global')}
+                  style={{
+                    padding: '10px 18px',
+                    minWidth: '180px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '999px',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: 'white',
+                    color: '#4f46e5',
+                    transition: 'all 0.15s',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  🌍 Ver torneos globales
+                </button>
+                <button
+                  onClick={() => setViewMode('sede')}
+                  style={{
+                    padding: '10px 18px',
+                    minWidth: '180px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '999px',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🎯 Volver a mi club
+                </button>
+              </>
+            )}
+
+            {viewMode === 'global' && (
+              <>
+                <button
+                  onClick={() => setViewMode('pais')}
+                  style={{
+                    padding: '10px 18px',
+                    minWidth: '180px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '999px',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🏠 Volver a mi país
+                </button>
+                <button
+                  onClick={() => setViewMode('sede')}
+                  style={{
+                    padding: '10px 18px',
+                    minWidth: '180px',
+                    height: '42px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '999px',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.35)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  🎯 Volver a mi club
+                </button>
+              </>
+            )}
+          </div>
 
           <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
             {filtered.length} torneo{filtered.length !== 1 ? 's' : ''}
