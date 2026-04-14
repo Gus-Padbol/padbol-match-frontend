@@ -43,7 +43,7 @@ export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl =
   const [filterSede,  setFilterSede]  = useState('');
   const [filterEstado,setFilterEstado]= useState('');
   const [perfil,      setPerfil]      = useState(null);   // jugadores_perfil: { sede_id, pais }
-  const [showAll,     setShowAll]     = useState(false);  // false = my sede only, true = enable full filters
+  const [viewMode,    setViewMode]    = useState('sede'); // 'sede', 'pais', 'global'
 
   useEffect(() => {
   const load = async () => {
@@ -123,21 +123,32 @@ console.log("SEDES MAP:", map);
       .then(({ data }) => setPerfil(data || null));
   }, [currentCliente?.email]);
 
-  // Base list: if showAll=false and player has sede, filter by sede only
-  const baseTorneos = !showAll && perfil?.sede_id
-    ? torneos.filter(t => t.sede_id === perfil.sede_id)
-    : torneos;
+  // Strip leading flag emoji from stored pais ("🇦🇷 Argentina" → "Argentina")
+  const playerPaisNombre = (perfil?.pais || '').replace(/^[\p{Emoji_Presentation}\p{Emoji}\s]+/u, '').trim();
 
-  // Apply manual filters only when showAll=true
-  const filtered = !showAll
-    ? baseTorneos
-    : baseTorneos.filter(t => {
+  // Filter by view mode: sede → pais → global
+  let baseTorneos = torneos;
+
+  if (viewMode === 'sede' && perfil?.sede_id) {
+    baseTorneos = torneos.filter(t => t.sede_id === perfil.sede_id);
+  } else if (viewMode === 'pais' && playerPaisNombre) {
+    baseTorneos = torneos.filter(t => {
+      const sede = sedesMap[String(t.sede_id)];
+      return sede && (sede.pais || '').includes(playerPaisNombre);
+    });
+  }
+  // viewMode === 'global' → baseTorneos = torneos (all)
+
+  // Apply manual filters only in global mode
+  const filtered = viewMode === 'global'
+    ? baseTorneos.filter(t => {
         if (filterSede   && String(t.sede_id) !== filterSede)   return false;
         if (filterEstado && t.estado !== filterEstado)           return false;
         return true;
-      });
+      })
+    : baseTorneos;
 
-  // All sedes for the dropdown (only shown when showAll=true)
+  // All sedes for the dropdown (only shown in global mode)
   const sedesEnLista = [...new Set(torneos.map(t => String(t.sede_id)).filter(Boolean))]
     .map(id => sedesMap[id])
     .filter(Boolean);
@@ -154,19 +165,57 @@ console.log("SEDES MAP:", map);
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 20px 0' }}>
 
-        {/* Mode toggle: my sede vs explore all */}
+        {/* 3-level navigation: sede → pais → global */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          {!showAll && perfil?.sede_id ? (
+
+          {/* Current scope badge */}
+          {viewMode === 'sede' && perfil?.sede_id && (
+            <span style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+              background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.25)',
+            }}>
+              🏠 {sedesMap[String(perfil.sede_id)]?.nombre || 'Mi club'}
+            </span>
+          )}
+          {viewMode === 'pais' && playerPaisNombre && (
+            <span style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+              background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.25)',
+            }}>
+              🌍 {playerPaisNombre}
+            </span>
+          )}
+          {viewMode === 'global' && (
+            <span style={{
+              padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+              background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.25)',
+            }}>
+              🌎 Global
+            </span>
+          )}
+
+          {/* Navigation buttons */}
+          {viewMode === 'sede' && (
+            <button
+              onClick={() => setViewMode('pais')}
+              style={{
+                padding: '8px 18px', border: 'none', borderRadius: '20px',
+                cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                background: 'white', color: '#4f46e5', transition: 'all 0.15s',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}
+            >
+              🌍 Ver torneos del país
+            </button>
+          )}
+
+          {viewMode === 'pais' && (
             <>
-              <span style={{
-                padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)',
-                border: '1px solid rgba(255,255,255,0.25)',
-              }}>
-                📍 {sedesMap[String(perfil.sede_id)]?.nombre || 'Mi sede'}
-              </span>
               <button
-                onClick={() => setShowAll(true)}
+                onClick={() => setViewMode('global')}
                 style={{
                   padding: '8px 18px', border: 'none', borderRadius: '20px',
                   cursor: 'pointer', fontWeight: 700, fontSize: '13px',
@@ -174,30 +223,56 @@ console.log("SEDES MAP:", map);
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}
               >
-                🌍 Ver otros torneos
+                🌎 Ver todos los torneos
+              </button>
+              <button
+                onClick={() => setViewMode('sede')}
+                style={{
+                  padding: '8px 18px', border: 'none', borderRadius: '20px',
+                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                  background: 'rgba(255,255,255,0.2)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
+                }}
+              >
+                🎯 Volver a mi club
               </button>
             </>
-          ) : showAll ? (
-            <button
-              onClick={() => { setShowAll(false); setFilterSede(''); setFilterEstado(''); }}
-              style={{
-                padding: '8px 18px', border: 'none', borderRadius: '20px',
-                cursor: 'pointer', fontWeight: 700, fontSize: '13px',
-                background: 'rgba(255,255,255,0.2)', color: 'white',
-                border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              }}
-            >
-              🎯 Ver solo mis torneos
-            </button>
-          ) : null}
+          )}
+
+          {viewMode === 'global' && (
+            <>
+              <button
+                onClick={() => setViewMode('pais')}
+                style={{
+                  padding: '8px 18px', border: 'none', borderRadius: '20px',
+                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                  background: 'rgba(255,255,255,0.2)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
+                }}
+              >
+                🏠 Volver a mi país
+              </button>
+              <button
+                onClick={() => setViewMode('sede')}
+                style={{
+                  padding: '8px 18px', border: 'none', borderRadius: '20px',
+                  cursor: 'pointer', fontWeight: 700, fontSize: '13px',
+                  background: 'rgba(255,255,255,0.2)', color: 'white',
+                  border: '1px solid rgba(255,255,255,0.35)', transition: 'all 0.15s',
+                }}
+              >
+                🎯 Volver a mi club
+              </button>
+            </>
+          )}
+
           <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>
             {filtered.length} torneo{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
 
-        {/* Filter bar — only shown when showAll=true */}
-        {showAll && (
+        {/* Filter bar — only shown in global mode */}
+        {viewMode === 'global' && (
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '28px', alignItems: 'center' }}>
             <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtrar:</span>
             <select value={filterSede} onChange={e => setFilterSede(e.target.value)}
@@ -220,44 +295,6 @@ console.log("SEDES MAP:", map);
                 ✕ Limpiar
               </button>
             )}
-          </div>
-        )}
-
-        {!showAll && (
-          <div style={{ marginBottom: '20px' }}>
-            <button
-              onClick={() => setShowAll(true)}
-              style={{
-                padding: '10px 16px',
-                background: '#1e40af',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              🌍 Ver otros torneos
-            </button>
-          </div>
-        )}
-
-        {showAll && (
-          <div style={{ marginBottom: '20px' }}>
-            <button
-              onClick={() => setShowAll(false)}
-              style={{
-                padding: '10px 16px',
-                background: '#16a34a',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: '600'
-              }}
-            >
-              🎯 Ver solo mis torneos
-            </button>
           </div>
         )}
 
