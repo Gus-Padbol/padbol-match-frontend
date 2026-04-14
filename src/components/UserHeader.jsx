@@ -29,18 +29,19 @@ export default function UserHeader({ onLogout, title }) {
   };
 
   return (
-    <div style={{
-      background: 'rgba(0,0,0,0.25)',
-      backdropFilter: 'blur(6px)',
-      padding: '12px 24px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: '8px',
-      borderBottom: '1px solid rgba(255,255,255,0.1)',
-    }}>
-      {/* Left: Logo + Title */}
+    <div
+      style={{
+        background: 'rgba(0,0,0,0.25)',
+        backdropFilter: 'blur(6px)',
+        padding: '12px 24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '8px',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ height: '36px' }} />
         {title && (
@@ -50,15 +51,15 @@ export default function UserHeader({ onLogout, title }) {
         )}
       </div>
 
-      {/* Right: Navigation buttons */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => { console.log('[UserHeader] Inicio clicked'); navigate('/'); }}
+          onClick={() => navigate('/')}
           style={btnStyle}
           title="Volver al inicio"
         >
-          🏠 Inicio FIX
+          🏠 Inicio
         </button>
+
         <button
           onClick={() => navigate('/torneos')}
           style={btnStyle}
@@ -66,6 +67,7 @@ export default function UserHeader({ onLogout, title }) {
         >
           🏆 Torneos
         </button>
+
         <button
           onClick={() => navigate('/rankings')}
           style={btnStyle}
@@ -73,6 +75,7 @@ export default function UserHeader({ onLogout, title }) {
         >
           🏅 Ranking
         </button>
+
         <button
           onClick={() => navigate('/perfil')}
           style={btnStyle}
@@ -80,12 +83,17 @@ export default function UserHeader({ onLogout, title }) {
         >
           👤 Mi Perfil
         </button>
+
         <button
-          onClick={() => { console.log('[UserHeader] Salir clicked'); onLogout(); }}
+          onClick={() => {
+            localStorage.clear();
+            if (typeof onLogout === 'function') onLogout();
+            navigate('/');
+          }}
           style={logoutBtnStyle}
           title="Cerrar sesión"
         >
-          🚪 Salir FIX
+          🚪 Salir
         </button>
       </div>
     </div>
