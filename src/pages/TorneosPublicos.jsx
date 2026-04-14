@@ -44,6 +44,8 @@ export default function TorneosPublicos({ currentCliente, onLogout, apiBaseUrl =
   const [filterEstado,setFilterEstado]= useState('');
   const [perfil,      setPerfil]      = useState(null);   // jugadores_perfil: { sede_id, pais }
   const [viewMode,    setViewMode]    = useState('sede'); // 'sede', 'pais', 'global'
+  const [searchQuery, setSearchQuery] = useState('');     // global search
+  const [filterPais,  setFilterPais]  = useState('');     // country filter in global mode
 
   useEffect(() => {
   const load = async () => {
@@ -136,12 +138,30 @@ console.log("SEDES MAP:", map);
       const sede = sedesMap[String(t.sede_id)];
       return sede && (sede.pais || '').includes(playerPaisNombre);
     });
+  } else if (viewMode === 'global') {
+    // In global mode, apply country filter (defaults to player's country)
+    baseTorneos = torneos.filter(t => {
+      const sede = sedesMap[String(t.sede_id)];
+      if (filterPais && sede) {
+        return (sede.pais || '').includes(filterPais);
+      }
+      return true;
+    });
   }
-  // viewMode === 'global' → baseTorneos = torneos (all)
 
-  // Apply manual filters only in global mode
+  // Apply manual filters in global mode + search query
   const filtered = viewMode === 'global'
     ? baseTorneos.filter(t => {
+        // Search filter
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const sede = sedesMap[String(t.sede_id)];
+          const matchesName   = (t.nombre || '').toLowerCase().includes(q);
+          const matchesSede   = sede && (sede.nombre || '').toLowerCase().includes(q);
+          const matchesCiudad = sede && (sede.ciudad || '').toLowerCase().includes(q);
+          if (!matchesName && !matchesSede && !matchesCiudad) return false;
+        }
+        // Existing filters
         if (filterSede   && String(t.sede_id) !== filterSede)   return false;
         if (filterEstado && t.estado !== filterEstado)           return false;
         return true;
@@ -152,6 +172,21 @@ console.log("SEDES MAP:", map);
   const sedesEnLista = [...new Set(torneos.map(t => String(t.sede_id)).filter(Boolean))]
     .map(id => sedesMap[id])
     .filter(Boolean);
+
+  // Unique countries from sedes
+  const paisesDisponibles = [...new Set(
+    Object.values(sedesMap)
+      .map(s => s.pais)
+      .filter(Boolean)
+      .map(p => p.replace(/^[\p{Emoji_Presentation}\p{Emoji}\s]+/u, '').trim())
+  )].sort();
+
+  // Auto-set country filter to player's country when entering global mode
+  useEffect(() => {
+    if (viewMode === 'global' && playerPaisNombre && !filterPais) {
+      setFilterPais(playerPaisNombre);
+    }
+  }, [viewMode, playerPaisNombre, filterPais]);
 
   const btnBase = {
     padding: '10px 20px', border: 'none', borderRadius: '5px',
@@ -264,30 +299,66 @@ console.log("SEDES MAP:", map);
           </span>
         </div>
 
-        {/* Filter bar — only shown in global mode */}
+        {/* Global filters — search + country + advanced */}
         {viewMode === 'global' && (
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '28px', alignItems: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtrar:</span>
-            <select value={filterSede} onChange={e => setFilterSede(e.target.value)}
-              style={{ padding: '7px 12px', borderRadius: '7px', border: 'none', fontSize: '13px', background: 'rgba(255,255,255,0.95)', color: '#333', minWidth: '160px' }}>
-              <option value="">Todas las sedes</option>
-              {sedesEnLista.map(s => (
-                <option key={s.id} value={String(s.id)}>{s.nombre}</option>
-              ))}
-            </select>
-            <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}
-              style={{ padding: '7px 12px', borderRadius: '7px', border: 'none', fontSize: '13px', background: 'rgba(255,255,255,0.95)', color: '#333', minWidth: '140px' }}>
-              <option value="">Todos los estados</option>
-              <option value="abierto">🟢 Abierto</option>
-              <option value="en_curso">🟡 En curso</option>
-              <option value="finalizado">🔴 Finalizado</option>
-            </select>
-            {(filterSede || filterEstado) && (
-              <button onClick={() => { setFilterSede(''); setFilterEstado(''); }}
-                style={{ ...btnBase, padding: '7px 14px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.35)', fontSize: '12px' }}>
-                ✕ Limpiar
-              </button>
-            )}
+          <div style={{ marginBottom: '28px' }}>
+            {/* Search bar */}
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="🔍 Buscar torneo, club o ciudad..."
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontSize: '14px',
+                  background: 'rgba(255,255,255,0.95)',
+                  color: '#333',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}
+              />
+            </div>
+
+            {/* Filters row */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 600 }}>Filtros:</span>
+
+              <select value={filterPais} onChange={e => setFilterPais(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontSize: '13px', background: 'rgba(255,255,255,0.95)', color: '#333', minWidth: '140px' }}>
+                <option value="">Todos los países</option>
+                {paisesDisponibles.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+
+              <select value={filterSede} onChange={e => setFilterSede(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontSize: '13px', background: 'rgba(255,255,255,0.95)', color: '#333', minWidth: '160px' }}>
+                <option value="">Todas las sedes</option>
+                {sedesEnLista
+                  .filter(s => !filterPais || (s.pais || '').includes(filterPais))
+                  .map(s => (
+                    <option key={s.id} value={String(s.id)}>{s.nombre}</option>
+                  ))}
+              </select>
+
+              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', fontSize: '13px', background: 'rgba(255,255,255,0.95)', color: '#333', minWidth: '140px' }}>
+                <option value="">Todos los estados</option>
+                <option value="abierto">🟢 Abierto</option>
+                <option value="en_curso">🟡 En curso</option>
+                <option value="finalizado">🔴 Finalizado</option>
+              </select>
+
+              {(filterPais || filterSede || filterEstado || searchQuery) && (
+                <button onClick={() => { setFilterPais(''); setFilterSede(''); setFilterEstado(''); setSearchQuery(''); }}
+                  style={{ ...btnBase, padding: '8px 14px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.35)', fontSize: '12px' }}>
+                  ✕ Limpiar todo
+                </button>
+              )}
+            </div>
           </div>
         )}
 
