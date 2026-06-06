@@ -264,26 +264,28 @@ export default function MiPerfil({ currentCliente, onLogout }) {
     );
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
-        <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
-        <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.8)' }}>Cargando perfil...</div>
-      </div>
-    );
-  }
-
-  const paisParts = (perfil?.pais || '').split(' ');
-  const paisFlag = paisParts[0];
-  const paisNombre = paisParts.slice(1).join(' ');
-  const categoriaColor = CATEGORIA_COLOR[perfil?.nivel] || '#999';
-
+if (loading) {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
+      <UserHeader onLogout={onLogout} title="Perfil" showBack={true} />
+      <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.8)' }}>
+        Cargando perfil...
+      </div>
+    </div>
+  );
+}
 
-      <UserHeader onLogout={onLogout} title="Ficha de Jugador" />
+const paisParts = (perfil?.pais || '').split(' ');
+const paisFlag = paisParts[0];
+const paisNombre = paisParts.slice(1).join(' ');
+const categoriaColor = CATEGORIA_COLOR[perfil?.nivel] || '#999';
 
-      <div style={{ maxWidth: '520px', margin: '0 auto', padding: '20px' }}>
+return (
+  <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', fontFamily: 'Arial' }}>
+
+    <UserHeader onLogout={onLogout} title="Perfil" showBack={true} />
+
+    <div style={{ maxWidth: '520px', margin: '0 auto', padding: '20px' }}>
       <div style={{ background: 'white', borderRadius: '12px', padding: '30px 24px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
         {/* Photo */}
         {(() => {
@@ -300,8 +302,7 @@ export default function MiPerfil({ currentCliente, onLogout }) {
                 <div style={{ width: '150px', height: '150px', borderRadius: '50%', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '64px', border: '3px solid #d32f2f' }}>
                   👤
                 </div>
-              )}
-              {editando && (
+              )}              {editando && (
                 <div
                   onClick={() => !fotoUploading && fotoInputRef.current?.click()}
                   style={{

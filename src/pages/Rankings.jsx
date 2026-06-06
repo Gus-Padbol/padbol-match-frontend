@@ -122,8 +122,7 @@ export default function Rankings({ currentCliente, onLogout }) {
 
   return (
     <div style={containerStyle}>
-      <UserHeader onLogout={onLogout} title="" />
-      <div style={innerStyle}>
+    <UserHeader onLogout={onLogout} title="Ranking" showBack={true} />      <div style={innerStyle}>
 
         {/* Tab bar */}
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>

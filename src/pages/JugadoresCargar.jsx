@@ -62,7 +62,8 @@ const OTROS_PAISES = [
 ];
 
 export default function JugadoresCargar() {
-  const { torneoId } = useParams();
+  const { id } = useParams();
+const torneoId = id;
   const navigate = useNavigate();
   const [torneo, setTorneo] = useState(null);
   const [jugadores, setJugadores] = useState([]);
