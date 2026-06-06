@@ -1,0 +1,236 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&display=swap');
+
+:root {
+  --sc-bg: #0f0f14;
+  --sc-card: #1a1a24;
+  --sc-border: rgba(255, 255, 255, 0.08);
+  --sc-blue: #3b82f6;
+  --sc-red: #ef4444;
+  --sc-green: #22c55e;
+  --sc-yellow: #eab308;
+  --sc-text: #f1f5f9;
+  --sc-muted: #94a3b8;
+  --sc-font: 'Barlow Condensed', system-ui, sans-serif;
+}
+
+.sc-control {
+  min-height: 100vh;
+  background: var(--sc-bg);
+  color: var(--sc-text);
+  font-family: var(--sc-font);
+  padding: 1rem;
+}
+
+.sc-header {
+  background: var(--sc-card);
+  border: 1px solid var(--sc-border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.sc-header__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.sc-header__meta {
+  color: var(--sc-muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.sc-timer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sc-timer {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  min-width: 7rem;
+}
+
+.sc-timer-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+
+.sc-timer-btn--start {
+  background: var(--sc-green);
+  color: #052e16;
+}
+
+.sc-timer-btn--pause {
+  background: var(--sc-yellow);
+  color: #422006;
+}
+
+.sc-timer-btn--reset {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--sc-text);
+}
+
+.sc-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .sc-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sc-team-card {
+  background: var(--sc-card);
+  border: 1px solid var(--sc-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.sc-team-card--a {
+  border-top: 4px solid var(--sc-blue);
+}
+
+.sc-team-card--b {
+  border-top: 4px solid var(--sc-red);
+}
+
+.sc-team-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.sc-game-score {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  color: var(--sc-yellow);
+}
+
+.sc-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 0.75rem 0 1rem;
+  color: var(--sc-muted);
+  font-size: 0.95rem;
+}
+
+.sc-stats strong {
+  color: var(--sc-text);
+  display: block;
+  font-size: 1.4rem;
+}
+
+.sc-point-btn {
+  width: 100%;
+  min-height: 120px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.sc-point-btn:active {
+  transform: scale(0.97);
+}
+
+.sc-point-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sc-point-btn--a {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+  color: white;
+}
+
+.sc-point-btn--b {
+  background: linear-gradient(180deg, #dc2626, #b91c1c);
+  color: white;
+}
+
+.sc-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.sc-secondary-btn {
+  flex: 1;
+  min-width: 140px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sc-border);
+  border-radius: 10px;
+  color: var(--sc-text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.sc-secondary-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sc-finished-banner {
+  background: linear-gradient(135deg, #422006, #713f12);
+  border: 1px solid var(--sc-yellow);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.sc-finished-banner h2 {
+  margin: 0 0 0.5rem;
+  color: var(--sc-yellow);
+}
+
+.sc-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--sc-red);
+  color: #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.sc-loading {
+  text-align: center;
+  padding: 4rem;
+  color: var(--sc-muted);
+}
+
+.sc-serve-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+  background: var(--sc-green);
+  box-shadow: 0 0 8px var(--sc-green);
+}
