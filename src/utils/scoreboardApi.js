@@ -33,4 +33,16 @@ export async function scoreboardAction(path, method = 'POST') {
   return data;
 }
 
+export async function createPartido(payload) {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/scoreboard/partidos`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error al crear partido');
+  return data;
+}
+
 export { API_BASE };

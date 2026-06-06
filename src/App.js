@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 import ReservaForm from './pages/ReservaForm';
 import AdminDashboard from './pages/AdminDashboard';
@@ -19,8 +20,8 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from './constants/
 import useUserRole from './hooks/useUserRole';
 import EquipoVista from './pages/EquipoVista';
 import UserHome from './pages/UserHome';
-import ScoreboardDisplay from './pages/ScoreboardDisplay';
-import ScoreboardControl from './pages/ScoreboardControl';
+const ScoreboardDisplay = lazy(() => import('./pages/ScoreboardDisplay'));
+const ScoreboardControl = lazy(() => import('./pages/ScoreboardControl'));
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
@@ -55,6 +56,15 @@ function AppContent() {
   const [registerNumeroTel, setRegisterNumeroTel] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleLogout = async () => {
+    setCurrentCliente(null);
+    localStorage.removeItem('currentCliente');
+    localStorage.removeItem('user_role_data');
+    localStorage.removeItem('ultima_sede');
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   const [showPreguntaTorneo, setShowPreguntaTorneo] = useState(false);
   const [showFichaJugador, setShowFichaJugador] = useState(false);
@@ -154,16 +164,36 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<UserHome currentCliente={currentCliente} />} />
-      <Route path="/reservar" element={<ReservaForm currentCliente={currentCliente} />} />
-      <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
-      <Route path="/admin" element={<AdminDashboard rol={rol} sedeId={sedeId} apiBaseUrl={API_BASE_URL} />} />
-      <Route
-        path="/admin/scoreboard/:partidoId"
-        element={<ScoreboardControl rol={rol} sedeId={sedeId} />}
-      />
-    </Routes>
+    <ErrorBoundary label="la aplicación">
+      <Routes>
+        <Route path="/" element={<UserHome currentCliente={currentCliente} />} />
+        <Route path="/reservar" element={<ReservaForm currentCliente={currentCliente} />} />
+        <Route path="/perfil" element={<MiPerfil currentCliente={currentCliente} />} />
+        <Route
+          path="/admin"
+          element={(
+            <ErrorBoundary label="el panel de administración">
+              <AdminDashboard
+                rol={rol}
+                sedeId={sedeId}
+                apiBaseUrl={API_BASE_URL}
+                handleLogout={handleLogout}
+              />
+            </ErrorBoundary>
+          )}
+        />
+        <Route
+          path="/admin/scoreboard/:partidoId"
+          element={(
+            <ErrorBoundary label="el panel del árbitro">
+              <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>Cargando scoreboard...</div>}>
+                <ScoreboardControl rol={rol} sedeId={sedeId} />
+              </Suspense>
+            </ErrorBoundary>
+          )}
+        />
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
@@ -171,7 +201,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/display/:sedeId/scoreboard/:partidoId" element={<ScoreboardDisplay />} />
+        <Route
+          path="/display/:sedeId/scoreboard/:partidoId"
+          element={(
+            <ErrorBoundary label="la pantalla TV del scoreboard">
+              <Suspense fallback={<div style={{ background: '#06060a', color: '#fff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando scoreboard...</div>}>
+                <ScoreboardDisplay />
+              </Suspense>
+            </ErrorBoundary>
+          )}
+        />
         <Route path="*" element={<AppContent />} />
       </Routes>
     </Router>

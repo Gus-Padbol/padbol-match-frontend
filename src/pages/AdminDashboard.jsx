@@ -3,6 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import './AdminDashboard.css';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
+import { createPartido } from '../utils/scoreboardApi';
+import { useSafeTranslation } from '../i18n/tSafe';
+
+const EMPTY_JUGADORES = () => ([
+  { numero: 1, nombre: '' },
+  { numero: 2, nombre: '' },
+  { numero: 3, nombre: '' },
+  { numero: 4, nombre: '' },
+]);
 
 const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
 
@@ -81,7 +90,13 @@ function sedeFlag(sede) {
   return FLAG_MAP[pais.toLowerCase()] || '';
 }
 
-export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://padbol-backend.onrender.com', rol = null, sedeId = null }) {
+export default function AdminDashboard({
+  handleLogout = () => {},
+  apiBaseUrl = 'https://padbol-backend.onrender.com',
+  rol = null,
+  sedeId = null,
+}) {
+  const { t } = useSafeTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
@@ -119,6 +134,22 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
   const [pendientesLoading, setPendientesLoading] = useState(true);
   // keyed by player email: { open: bool, categoria: string, saving: bool }
   const [validacionState, setValidacionState] = useState({});
+
+  const puedeVerScoreboard = isAdmin;
+  const [sbSedeId, setSbSedeId] = useState(sedeId ? String(sedeId) : '');
+  const [sbCancha, setSbCancha] = useState('');
+  const [sbEquipoA, setSbEquipoA] = useState('');
+  const [sbEquipoB, setSbEquipoB] = useState('');
+  const [sbJugadoresA, setSbJugadoresA] = useState(EMPTY_JUGADORES);
+  const [sbJugadoresB, setSbJugadoresB] = useState(EMPTY_JUGADORES);
+  const [sbCreating, setSbCreating] = useState(false);
+  const [sbError, setSbError] = useState('');
+  const [sbCreated, setSbCreated] = useState(null);
+  const [sbCopied, setSbCopied] = useState('');
+
+  useEffect(() => {
+    if (sedeId && !sbSedeId) setSbSedeId(String(sedeId));
+  }, [sedeId, sbSedeId]);
 
   useEffect(() => {
     console.log('[AdminDashboard] fetchData triggered — rol:', rol, 'sedeId:', sedeId);
@@ -396,6 +427,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       // Cargar reservas
       const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
       let resData = await resRes.json();
+      if (!Array.isArray(resData)) resData = [];
 
       // Filter reservas by allowed sedes (for admin_nacional and admin_club)
       if (!isSuperAdmin && sedesData.length > 0) {
@@ -418,6 +450,7 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
       // Cargar torneos (filter by sede scope for non-super-admin)
       const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
       let tornData = await tornRes.json();
+      if (!Array.isArray(tornData)) tornData = [];
       if (!isSuperAdmin && sedesData.length > 0) {
         tornData = tornData.filter(t => t.sede_id == null || allowedSedeIds.has(t.sede_id));
       }
@@ -664,6 +697,58 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     if (!error) setCanchas(prev => prev.map(c => c.id === cancha.id ? { ...c, estado: nuevoEstado } : c));
   };
 
+  const sedesList = Object.values(sedesMap).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+  const updateSbJugador = (equipo, index, nombre) => {
+    const setter = equipo === 'A' ? setSbJugadoresA : setSbJugadoresB;
+    setter((prev) => prev.map((j, i) => (i === index ? { ...j, nombre } : j)));
+  };
+
+  const copiarLink = async (url, key) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setSbCopied(key);
+      setTimeout(() => setSbCopied(''), 2000);
+    } catch {
+      window.prompt('Copiá este link:', url);
+    }
+  };
+
+  const crearPartidoScoreboard = async (e) => {
+    e.preventDefault();
+    setSbError('');
+    setSbCreated(null);
+
+    const sede_id = parseInt(sbSedeId, 10);
+    if (!Number.isFinite(sede_id) || sede_id <= 0) {
+      setSbError(t('scoreboard.sedeRequired', 'Seleccioná una sede'));
+      return;
+    }
+    if (!sbEquipoA.trim() || !sbEquipoB.trim()) {
+      setSbError(t('scoreboard.teamsRequired', 'Completá los nombres de ambos equipos'));
+      return;
+    }
+
+    setSbCreating(true);
+    try {
+      const partido = await createPartido({
+        sede_id,
+        cancha: sbCancha.trim() || null,
+        equipo_a_nombre: sbEquipoA.trim(),
+        equipo_b_nombre: sbEquipoB.trim(),
+        equipo_a_jugadores: sbJugadoresA.map((j) => ({ numero: j.numero, nombre: j.nombre.trim() || `Jugador ${j.numero}` })),
+        equipo_b_jugadores: sbJugadoresB.map((j) => ({ numero: j.numero, nombre: j.nombre.trim() || `Jugador ${j.numero}` })),
+      });
+      setSbCreated({ id: partido.id, sede_id: partido.sede_id });
+      setMensajeExito(t('scoreboard.created', '✅ Partido de scoreboard creado'));
+      setTimeout(() => setMensajeExito(''), 4000);
+    } catch (err) {
+      setSbError(err.message || t('scoreboard.createError', 'Error al crear el partido'));
+    } finally {
+      setSbCreating(false);
+    }
+  };
+
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
 
   const TABS = [
@@ -671,9 +756,14 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
     { id: 'torneos',      label: '🏆 Torneos' },
     { id: 'reservas',     label: '📅 Reservas' },
     { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
+    ...(puedeVerScoreboard ? [{ id: 'scoreboard', label: '📺 Scoreboard' }] : []),
     ...(puedeVerMiSede  ? [{ id: 'mi_sede', label: '🏟️ Mi Sede' }] : []),
     ...(puedeVerConfig  ? [{ id: 'config',  label: '⚙️ Config' }]  : []),
   ];
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const tvLink = sbCreated ? `${origin}/display/${sbCreated.sede_id}/scoreboard/${sbCreated.id}` : '';
+  const arbiterLink = sbCreated ? `${origin}/admin/scoreboard/${sbCreated.id}` : '';
 
   return (
     <div className="admin-dashboard">
@@ -1248,6 +1338,166 @@ export default function AdminDashboard({ handleLogout, apiBaseUrl = 'https://pad
             </div>
           );
         })()}
+      </div>}
+
+      {activeTab === 'scoreboard' && puedeVerScoreboard && <div className="section">
+        <h2 style={{ marginTop: 0 }}>📺 {t('scoreboard.sectionTitle', 'Scoreboard en vivo')}</h2>
+        <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '20px' }}>
+          {t('scoreboard.sectionDesc', 'Creá un partido y compartí los links de la pantalla TV y el panel del árbitro.')}
+        </p>
+
+        <form onSubmit={crearPartidoScoreboard} style={{ background: 'white', borderRadius: '12px', padding: '20px', maxWidth: '720px', color: '#1e293b' }}>
+          <div style={{ display: 'grid', gap: '14px', marginBottom: '18px' }}>
+            <label style={{ display: 'grid', gap: '6px' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>{t('scoreboard.sedeLabel', 'Sede')}</span>
+              <select
+                value={sbSedeId}
+                onChange={(e) => setSbSedeId(e.target.value)}
+                required
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              >
+                <option value="">{t('scoreboard.selectSede', 'Seleccionar sede...')}</option>
+                {sedesList.map((s) => (
+                  <option key={s.id} value={s.id}>{sedeFlag(s)} {s.nombre}</option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: 'grid', gap: '6px' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>{t('scoreboard.courtLabel', 'Cancha')}</span>
+              <input
+                type="text"
+                value={sbCancha}
+                onChange={(e) => setSbCancha(e.target.value)}
+                placeholder={t('scoreboard.courtPlaceholder', 'Ej: Cancha 1')}
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '18px' }}>
+            <label style={{ display: 'grid', gap: '6px' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>{t('scoreboard.teamA', 'Nombre Equipo A')}</span>
+              <input
+                type="text"
+                value={sbEquipoA}
+                onChange={(e) => setSbEquipoA(e.target.value)}
+                required
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              />
+            </label>
+            <label style={{ display: 'grid', gap: '6px' }}>
+              <span style={{ fontWeight: 600, fontSize: '14px' }}>{t('scoreboard.teamB', 'Nombre Equipo B')}</span>
+              <input
+                type="text"
+                value={sbEquipoB}
+                onChange={(e) => setSbEquipoB(e.target.value)}
+                required
+                style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            {['A', 'B'].map((equipo) => {
+              const jugadores = equipo === 'A' ? sbJugadoresA : sbJugadoresB;
+              return (
+                <div key={equipo}>
+                  <h3 style={{ margin: '0 0 10px', fontSize: '15px', color: '#334155' }}>
+                    {t('scoreboard.playersTeam', 'Jugadores Equipo')} {equipo}
+                  </h3>
+                  {jugadores.map((j, idx) => (
+                    <div key={j.numero} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        background: equipo === 'A' ? '#dbeafe' : '#fee2e2',
+                        color: equipo === 'A' ? '#1d4ed8' : '#b91c1c',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: '13px', flexShrink: 0,
+                      }}
+                      >
+                        {j.numero}
+                      </span>
+                      <input
+                        type="text"
+                        value={j.nombre}
+                        onChange={(e) => updateSbJugador(equipo, idx, e.target.value)}
+                        placeholder={`${t('scoreboard.playerName', 'Nombre jugador')} ${j.numero}`}
+                        style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {sbError && (
+            <p style={{ color: '#dc2626', fontWeight: 600, marginBottom: '12px' }}>{sbError}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={sbCreating}
+            style={{
+              padding: '12px 24px',
+              background: sbCreating ? '#94a3b8' : '#e53935',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: sbCreating ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {sbCreating ? t('scoreboard.creating', 'Creando...') : t('scoreboard.createBtn', 'Crear partido')}
+          </button>
+        </form>
+
+        {sbCreated && (
+          <div style={{ marginTop: '24px', background: 'rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px', maxWidth: '720px' }}>
+            <h3 style={{ margin: '0 0 14px', color: 'white' }}>{t('scoreboard.linksTitle', 'Links del partido')}</h3>
+
+            <div style={{ marginBottom: '12px' }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                {t('scoreboard.tvLink', 'Pantalla TV')}
+              </span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <a href={tvLink} target="_blank" rel="noopener noreferrer" style={{ color: '#7dd3fc', wordBreak: 'break-all' }}>{tvLink}</a>
+                <button
+                  type="button"
+                  onClick={() => copiarLink(tvLink, 'tv')}
+                  style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                >
+                  {sbCopied === 'tv' ? t('scoreboard.copied', '✓ Copiado') : t('scoreboard.copy', 'Copiar')}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                {t('scoreboard.arbiterLink', 'Panel del árbitro')}
+              </span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <a href={arbiterLink} style={{ color: '#7dd3fc', wordBreak: 'break-all' }}>{arbiterLink}</a>
+                <button
+                  type="button"
+                  onClick={() => copiarLink(arbiterLink, 'arbiter')}
+                  style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                >
+                  {sbCopied === 'arbiter' ? t('scoreboard.copied', '✓ Copiado') : t('scoreboard.copy', 'Copiar')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/admin/scoreboard/${sbCreated.id}`)}
+                  style={{ padding: '6px 12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                >
+                  {t('scoreboard.openArbiter', 'Abrir panel')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>}
 
       {activeTab === 'config' && puedeVerConfig && <div className="section">
