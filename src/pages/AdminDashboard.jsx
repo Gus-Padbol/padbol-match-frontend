@@ -206,9 +206,129 @@ export default function AdminDashboard({
   const [premiosError, setPremiosError] = useState('');
   const [premioFormMode, setPremioFormMode] = useState(null);
   const [premioEditId, setPremioEditId] = useState(null);
-  const [premioForm, setPremioForm] = useState(EMPTY_PREMIO_FORM());
+  const [premioForm, setPremioForm] = useState(EMPTY_PREMIO_FORM);
   const [premioFormError, setPremioFormError] = useState('');
   const [premioSaving, setPremioSaving] = useState(false);
+
+  const pcNeedsSelector = isSuperAdmin || (esAdminNacional && !sedeId);
+
+  function resolvePcSedeId() {
+    if (esAdminClub && sedeId) return String(sedeId);
+    if (pcNeedsSelector) return pcSedeId;
+    return sedeId ? String(sedeId) : pcSedeId;
+  }
+
+  async function fetchPremios() {
+    const sid = resolvePcSedeId();
+    if (!sid) {
+      setPremios([]);
+      return;
+    }
+    setPremiosLoading(true);
+    setPremiosError('');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(
+        `${apiBaseUrl}/api/admin/premios-canjeables?sede_id=${encodeURIComponent(sid)}`,
+        { headers },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al cargar premios');
+      const list = Array.isArray(data) ? data : (data.premios || data.data || []);
+      setPremios(list);
+    } catch (err) {
+      setPremiosError(err.message || 'Error al cargar premios');
+      setPremios([]);
+    } finally {
+      setPremiosLoading(false);
+    }
+  }
+
+  function abrirNuevoPremio() {
+    setPremioForm(EMPTY_PREMIO_FORM());
+    setPremioEditId(null);
+    setPremioFormMode('create');
+    setPremioFormError('');
+  }
+
+  function abrirEditarPremio(premio) {
+    setPremioForm({
+      nombre: premio.nombre || '',
+      descripcion: premio.descripcion || '',
+      costo_padcoins: premio.costo_padcoins != null ? String(premio.costo_padcoins) : '',
+      stock_total: premio.stock_total != null ? String(premio.stock_total) : '',
+      stock_disponible: premio.stock_disponible != null ? String(premio.stock_disponible) : '',
+      condiciones: premio.condiciones || '',
+      activo: premio.activo !== false,
+    });
+    setPremioEditId(premio.id);
+    setPremioFormMode('edit');
+    setPremioFormError('');
+  }
+
+  function cerrarPremioForm() {
+    setPremioFormMode(null);
+    setPremioEditId(null);
+    setPremioForm(EMPTY_PREMIO_FORM());
+    setPremioFormError('');
+  }
+
+  async function guardarPremio(e) {
+    e.preventDefault();
+    const sid = resolvePcSedeId();
+    if (!sid) {
+      setPremioFormError('Seleccioná una sede para gestionar premios PadCoins');
+      return;
+    }
+    const validationError = validatePremioForm(premioForm);
+    if (validationError) {
+      setPremioFormError(validationError);
+      return;
+    }
+    setPremioSaving(true);
+    setPremioFormError('');
+    try {
+      const headers = await getAuthHeaders();
+      const payload = buildPremioPayload(premioForm, sid);
+      const isEdit = premioFormMode === 'edit' && premioEditId;
+      const url = isEdit
+        ? `${apiBaseUrl}/api/admin/premios-canjeables/${premioEditId}`
+        : `${apiBaseUrl}/api/admin/premios-canjeables`;
+      const res = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al guardar premio');
+      cerrarPremioForm();
+      setMensajeExito(isEdit ? '✅ Premio actualizado' : '✅ Premio creado');
+      setTimeout(() => setMensajeExito(''), 3000);
+      await fetchPremios();
+    } catch (err) {
+      setPremioFormError(err.message || 'Error al guardar premio');
+    } finally {
+      setPremioSaving(false);
+    }
+  }
+
+  async function desactivarPremio(premio) {
+    if (!window.confirm(`¿Desactivar el premio "${premio.nombre}"? Ya no será visible para los jugadores.`)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${apiBaseUrl}/api/admin/premios-canjeables/${premio.id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al desactivar premio');
+      setMensajeExito('✅ Premio desactivado');
+      setTimeout(() => setMensajeExito(''), 3000);
+      await fetchPremios();
+    } catch (err) {
+      alert(err.message || 'Error al desactivar premio');
+    }
+  }
 
   useEffect(() => {
     if (sedeId && !sbSedeId) setSbSedeId(String(sedeId));
@@ -217,6 +337,18 @@ export default function AdminDashboard({
   useEffect(() => {
     if (sedeId && !pcSedeId) setPcSedeId(String(sedeId));
   }, [sedeId, pcSedeId]);
+
+  useEffect(() => {
+    if (activeTab !== 'padcoins') return;
+    const sid = resolvePcSedeId();
+    if (!sid) {
+      setPremios([]);
+      setPremiosError('');
+      setPremiosLoading(false);
+      return;
+    }
+    fetchPremios();
+  }, [activeTab, pcSedeId, sedeId, apiBaseUrl, esAdminClub, isSuperAdmin, esAdminNacional]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     console.log('[AdminDashboard] fetchData triggered — rol:', rol, 'sedeId:', sedeId);
@@ -660,138 +792,6 @@ export default function AdminDashboard({
       .maybeSingle()
       .then(({ data }) => { if (data) setSedeStatus(data); });
   }, [sedeId, esAdminClub]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const pcNeedsSelector = isSuperAdmin || (esAdminNacional && !sedeId);
-
-  const resolvePcSedeId = () => {
-    if (esAdminClub && sedeId) return String(sedeId);
-    if (pcNeedsSelector) return pcSedeId;
-    return sedeId ? String(sedeId) : pcSedeId;
-  };
-
-  const fetchPremios = async () => {
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremios([]);
-      return;
-    }
-    setPremiosLoading(true);
-    setPremiosError('');
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(
-        `${apiBaseUrl}/api/admin/premios-canjeables?sede_id=${encodeURIComponent(sid)}`,
-        { headers },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al cargar premios');
-      const list = Array.isArray(data) ? data : (data.premios || data.data || []);
-      setPremios(list);
-    } catch (err) {
-      setPremiosError(err.message || 'Error al cargar premios');
-      setPremios([]);
-    } finally {
-      setPremiosLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab !== 'padcoins') return;
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremios([]);
-      setPremiosError('');
-      setPremiosLoading(false);
-      return;
-    }
-    fetchPremios();
-  }, [activeTab, pcSedeId, sedeId, apiBaseUrl, esAdminClub, isSuperAdmin, esAdminNacional]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const abrirNuevoPremio = () => {
-    setPremioForm(EMPTY_PREMIO_FORM());
-    setPremioEditId(null);
-    setPremioFormMode('create');
-    setPremioFormError('');
-  };
-
-  const abrirEditarPremio = (premio) => {
-    setPremioForm({
-      nombre: premio.nombre || '',
-      descripcion: premio.descripcion || '',
-      costo_padcoins: premio.costo_padcoins != null ? String(premio.costo_padcoins) : '',
-      stock_total: premio.stock_total != null ? String(premio.stock_total) : '',
-      stock_disponible: premio.stock_disponible != null ? String(premio.stock_disponible) : '',
-      condiciones: premio.condiciones || '',
-      activo: premio.activo !== false,
-    });
-    setPremioEditId(premio.id);
-    setPremioFormMode('edit');
-    setPremioFormError('');
-  };
-
-  const cerrarPremioForm = () => {
-    setPremioFormMode(null);
-    setPremioEditId(null);
-    setPremioForm(EMPTY_PREMIO_FORM());
-    setPremioFormError('');
-  };
-
-  const guardarPremio = async (e) => {
-    e.preventDefault();
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremioFormError('Seleccioná una sede para gestionar premios PadCoins');
-      return;
-    }
-    const validationError = validatePremioForm(premioForm);
-    if (validationError) {
-      setPremioFormError(validationError);
-      return;
-    }
-    setPremioSaving(true);
-    setPremioFormError('');
-    try {
-      const headers = await getAuthHeaders();
-      const payload = buildPremioPayload(premioForm, sid);
-      const isEdit = premioFormMode === 'edit' && premioEditId;
-      const url = isEdit
-        ? `${apiBaseUrl}/api/admin/premios-canjeables/${premioEditId}`
-        : `${apiBaseUrl}/api/admin/premios-canjeables`;
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al guardar premio');
-      cerrarPremioForm();
-      setMensajeExito(isEdit ? '✅ Premio actualizado' : '✅ Premio creado');
-      setTimeout(() => setMensajeExito(''), 3000);
-      await fetchPremios();
-    } catch (err) {
-      setPremioFormError(err.message || 'Error al guardar premio');
-    } finally {
-      setPremioSaving(false);
-    }
-  };
-
-  const desactivarPremio = async (premio) => {
-    if (!window.confirm(`¿Desactivar el premio "${premio.nombre}"? Ya no será visible para los jugadores.`)) return;
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${apiBaseUrl}/api/admin/premios-canjeables/${premio.id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al desactivar premio');
-      setMensajeExito('✅ Premio desactivado');
-      setTimeout(() => setMensajeExito(''), 3000);
-      await fetchPremios();
-    } catch (err) {
-      alert(err.message || 'Error al desactivar premio');
-    }
-  };
 
   const guardarMiSede = async () => {
     setMiSedeSaving(true); setMiSedeMsg('');
