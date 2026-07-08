@@ -142,6 +142,93 @@ function sedeFlag(sede) {
   return FLAG_MAP[pais.toLowerCase()] || '';
 }
 
+const SETUP_CHECKLIST_DEFS = [
+  { key: 'admin_sede_configurado', label: 'Administrador de sede asignado' },
+  { key: 'padcoins_activado', label: 'PadCoins activado en la sede' },
+  { key: 'padcoins_default_5_configurado', label: 'Fidelización 5% configurada' },
+  { key: 'beneficios_iniciales_configurados', label: 'Beneficios iniciales configurados' },
+  { key: 'campanas_habilitadas', label: 'Campañas habilitadas' },
+  { key: 'reserva_visible_para_jugador', label: 'Reserva visible para jugador' },
+];
+
+function setupChecklistDetailForKey(key, ok, meta) {
+  if (key === 'padcoins_default_5_configurado') {
+    return ok
+      ? 'Fidelización al 5% (punto de partida recomendado)'
+      : `Porcentaje efectivo: ${meta?.effective_porcentaje_devolucion_reserva ?? '—'}%`;
+  }
+  if (key === 'beneficios_iniciales_configurados') {
+    return ok
+      ? `${meta?.premios_count ?? 0} beneficio(s) cargado(s)`
+      : 'Sin beneficios canjeables en la sede';
+  }
+  if (key === 'reserva_visible_para_jugador') {
+    return ok
+      ? `${meta?.canchas_count ?? 0} cancha(s) disponible(s)`
+      : 'Falta perfil de sede o canchas para reservar';
+  }
+  if (key === 'campanas_habilitadas') {
+    return ok
+      ? 'PadCoins activo — la sede puede operar campañas'
+      : 'Activar PadCoins antes de campañas';
+  }
+  return ok ? 'Completo' : 'Pendiente';
+}
+
+function buildSetupChecklistFromLive(live, meta) {
+  const checklist = SETUP_CHECKLIST_DEFS.map(({ key, label }) => {
+    const ok = live?.[key] === true;
+    return {
+      key,
+      label,
+      status: ok ? 'ok' : 'missing',
+      detail: setupChecklistDetailForKey(key, ok, meta),
+    };
+  });
+  const allOk = checklist.every((item) => item.status === 'ok');
+  return {
+    checklist,
+    checklist_completo: allOk || live?.checklist_completo === true,
+  };
+}
+
+function parseSetupStatusResponse(data) {
+  const live = data?.live || {};
+  const meta = data?.meta || {};
+  const built = buildSetupChecklistFromLive(live, meta);
+  return {
+    sede_id: data?.sede_id,
+    checklist: built.checklist,
+    checklist_completo: data?.checklist_completo === true || built.checklist_completo,
+    meta,
+    next_actions: [],
+    status: data?.status,
+  };
+}
+
+function parseSetupValidateResponse(data) {
+  return {
+    ok: data?.ok === true,
+    checklist: Array.isArray(data?.checklist) ? data.checklist : [],
+    checklist_completo: data?.checklist_completo === true,
+    missing: Array.isArray(data?.missing) ? data.missing : [],
+    next_actions: Array.isArray(data?.next_actions) ? data.next_actions : [],
+  };
+}
+
+function parseSetupInitResponse(data) {
+  const summary = data?.summary || {};
+  return {
+    created: Array.isArray(summary.created) ? summary.created : [],
+    already_existed: Array.isArray(summary.already_existed) ? summary.already_existed : [],
+    updated: Array.isArray(summary.updated) ? summary.updated : [],
+    skipped: Array.isArray(summary.skipped) ? summary.skipped : [],
+    missing: Array.isArray(summary.missing) ? summary.missing : [],
+    padcoins: data?.padcoins || null,
+    validation: data?.validation || null,
+  };
+}
+
 export default function AdminDashboard({
   handleLogout = () => {},
   apiBaseUrl = 'https://padbol-backend.onrender.com',
@@ -161,6 +248,7 @@ export default function AdminDashboard({
   // Role-based access flags
   const esAdminNacional = rol === 'admin_nacional';
   const esAdminClub     = rol === 'admin_club';
+  const puedeVerSetup   = isSuperAdmin || esAdminClub;
   const puedeVerConfig  = isSuperAdmin;
   const puedeCrearTorneosOficiales = isSuperAdmin || (!esAdminClub);
 
@@ -210,12 +298,137 @@ export default function AdminDashboard({
   const [premioFormError, setPremioFormError] = useState('');
   const [premioSaving, setPremioSaving] = useState(false);
 
+  const [setupSedeId, setSetupSedeId] = useState(sedeId ? String(sedeId) : '');
+  const [setupStatus, setSetupStatus] = useState(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState('');
+  const [setupActionLoading, setSetupActionLoading] = useState(false);
+  const [setupInitResult, setSetupInitResult] = useState(null);
+  const [setupInitError, setSetupInitError] = useState('');
+
   const pcNeedsSelector = isSuperAdmin || (esAdminNacional && !sedeId);
+  const setupNeedsSelector = isSuperAdmin;
 
   function resolvePcSedeId() {
     if (esAdminClub && sedeId) return String(sedeId);
     if (pcNeedsSelector) return pcSedeId;
     return sedeId ? String(sedeId) : pcSedeId;
+  }
+
+  function resolveSetupSedeId() {
+    if (esAdminClub && sedeId) return String(sedeId);
+    if (setupNeedsSelector) return setupSedeId;
+    return sedeId ? String(sedeId) : setupSedeId;
+  }
+
+  async function fetchSetupStatus() {
+    const sid = resolveSetupSedeId();
+    if (!sid) {
+      setSetupStatus(null);
+      setSetupError('');
+      setSetupLoading(false);
+      return;
+    }
+    setSetupLoading(true);
+    setSetupError('');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(
+        `${apiBaseUrl}/api/admin/setup/sedes/${encodeURIComponent(sid)}/status`,
+        { headers },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al cargar estado de setup');
+      setSetupStatus(parseSetupStatusResponse(data));
+    } catch (err) {
+      setSetupError(err.message || 'Error al cargar estado de setup');
+      setSetupStatus(null);
+    } finally {
+      setSetupLoading(false);
+    }
+  }
+
+  async function validarSetup() {
+    const sid = resolveSetupSedeId();
+    if (!sid) {
+      setSetupError('Seleccioná una sede para validar la configuración');
+      return;
+    }
+    setSetupActionLoading(true);
+    setSetupError('');
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(
+        `${apiBaseUrl}/api/admin/setup/sedes/${encodeURIComponent(sid)}/validate`,
+        { method: 'POST', headers },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al validar configuración');
+      const parsed = parseSetupValidateResponse(data);
+      setSetupStatus((prev) => ({
+        sede_id: sid,
+        checklist: parsed.checklist.length > 0 ? parsed.checklist : (prev?.checklist || []),
+        checklist_completo: parsed.checklist_completo,
+        meta: prev?.meta || {},
+        next_actions: parsed.next_actions,
+        status: parsed.ok ? 'validated' : 'incomplete',
+      }));
+      setMensajeExito(parsed.checklist_completo
+        ? '✅ Checklist de setup completo'
+        : '⚠️ Validación completada — hay ítems pendientes');
+      setTimeout(() => setMensajeExito(''), 4000);
+    } catch (err) {
+      setSetupError(err.message || 'Error al validar configuración');
+    } finally {
+      setSetupActionLoading(false);
+    }
+  }
+
+  async function inicializarPadcoinsSetup() {
+    const sid = resolveSetupSedeId();
+    if (!sid) {
+      setSetupInitError('Seleccioná una sede para inicializar PadCoins');
+      return;
+    }
+    const confirmMsg = 'Se aplicará la configuración inicial recomendada para esta sede: PadCoins activo, 5% de fidelización y beneficios iniciales si corresponde.';
+    if (!window.confirm(confirmMsg)) return;
+    setSetupActionLoading(true);
+    setSetupInitError('');
+    setSetupInitResult(null);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(
+        `${apiBaseUrl}/api/admin/setup/sedes/${encodeURIComponent(sid)}/initialize-padcoins`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ seed_beneficios: true }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Error al inicializar PadCoins');
+      const parsed = parseSetupInitResponse(data);
+      setSetupInitResult(parsed);
+      if (data?.validation) {
+        const validated = parseSetupValidateResponse(data.validation);
+        setSetupStatus((prev) => ({
+          sede_id: sid,
+          checklist: validated.checklist.length > 0 ? validated.checklist : (prev?.checklist || []),
+          checklist_completo: validated.checklist_completo,
+          meta: prev?.meta || {},
+          next_actions: validated.next_actions,
+          status: validated.checklist_completo ? 'complete' : 'incomplete',
+        }));
+      } else {
+        await fetchSetupStatus();
+      }
+      setMensajeExito('✅ Inicialización de PadCoins aplicada');
+      setTimeout(() => setMensajeExito(''), 4000);
+    } catch (err) {
+      setSetupInitError(err.message || 'Error al inicializar PadCoins');
+    } finally {
+      setSetupActionLoading(false);
+    }
   }
 
   async function fetchPremios() {
@@ -337,6 +550,22 @@ export default function AdminDashboard({
   useEffect(() => {
     if (sedeId && !pcSedeId) setPcSedeId(String(sedeId));
   }, [sedeId, pcSedeId]);
+
+  useEffect(() => {
+    if (sedeId && !setupSedeId) setSetupSedeId(String(sedeId));
+  }, [sedeId, setupSedeId]);
+
+  useEffect(() => {
+    if (activeTab !== 'setup' || !puedeVerSetup) return;
+    const sid = resolveSetupSedeId();
+    if (!sid) {
+      setSetupStatus(null);
+      setSetupError('');
+      setSetupLoading(false);
+      return;
+    }
+    fetchSetupStatus();
+  }, [activeTab, setupSedeId, sedeId, apiBaseUrl, puedeVerSetup, esAdminClub, isSuperAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab !== 'padcoins') return;
@@ -956,6 +1185,7 @@ export default function AdminDashboard({
     { id: 'reservas',     label: '📅 Reservas' },
     { id: 'validaciones', label: '⏳ Validaciones', badge: pendientes.length },
     ...(puedeVerScoreboard ? [{ id: 'scoreboard', label: '📺 Scoreboard' }] : []),
+    ...(puedeVerSetup ? [{ id: 'setup', label: '⚙️ Setup' }] : []),
     ...(puedeVerPadCoins   ? [{ id: 'padcoins',   label: '🪙 PadCoins' }] : []),
     ...(puedeVerMiSede  ? [{ id: 'mi_sede', label: '🏟️ Mi Sede' }] : []),
     ...(puedeVerConfig  ? [{ id: 'config',  label: '⚙️ Config' }]  : []),
@@ -1699,6 +1929,266 @@ export default function AdminDashboard({
           </div>
         )}
       </div>}
+
+      {activeTab === 'setup' && puedeVerSetup && (() => {
+        const effectiveSetupSedeId = resolveSetupSedeId();
+        const setupInp = { padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' };
+        const sedeNombre = effectiveSetupSedeId ? sedesMap[effectiveSetupSedeId]?.nombre : null;
+        const checklist = setupStatus?.checklist || [];
+        const checklistCompleto = setupStatus?.checklist_completo === true;
+        const nextActions = setupStatus?.next_actions || [];
+
+        const renderSetupItem = (item, isOverall = false) => {
+          const ok = isOverall ? checklistCompleto : item.status === 'ok';
+          return (
+            <div
+              key={isOverall ? 'checklist_completo' : item.key}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '14px',
+                padding: '14px 16px',
+                background: 'white',
+                borderRadius: '10px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            >
+              <span style={{
+                flexShrink: 0,
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: 700,
+                background: ok ? '#dcfce7' : '#fef3c7',
+                color: ok ? '#166534' : '#92400e',
+              }}>
+                {ok ? '✓' : '…'}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <strong style={{ fontSize: '15px', color: '#1e293b' }}>
+                    {isOverall ? 'Checklist completo' : item.label}
+                  </strong>
+                  <span style={{
+                    background: ok ? '#dcfce7' : '#fef3c7',
+                    color: ok ? '#166534' : '#92400e',
+                    borderRadius: '12px',
+                    padding: '2px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                  }}>
+                    {ok ? 'Completo' : 'Pendiente'}
+                  </span>
+                </div>
+                {!isOverall && item.detail ? (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>{item.detail}</p>
+                ) : null}
+                {isOverall && !ok ? (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+                    Hay ítems pendientes en la configuración inicial de la sede.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          );
+        };
+
+        const renderInitSummarySection = (title, items, tone) => {
+          if (!items || items.length === 0) return null;
+          const tones = {
+            created: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+            existed: { bg: '#f8fafc', border: '#e2e8f0', color: '#475569' },
+            updated: { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+            skipped: { bg: '#fff7ed', border: '#fed7aa', color: '#c2410c' },
+            missing: { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
+          };
+          const style = tones[tone] || tones.existed;
+          return (
+            <div style={{ marginTop: '12px' }}>
+              <strong style={{ fontSize: '14px', color: style.color, display: 'block', marginBottom: '6px' }}>{title}</strong>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', fontSize: '13px', lineHeight: 1.5 }}>
+                {items.map((entry, idx) => (
+                  <li key={`${title}-${idx}`}>{typeof entry === 'string' ? entry : (entry?.label || entry?.key || JSON.stringify(entry))}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        };
+
+        return (
+          <div className="section">
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ marginTop: 0 }}>⚙️ Padbol Match Setup</h2>
+              <p style={{ color: 'rgba(255,255,255,0.75)', margin: '0 0 12px', maxWidth: '640px', lineHeight: 1.5 }}>
+                Revisión inicial de sede, PadCoins, beneficios y campañas.
+              </p>
+              <div style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                maxWidth: '640px',
+                fontSize: '13px',
+                color: 'rgba(255,255,255,0.8)',
+                lineHeight: 1.55,
+              }}>
+                <p style={{ margin: '0 0 8px' }}>El 5% es el punto de partida recomendado.</p>
+                <p style={{ margin: '0 0 8px' }}>La sede puede ajustar su estrategia de fidelización más adelante.</p>
+                <p style={{ margin: '0 0 8px' }}>PadCoins debe usarse para generar frecuencia, vínculo y participación.</p>
+                <p style={{ margin: 0 }}>La conversión interna es global y no se modifica desde la sede.</p>
+              </div>
+            </div>
+
+            {setupNeedsSelector && (
+              <div style={{ marginBottom: '20px', maxWidth: '360px' }}>
+                <label style={{ display: 'grid', gap: '6px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>Sede</span>
+                  <select
+                    value={setupSedeId}
+                    onChange={(e) => {
+                      setSetupSedeId(e.target.value);
+                      setSetupInitResult(null);
+                      setSetupInitError('');
+                    }}
+                    style={setupInp}
+                  >
+                    <option value="">Seleccionar sede...</option>
+                    {sedesList.map((s) => (
+                      <option key={s.id} value={s.id}>{sedeFlag(s)} {s.nombre}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+
+            {!effectiveSetupSedeId && (
+              <p style={{ color: 'rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.1)', padding: '16px 20px', borderRadius: '10px', maxWidth: '520px' }}>
+                Seleccioná una sede para revisar su configuración inicial.
+              </p>
+            )}
+
+            {effectiveSetupSedeId && sedeNombre && (
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
+                Sede: <strong style={{ color: 'white' }}>{sedeNombre}</strong>
+                {setupStatus?.meta?.sede_nombre && setupStatus.meta.sede_nombre !== sedeNombre ? (
+                  <span> ({setupStatus.meta.sede_nombre})</span>
+                ) : null}
+              </p>
+            )}
+
+            {effectiveSetupSedeId && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+                <button
+                  type="button"
+                  onClick={validarSetup}
+                  disabled={setupActionLoading || setupLoading}
+                  style={{
+                    padding: '10px 20px',
+                    background: setupActionLoading ? '#94a3b8' : '#1976d2',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: setupActionLoading || setupLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {setupActionLoading ? 'Procesando...' : 'Validar configuración'}
+                </button>
+                {isSuperAdmin && (
+                  <button
+                    type="button"
+                    onClick={inicializarPadcoinsSetup}
+                    disabled={setupActionLoading || setupLoading}
+                    style={{
+                      padding: '10px 20px',
+                      background: setupActionLoading ? '#94a3b8' : '#e53935',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      cursor: setupActionLoading || setupLoading ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    Inicializar PadCoins
+                  </button>
+                )}
+              </div>
+            )}
+
+            {effectiveSetupSedeId && setupLoading && (
+              <p style={{ color: 'rgba(255,255,255,0.7)' }}>Cargando estado de setup...</p>
+            )}
+
+            {effectiveSetupSedeId && !setupLoading && setupError && (
+              <p style={{ color: '#fecaca', fontWeight: 600, background: 'rgba(220,38,38,0.2)', padding: '12px 16px', borderRadius: '8px', maxWidth: '560px' }}>
+                {setupError}
+              </p>
+            )}
+
+            {effectiveSetupSedeId && !setupLoading && !setupError && checklist.length > 0 && (
+              <div style={{ display: 'grid', gap: '10px', maxWidth: '720px', marginBottom: '24px' }}>
+                {checklist.map((item) => renderSetupItem(item))}
+                {renderSetupItem(null, true)}
+              </div>
+            )}
+
+            {effectiveSetupSedeId && !setupLoading && nextActions.length > 0 && (
+              <div style={{
+                background: 'white',
+                borderRadius: '10px',
+                padding: '16px 18px',
+                maxWidth: '720px',
+                marginBottom: '24px',
+                color: '#334155',
+              }}>
+                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Próximas acciones sugeridas</strong>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: 1.5 }}>
+                  {nextActions.map((action, idx) => (
+                    <li key={`action-${idx}`}>{typeof action === 'string' ? action : (action?.label || action?.message || JSON.stringify(action))}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {setupInitError && (
+              <p style={{ color: '#fecaca', fontWeight: 600, background: 'rgba(220,38,38,0.2)', padding: '12px 16px', borderRadius: '8px', maxWidth: '560px', marginBottom: '16px' }}>
+                {setupInitError}
+              </p>
+            )}
+
+            {setupInitResult && (
+              <div style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '18px 20px',
+                maxWidth: '720px',
+                color: '#1e293b',
+                marginBottom: '24px',
+              }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '16px', color: '#334155' }}>Resultado de inicialización</h3>
+                {renderInitSummarySection('Creado', setupInitResult.created, 'created')}
+                {renderInitSummarySection('Ya existía', setupInitResult.already_existed, 'existed')}
+                {renderInitSummarySection('Actualizado', setupInitResult.updated, 'updated')}
+                {renderInitSummarySection('Omitido', setupInitResult.skipped, 'skipped')}
+                {renderInitSummarySection('Falta', setupInitResult.missing, 'missing')}
+                {!setupInitResult.created.length
+                  && !setupInitResult.already_existed.length
+                  && !setupInitResult.updated.length
+                  && !setupInitResult.skipped.length
+                  && !setupInitResult.missing.length && (
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sin cambios reportados por el servidor.</p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {activeTab === 'padcoins' && puedeVerPadCoins && (() => {
         const effectivePcSedeId = resolvePcSedeId();
