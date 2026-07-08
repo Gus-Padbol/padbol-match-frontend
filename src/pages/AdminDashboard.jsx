@@ -196,23 +196,32 @@ function parseSetupStatusResponse(data) {
   const live = data?.live || {};
   const meta = data?.meta || {};
   const built = buildSetupChecklistFromLive(live, meta);
+  const phase2 = mergeSetupPhase2Fields(data, built);
   return {
     sede_id: data?.sede_id,
-    checklist: built.checklist,
-    checklist_completo: data?.checklist_completo === true || built.checklist_completo,
+    checklist: phase2.checklist,
+    checklist_completo: phase2.checklist_completo,
+    readiness_level: phase2.readiness_level,
+    sections: phase2.sections,
     meta,
-    next_actions: [],
+    next_actions: phase2.next_actions,
     status: data?.status,
   };
 }
 
 function parseSetupValidateResponse(data) {
+  const built = Array.isArray(data?.checklist) && data.checklist.length > 0
+    ? { checklist: data.checklist, checklist_completo: data?.checklist_completo === true }
+    : null;
+  const phase2 = mergeSetupPhase2Fields(data, built);
   return {
     ok: data?.ok === true,
-    checklist: Array.isArray(data?.checklist) ? data.checklist : [],
-    checklist_completo: data?.checklist_completo === true,
+    checklist: phase2.checklist,
+    checklist_completo: phase2.checklist_completo,
+    readiness_level: phase2.readiness_level,
+    sections: phase2.sections,
     missing: Array.isArray(data?.missing) ? data.missing : [],
-    next_actions: Array.isArray(data?.next_actions) ? data.next_actions : [],
+    next_actions: phase2.next_actions,
   };
 }
 
@@ -226,6 +235,163 @@ function parseSetupInitResponse(data) {
     missing: Array.isArray(summary.missing) ? summary.missing : [],
     padcoins: data?.padcoins || null,
     validation: data?.validation || null,
+  };
+}
+
+const SETUP_READINESS_CONFIG = {
+  incomplete: {
+    label: 'Incompleta',
+    help: 'Faltan datos mínimos o canchas.',
+    bg: '#fef2f2',
+    color: '#b91c1c',
+    border: '#fecaca',
+  },
+  basic: {
+    label: 'Básica',
+    help: 'La sede tiene base inicial, pero todavía no está lista para operar reservas completas.',
+    bg: '#fef3c7',
+    color: '#92400e',
+    border: '#fde68a',
+  },
+  operational: {
+    label: 'Operativa',
+    help: 'La sede puede operar reservas.',
+    bg: '#dbeafe',
+    color: '#1d4ed8',
+    border: '#bfdbfe',
+  },
+  ready: {
+    label: 'Lista',
+    help: 'La sede tiene reservas, PadCoins, beneficios, campañas y pagos preparados.',
+    bg: '#dcfce7',
+    color: '#166534',
+    border: '#bbf7d0',
+  },
+};
+
+const SETUP_SECTION_LABELS = {
+  identidad_sede: 'Identidad de sede',
+  administracion: 'Administración',
+  reservas: 'Reservas',
+  padcoins: 'PadCoins',
+  beneficios: 'Beneficios',
+  campanas: 'Campañas',
+  pagos: 'Pagos',
+  reglas_operativas: 'Reglas operativas',
+};
+
+const SETUP_SECTION_ORDER = [
+  'identidad_sede',
+  'administracion',
+  'reservas',
+  'padcoins',
+  'beneficios',
+  'campanas',
+  'pagos',
+  'reglas_operativas',
+];
+
+function setupHumanText(entry) {
+  if (!entry) return '';
+  if (typeof entry === 'string') return entry.trim();
+  return String(
+    entry.label
+    || entry.message
+    || entry.text
+    || entry.title
+    || entry.description
+    || entry.detail
+    || entry.name
+    || '',
+  ).trim();
+}
+
+function setupStatusLabel(status) {
+  const s = String(status || '').toLowerCase();
+  if (['ok', 'complete', 'completo', 'completed', 'done', 'ready'].includes(s)) return 'Completo';
+  if (['partial', 'parcial', 'in_progress', 'in-progress'].includes(s)) return 'Parcial';
+  if (['future', 'futuro', 'planned', 'later'].includes(s)) return 'Futuro';
+  if (['missing', 'pending', 'pendiente', 'incomplete'].includes(s)) return 'Pendiente';
+  return 'Pendiente';
+}
+
+function setupStatusStyle(statusLabel) {
+  switch (statusLabel) {
+    case 'Completo':
+      return { bg: '#dcfce7', color: '#166534' };
+    case 'Parcial':
+      return { bg: '#dbeafe', color: '#1d4ed8' };
+    case 'Futuro':
+      return { bg: '#f1f5f9', color: '#64748b' };
+    default:
+      return { bg: '#fef3c7', color: '#92400e' };
+  }
+}
+
+function parseSetupSections(raw) {
+  if (!raw) return [];
+
+  const toSection = (key, value) => {
+    const sectionKey = String(key || value?.key || value?.id || '').trim();
+    const itemsRaw = value?.items || value?.checklist || value?.checks || [];
+    const items = (Array.isArray(itemsRaw) ? itemsRaw : []).map((item, idx) => {
+      const label = setupHumanText(item);
+      const detail = String(item?.detail || item?.description || item?.message || '').trim();
+      return {
+        key: item?.key || item?.id || `${sectionKey}-${idx}`,
+        label: label || detail,
+        detail: label && detail && detail !== label ? detail : '',
+        status: item?.status,
+        statusLabel: setupStatusLabel(item?.status),
+      };
+    }).filter((item) => item.label || item.detail);
+
+    const sectionLabel = value?.label || value?.title || SETUP_SECTION_LABELS[sectionKey] || '';
+    return {
+      key: sectionKey,
+      label: sectionLabel || (sectionKey ? sectionKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : ''),
+      status: value?.status,
+      statusLabel: setupStatusLabel(value?.status),
+      items,
+    };
+  };
+
+  if (Array.isArray(raw)) {
+    return raw.map((section, idx) => toSection(section?.key || section?.id || idx, section));
+  }
+  if (typeof raw === 'object') {
+    return Object.entries(raw).map(([key, value]) => toSection(key, value));
+  }
+  return [];
+}
+
+function sortSetupSections(sections) {
+  const order = new Map(SETUP_SECTION_ORDER.map((key, index) => [key, index]));
+  return [...sections].sort((a, b) => {
+    const aIndex = order.has(a.key) ? order.get(a.key) : 999;
+    const bIndex = order.has(b.key) ? order.get(b.key) : 999;
+    if (aIndex !== bIndex) return aIndex - bIndex;
+    return (a.label || '').localeCompare(b.label || '');
+  });
+}
+
+function mergeSetupPhase2Fields(data, builtChecklist) {
+  const readinessLevel = data?.readiness_level || data?.readinessLevel || null;
+  const sections = sortSetupSections(parseSetupSections(data?.sections));
+  const nextActions = Array.isArray(data?.next_actions) ? data.next_actions : [];
+  const checklist = Array.isArray(data?.checklist) && data.checklist.length > 0
+    ? data.checklist
+    : (builtChecklist?.checklist || []);
+  const checklistCompleto = data?.checklist_completo === true
+    || builtChecklist?.checklist_completo === true
+    || readinessLevel === 'ready';
+
+  return {
+    readiness_level: readinessLevel,
+    sections,
+    next_actions: nextActions,
+    checklist,
+    checklist_completo: checklistCompleto,
   };
 }
 
@@ -367,15 +533,18 @@ export default function AdminDashboard({
       const parsed = parseSetupValidateResponse(data);
       setSetupStatus((prev) => ({
         sede_id: sid,
-        checklist: parsed.checklist.length > 0 ? parsed.checklist : (prev?.checklist || []),
+        checklist: parsed.checklist,
         checklist_completo: parsed.checklist_completo,
+        readiness_level: parsed.readiness_level,
+        sections: parsed.sections,
         meta: prev?.meta || {},
         next_actions: parsed.next_actions,
         status: parsed.ok ? 'validated' : 'incomplete',
       }));
+      const readinessLabel = SETUP_READINESS_CONFIG[parsed.readiness_level]?.label;
       setMensajeExito(parsed.checklist_completo
-        ? '✅ Checklist de setup completo'
-        : '⚠️ Validación completada — hay ítems pendientes');
+        ? (readinessLabel ? `✅ Sede ${readinessLabel.toLowerCase()}` : '✅ Checklist de setup completo')
+        : (readinessLabel ? `⚠️ Validación completada — sede ${readinessLabel.toLowerCase()}` : '⚠️ Validación completada — hay ítems pendientes'));
       setTimeout(() => setMensajeExito(''), 4000);
     } catch (err) {
       setSetupError(err.message || 'Error al validar configuración');
@@ -413,8 +582,10 @@ export default function AdminDashboard({
         const validated = parseSetupValidateResponse(data.validation);
         setSetupStatus((prev) => ({
           sede_id: sid,
-          checklist: validated.checklist.length > 0 ? validated.checklist : (prev?.checklist || []),
+          checklist: validated.checklist,
           checklist_completo: validated.checklist_completo,
+          readiness_level: validated.readiness_level,
+          sections: validated.sections,
           meta: prev?.meta || {},
           next_actions: validated.next_actions,
           status: validated.checklist_completo ? 'complete' : 'incomplete',
@@ -1937,6 +2108,26 @@ export default function AdminDashboard({
         const checklist = setupStatus?.checklist || [];
         const checklistCompleto = setupStatus?.checklist_completo === true;
         const nextActions = setupStatus?.next_actions || [];
+        const sections = setupStatus?.sections || [];
+        const readinessLevel = setupStatus?.readiness_level || null;
+        const readinessConfig = SETUP_READINESS_CONFIG[readinessLevel] || null;
+
+        const renderStatusBadge = (statusLabel) => {
+          const style = setupStatusStyle(statusLabel);
+          return (
+            <span style={{
+              background: style.bg,
+              color: style.color,
+              borderRadius: '12px',
+              padding: '2px 10px',
+              fontSize: '11px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}>
+              {statusLabel}
+            </span>
+          );
+        };
 
         const renderSetupItem = (item, isOverall = false) => {
           const ok = isOverall ? checklistCompleto : item.status === 'ok';
@@ -2011,13 +2202,56 @@ export default function AdminDashboard({
             <div style={{ marginTop: '12px' }}>
               <strong style={{ fontSize: '14px', color: style.color, display: 'block', marginBottom: '6px' }}>{title}</strong>
               <ul style={{ margin: 0, paddingLeft: '20px', color: '#334155', fontSize: '13px', lineHeight: 1.5 }}>
-                {items.map((entry, idx) => (
-                  <li key={`${title}-${idx}`}>{typeof entry === 'string' ? entry : (entry?.label || entry?.key || JSON.stringify(entry))}</li>
-                ))}
+                {items.map((entry, idx) => {
+                  const text = setupHumanText(entry);
+                  return text ? <li key={`${title}-${idx}`}>{text}</li> : null;
+                })}
               </ul>
             </div>
           );
         };
+
+        const renderSetupSectionCard = (section) => (
+          <div
+            key={section.key}
+            style={{
+              background: 'white',
+              borderRadius: '10px',
+              padding: '16px 18px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: section.items.length > 0 ? '12px' : 0 }}>
+              <strong style={{ fontSize: '15px', color: '#1e293b' }}>{section.label}</strong>
+              {renderStatusBadge(section.statusLabel)}
+            </div>
+            {section.items.length > 0 ? (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {section.items.map((item) => (
+                  <div
+                    key={item.key}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: item.detail ? '4px' : 0 }}>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#334155' }}>{item.label}</span>
+                      {renderStatusBadge(item.statusLabel)}
+                    </div>
+                    {item.detail ? (
+                      <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>{item.detail}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sin ítems detallados en esta área.</p>
+            )}
+          </div>
+        );
 
         return (
           <div className="section">
@@ -2036,6 +2270,8 @@ export default function AdminDashboard({
                 color: 'rgba(255,255,255,0.8)',
                 lineHeight: 1.55,
               }}>
+                <p style={{ margin: '0 0 8px' }}>El Setup ayuda a confirmar si una sede está lista para recibir reservas y usar PadCoins correctamente.</p>
+                <p style={{ margin: '0 0 8px' }}>El nivel Lista requiere que la sede esté operativa y que tenga PadCoins, beneficios, campañas y pagos preparados.</p>
                 <p style={{ margin: '0 0 8px' }}>El 5% es el punto de partida recomendado.</p>
                 <p style={{ margin: '0 0 8px' }}>La sede puede ajustar su estrategia de fidelización más adelante.</p>
                 <p style={{ margin: '0 0 8px' }}>PadCoins debe usarse para generar frecuencia, vínculo y participación.</p>
@@ -2131,10 +2367,50 @@ export default function AdminDashboard({
               </p>
             )}
 
+            {effectiveSetupSedeId && !setupLoading && !setupError && readinessConfig && (
+              <div style={{
+                background: readinessConfig.bg,
+                border: `1px solid ${readinessConfig.border}`,
+                borderRadius: '12px',
+                padding: '16px 18px',
+                maxWidth: '720px',
+                marginBottom: '24px',
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '15px', color: readinessConfig.color }}>Nivel de preparación:</strong>
+                  <span style={{
+                    background: 'white',
+                    color: readinessConfig.color,
+                    borderRadius: '12px',
+                    padding: '4px 12px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                  }}>
+                    {readinessConfig.label}
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '13px', color: readinessConfig.color, lineHeight: 1.5 }}>
+                  {readinessConfig.help}
+                </p>
+              </div>
+            )}
+
             {effectiveSetupSedeId && !setupLoading && !setupError && checklist.length > 0 && (
-              <div style={{ display: 'grid', gap: '10px', maxWidth: '720px', marginBottom: '24px' }}>
-                {checklist.map((item) => renderSetupItem(item))}
-                {renderSetupItem(null, true)}
+              <div style={{ maxWidth: '720px', marginBottom: '24px' }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '16px', color: 'rgba(255,255,255,0.95)' }}>Checklist principal</h3>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {checklist.map((item) => renderSetupItem(item))}
+                  {renderSetupItem(null, true)}
+                </div>
+              </div>
+            )}
+
+            {effectiveSetupSedeId && !setupLoading && !setupError && sections.length > 0 && (
+              <div style={{ maxWidth: '720px', marginBottom: '24px' }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '16px', color: 'rgba(255,255,255,0.95)' }}>Detalle por áreas</h3>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {sections.map((section) => renderSetupSectionCard(section))}
+                </div>
               </div>
             )}
 
@@ -2147,11 +2423,12 @@ export default function AdminDashboard({
                 marginBottom: '24px',
                 color: '#334155',
               }}>
-                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Próximas acciones sugeridas</strong>
+                <strong style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Próximas acciones recomendadas</strong>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: 1.5 }}>
-                  {nextActions.map((action, idx) => (
-                    <li key={`action-${idx}`}>{typeof action === 'string' ? action : (action?.label || action?.message || JSON.stringify(action))}</li>
-                  ))}
+                  {nextActions.map((action, idx) => {
+                    const text = setupHumanText(action);
+                    return text ? <li key={`action-${idx}`}>{text}</li> : null;
+                  })}
                 </ul>
               </div>
             )}
