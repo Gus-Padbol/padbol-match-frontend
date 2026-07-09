@@ -291,6 +291,60 @@ const SETUP_SECTION_ORDER = [
   'reglas_operativas',
 ];
 
+const SETUP_LOYALTY_QUALITY_CONFIG = {
+  none: { label: 'Sin beneficios', bg: '#f1f5f9', color: '#64748b' },
+  poor: { label: 'Floja', bg: '#fef2f2', color: '#b91c1c' },
+  partial: { label: 'Parcial', bg: '#fef3c7', color: '#92400e' },
+  good: { label: 'Buena', bg: '#dcfce7', color: '#166534' },
+};
+
+const SETUP_LOYALTY_GOAL_LABELS = {
+  retorno_post_partido: 'retorno post partido',
+  frecuencia: 'frecuencia',
+  participacion: 'participación',
+  vinculo: 'vínculo',
+  vinculo_sede: 'vínculo con la sede',
+};
+
+function setupLoyaltyGoalLabel(goal) {
+  const key = String(goal || '').trim();
+  if (!key) return '—';
+  return SETUP_LOYALTY_GOAL_LABELS[key] || key.replace(/_/g, ' ');
+}
+
+function setupWarningText(warning) {
+  const message = String(warning?.message || '').trim();
+  if (message) return message;
+  const code = String(warning?.code || '').trim();
+  if (code === 'costo_padcoins_alto') return 'Un beneficio tiene un costo en PadCoins demasiado alto.';
+  if (code) return `Alerta: ${code.replace(/_/g, ' ')}`;
+  if (warning?.premio_id != null && warning?.premio_id !== '') {
+    return `Revisar beneficio #${warning.premio_id}`;
+  }
+  return 'Revisar configuración del beneficio.';
+}
+
+function parseSetupBenefitsEvaluation(value) {
+  const summary = value?.evaluation_summary;
+  return {
+    detail: String(value?.detail || '').trim(),
+    recommendations: Array.isArray(value?.recommendations) ? value.recommendations : [],
+    warnings: Array.isArray(value?.warnings) ? value.warnings : [],
+    loyalty_quality: value?.loyalty_quality || null,
+    evaluation_summary: summary && typeof summary === 'object' ? summary : null,
+  };
+}
+
+function setupPadcoinsRangeText(range) {
+  if (!range || typeof range !== 'object') return null;
+  const min = range.min;
+  const max = range.max;
+  if (min != null && max != null) return `${min} a ${max} PadCoins`;
+  if (min != null) return `desde ${min} PadCoins`;
+  if (max != null) return `hasta ${max} PadCoins`;
+  return null;
+}
+
 function setupHumanText(entry) {
   if (!entry) return '';
   if (typeof entry === 'string') return entry.trim();
@@ -347,12 +401,15 @@ function parseSetupSections(raw) {
     }).filter((item) => item.label || item.detail);
 
     const sectionLabel = value?.label || value?.title || SETUP_SECTION_LABELS[sectionKey] || '';
+    const benefitsEvaluation = sectionKey === 'beneficios' ? parseSetupBenefitsEvaluation(value) : null;
     return {
       key: sectionKey,
       label: sectionLabel || (sectionKey ? sectionKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : ''),
       status: value?.status,
       statusLabel: setupStatusLabel(value?.status),
+      detail: String(value?.detail || '').trim(),
       items,
+      benefitsEvaluation,
     };
   };
 
@@ -2211,7 +2268,22 @@ export default function AdminDashboard({
           );
         };
 
-        const renderSetupSectionCard = (section) => (
+        const renderSetupSectionCard = (section) => {
+          const isBeneficios = section.key === 'beneficios';
+          const benefitsEval = section.benefitsEvaluation;
+          const loyaltyConfig = benefitsEval?.loyalty_quality
+            ? SETUP_LOYALTY_QUALITY_CONFIG[benefitsEval.loyalty_quality]
+            : null;
+          const evalSummary = benefitsEval?.evaluation_summary;
+          const hasBenefitsInsights = isBeneficios && benefitsEval && (
+            loyaltyConfig
+            || evalSummary
+            || (benefitsEval.warnings?.length > 0)
+            || (benefitsEval.recommendations?.length > 0)
+            || benefitsEval.detail
+          );
+
+          return (
           <div
             key={section.key}
             style={{
@@ -2221,10 +2293,157 @@ export default function AdminDashboard({
               boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: section.items.length > 0 ? '12px' : 0 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
               <strong style={{ fontSize: '15px', color: '#1e293b' }}>{section.label}</strong>
               {renderStatusBadge(section.statusLabel)}
             </div>
+
+            {(section.detail || benefitsEval?.detail) && (
+              <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>
+                {benefitsEval?.detail || section.detail}
+              </p>
+            )}
+
+            {hasBenefitsInsights ? (
+              <div style={{ display: 'grid', gap: '14px', marginBottom: section.items.length > 0 ? '14px' : 0 }}>
+                {loyaltyConfig ? (
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: loyaltyConfig.bg,
+                    border: `1px solid ${loyaltyConfig.color}22`,
+                  }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <strong style={{ fontSize: '14px', color: '#334155' }}>Calidad de fidelización:</strong>
+                      <span style={{
+                        background: 'white',
+                        color: loyaltyConfig.color,
+                        borderRadius: '12px',
+                        padding: '2px 10px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                      }}>
+                        {loyaltyConfig.label}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.45 }}>
+                      La calidad de fidelización indica si los beneficios ayudan a que el jugador vuelva, participe y se vincule más con la sede.
+                    </p>
+                  </div>
+                ) : null}
+
+                {evalSummary ? (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '10px',
+                  }}>
+                    {[
+                      { label: 'Beneficios cargados', value: evalSummary.count },
+                      { label: 'Beneficios fuertes', value: evalSummary.strong_count },
+                      { label: 'Beneficios débiles', value: evalSummary.weak_count },
+                    ].map((stat) => (
+                      <div
+                        key={stat.label}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>{stat.label}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b' }}>
+                          {stat.value != null ? stat.value : '—'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                <p style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: '#475569',
+                  lineHeight: 1.45,
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  PadCoins funciona mejor cuando los beneficios ayudan a generar frecuencia, vínculo y participación. No conviene cargar beneficios solo como productos aislados.
+                </p>
+
+                {benefitsEval.warnings?.length > 0 ? (
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                  }}>
+                    <strong style={{ display: 'block', fontSize: '14px', color: '#b91c1c', marginBottom: '8px' }}>
+                      Alertas de beneficios
+                    </strong>
+                    <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5 }}>
+                      {benefitsEval.warnings.map((warning, idx) => {
+                        const text = setupWarningText(warning);
+                        return text ? <li key={`warn-${idx}`}>{text}</li> : null;
+                      })}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {benefitsEval.recommendations?.length > 0 ? (
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '10px' }}>
+                      Beneficios recomendados
+                    </strong>
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                      {benefitsEval.recommendations.map((rec, idx) => {
+                        const name = String(rec?.name || '').trim();
+                        const why = String(rec?.why || '').trim();
+                        const rangeText = setupPadcoinsRangeText(rec?.suggested_padcoins_range);
+                        const goal = setupLoyaltyGoalLabel(rec?.loyalty_goal);
+                        if (!name && !why && !rangeText) return null;
+                        return (
+                          <div
+                            key={`rec-${idx}`}
+                            style={{
+                              padding: '12px 14px',
+                              borderRadius: '8px',
+                              background: '#f0fdf4',
+                              border: '1px solid #bbf7d0',
+                            }}
+                          >
+                            {name ? (
+                              <strong style={{ display: 'block', fontSize: '14px', color: '#166534', marginBottom: '6px' }}>
+                                {name}
+                              </strong>
+                            ) : null}
+                            {rec?.loyalty_goal ? (
+                              <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#334155' }}>
+                                <strong>Objetivo:</strong> {goal}
+                              </p>
+                            ) : null}
+                            {rangeText ? (
+                              <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#334155' }}>
+                                <strong>Rango sugerido:</strong> {rangeText}
+                              </p>
+                            ) : null}
+                            {why ? (
+                              <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.45 }}>
+                                <strong>Por qué sirve:</strong> {why}
+                              </p>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {section.items.length > 0 ? (
               <div style={{ display: 'grid', gap: '10px' }}>
                 {section.items.map((item) => (
@@ -2247,11 +2466,12 @@ export default function AdminDashboard({
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : !hasBenefitsInsights ? (
               <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sin ítems detallados en esta área.</p>
-            )}
+            ) : null}
           </div>
-        );
+          );
+        };
 
         return (
           <div className="section">
