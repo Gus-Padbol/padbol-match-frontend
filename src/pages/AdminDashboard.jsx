@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './AdminDashboard.css';
 import { supabase } from '../supabaseClient';
@@ -661,6 +661,10 @@ export default function AdminDashboard({
   const [activeTab, setActiveTab] = useState(
     searchParams.get('tab') || sessionStorage.getItem('adminActiveTab') || 'resumen'
   );
+  const [miSedeActiveSection, setMiSedeActiveSection] = useState(
+    () => sessionStorage.getItem('adminMiSedeSection') || 'licencia'
+  );
+  const adminMainRef = useRef(null);
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -975,6 +979,23 @@ export default function AdminDashboard({
     }
     fetchPremios();
   }, [activeTab, pcSedeId, sedeId, apiBaseUrl, esAdminClub, isSuperAdmin, esAdminNacional]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (activeTab !== 'mi_sede') return;
+    const allowedIds = [
+      'licencia',
+      'info',
+      'precios',
+      ...(esAdminClub || isSuperAdmin ? ['mercadopago'] : []),
+      'redes',
+      'canchas',
+      'fotos',
+    ];
+    if (!allowedIds.includes(miSedeActiveSection)) {
+      setMiSedeActiveSection('licencia');
+      sessionStorage.setItem('adminMiSedeSection', 'licencia');
+    }
+  }, [activeTab, miSedeActiveSection, esAdminClub, isSuperAdmin]);
 
   useEffect(() => {
     console.log('[AdminDashboard] fetchData triggered — rol:', rol, 'sedeId:', sedeId);
@@ -1576,6 +1597,35 @@ export default function AdminDashboard({
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
 
+  const MI_SEDE_SECTIONS = [
+    { id: 'licencia', label: 'Licencia PADBOL' },
+    { id: 'info', label: 'Información general' },
+    { id: 'precios', label: 'Precios' },
+    ...(esAdminClub || isSuperAdmin ? [{ id: 'mercadopago', label: 'Mercado Pago' }] : []),
+    { id: 'redes', label: 'Redes sociales' },
+    { id: 'canchas', label: 'Canchas' },
+    { id: 'fotos', label: 'Fotos' },
+  ];
+
+  const resetAdminPanelScroll = () => {
+    if (adminMainRef.current) adminMainRef.current.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
+
+  const selectAdminTab = (tabId) => {
+    setActiveTab(tabId);
+    sessionStorage.setItem('adminActiveTab', tabId);
+    resetAdminPanelScroll();
+  };
+
+  const selectMiSedeSection = (sectionId) => {
+    setActiveTab('mi_sede');
+    sessionStorage.setItem('adminActiveTab', 'mi_sede');
+    setMiSedeActiveSection(sectionId);
+    sessionStorage.setItem('adminMiSedeSection', sectionId);
+    resetAdminPanelScroll();
+  };
+
   const TABS = [
     { id: 'resumen',      label: '📊 Resumen' },
     { id: 'torneos',      label: '🏆 Torneos' },
@@ -1626,55 +1676,45 @@ export default function AdminDashboard({
         </div>
       </div>
 
-      {/* Tab navigation */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid rgba(255,255,255,0.3)', paddingBottom: '0' }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); sessionStorage.setItem('adminActiveTab', tab.id); }}
-            style={{
-              position: 'relative',
-              padding: '10px 18px',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '3px solid white' : '3px solid transparent',
-              background: 'none',
-              cursor: 'pointer',
-              fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-              color: activeTab === tab.id ? 'white' : 'rgba(255,255,255,0.7)',
-              fontSize: '14px',
-              marginBottom: '-2px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {tab.label}
-            {tab.badge > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '4px',
-                right: '4px',
-                background: '#d32f2f',
-                color: 'white',
-                borderRadius: '50%',
-                width: '18px',
-                height: '18px',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <div className="admin-shell">
+        <aside className="admin-sidebar" aria-label="Navegación del panel admin">
+          <nav className="admin-sidebar-nav">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`admin-sidebar-btn${activeTab === tab.id ? ' admin-sidebar-btn--active' : ''}`}
+                onClick={() => selectAdminTab(tab.id)}
+              >
+                <span className="admin-sidebar-btn-label">{tab.label}</span>
+                {tab.badge > 0 ? (
+                  <span className="admin-sidebar-badge">{tab.badge}</span>
+                ) : null}
+              </button>
+            ))}
+            {puedeVerMiSede && activeTab === 'mi_sede' ? (
+              <div className="admin-sidebar-sub" aria-label="Secciones de Mi Sede">
+                {MI_SEDE_SECTIONS.map((section) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    className={`admin-sidebar-sub-btn${miSedeActiveSection === section.id ? ' admin-sidebar-sub-btn--active' : ''}`}
+                    onClick={() => selectMiSedeSection(section.id)}
+                  >
+                    {section.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </nav>
+        </aside>
 
-      {mensajeExito && (
-        <div style={{ background: '#4caf50', color: 'white', padding: '15px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
-          {mensajeExito}
-        </div>
-      )}
+        <main className="admin-main" ref={adminMainRef}>
+          {mensajeExito && (
+            <div style={{ background: '#4caf50', color: 'white', padding: '15px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
+              {mensajeExito}
+            </div>
+          )}
 
       {activeTab === 'resumen' && <>
         {esAdminClub && sedeStatus && (() => {
@@ -3704,6 +3744,9 @@ export default function AdminDashboard({
       {/* ── Mi Sede tab ── */}
       {activeTab === 'mi_sede' && puedeVerMiSede && <div className="section">
         <h2>🏟️ Mi Sede</h2>
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '13px', marginTop: '-8px', marginBottom: '20px' }}>
+          {MI_SEDE_SECTIONS.find((s) => s.id === miSedeActiveSection)?.label || 'Sección'}
+        </p>
 
         {miSedeLoading ? (
           <p style={{ color: '#999' }}>Cargando datos de la sede...</p>
@@ -3711,7 +3754,7 @@ export default function AdminDashboard({
           <p style={{ color: '#f87171' }}>No se encontró información de la sede.</p>
         ) : (<>
 
-          {/* ── 0. Licencia PADBOL ── */}
+          {miSedeActiveSection === 'licencia' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>🔐 Licencia PADBOL</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
@@ -3790,8 +3833,9 @@ export default function AdminDashboard({
               )}
             </div>
           </div>
+          )}
 
-          {/* ── 1. Info General ── */}
+          {miSedeActiveSection === 'info' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Información General</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
@@ -3858,8 +3902,9 @@ export default function AdminDashboard({
               </div>
             </div>
           </div>
+          )}
 
-          {/* ── 2. Precios ── */}
+          {miSedeActiveSection === 'precios' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Precios</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '400px' }}>
@@ -3919,9 +3964,9 @@ export default function AdminDashboard({
               </button>
             </div>
           </div>
+          )}
 
-          {/* ── 3. Mercado Pago ── */}
-          {(esAdminClub || isSuperAdmin) && (
+          {miSedeActiveSection === 'mercadopago' && (esAdminClub || isSuperAdmin) && (
             <div style={{ marginBottom: '32px' }}>
               <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>💳 Mercado Pago</h3>
               <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
@@ -3946,7 +3991,7 @@ export default function AdminDashboard({
             </div>
           )}
 
-          {/* ── 4. Redes Sociales ── */}
+          {miSedeActiveSection === 'redes' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>📱 Redes Sociales</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
@@ -3978,8 +4023,9 @@ export default function AdminDashboard({
               </button>
             </div>
           </div>
+          )}
 
-          {/* ── 5. Canchas ── */}
+          {miSedeActiveSection === 'canchas' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Canchas</h3>
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
@@ -4031,11 +4077,12 @@ export default function AdminDashboard({
               </div>
             </div>
           </div>
+          )}
 
         </>)}
 
-        {/* ── 4. Fotos ── always visible when tab is active */}
-        {!miSedeLoading && <div style={{ marginBottom: '32px' }}>
+        {miSedeActiveSection === 'fotos' && !miSedeLoading && (
+        <div style={{ marginBottom: '32px' }}>
           <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>📸 Fotos</h3>
 
           {/* Logo */}
@@ -4134,9 +4181,13 @@ export default function AdminDashboard({
             {fotosMsg && <p style={{ margin: '12px 0 0', fontSize: '13px', fontWeight: 600, color: fotosMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{fotosMsg}</p>}
             <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#9ca3af' }}>JPG, PNG o WEBP · máx. 2MB por foto</p>
           </div>
-        </div>}
+        </div>
+        )}
 
       </div>}
+
+        </main>
+      </div>
 
     </div>
   );
