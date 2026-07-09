@@ -430,6 +430,83 @@ function parseSetupPadcoinsPolicy(value) {
   };
 }
 
+const SETUP_EARNING_SOURCES_DEFAULT_MESSAGE = 'PadCoins puede generarse por distintas acciones del ecosistema. Las reservas son una fuente actual, pero el sistema está preparado para sumar torneos, partidos, invitaciones, reseñas, perfil, e-shop, campañas y retención.';
+
+const SETUP_CALCULATION_TYPE_LABELS = {
+  percentage: 'Porcentaje',
+  fixed: 'Monto fijo',
+  per_action: 'Por acción',
+  rule_based: 'Por regla',
+  reservation_percentage: 'Porcentaje de reserva',
+  loyalty_return: 'Devolución de fidelización',
+  campaign_bonus: 'Bono de campaña',
+  retention_bonus: 'Bono de retención',
+};
+
+function setupCalculationTypeLabel(type) {
+  const key = String(type || '').trim().toLowerCase();
+  if (!key) return null;
+  return SETUP_CALCULATION_TYPE_LABELS[key] || key.replace(/_/g, ' ');
+}
+
+function setupCategoryLabel(category) {
+  const key = String(category || '').trim();
+  if (!key) return null;
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeEarningSource(row, idx, status) {
+  const label = String(row?.label || row?.name || row?.title || '').trim();
+  const description = String(row?.description || row?.detail || '').trim();
+  return {
+    key: row?.key || row?.id || row?.source_key || `${status}-${idx}`,
+    label: label || description,
+    description: label && description && description !== label ? description : '',
+    category: setupCategoryLabel(row?.category),
+    calculationType: setupCalculationTypeLabel(row?.calculation_type),
+    editableBySede: row?.editable_by_sede === true
+      ? 'Editable por sede'
+      : row?.editable_by_sede === false
+        ? 'Global'
+        : null,
+  };
+}
+
+function parseSetupEarningSources(value) {
+  if (!value || typeof value !== 'object') return null;
+  const active = Array.isArray(value?.earning_sources_active) ? value.earning_sources_active : [];
+  const planned = Array.isArray(value?.earning_sources_planned) ? value.earning_sources_planned : [];
+  const future = Array.isArray(value?.earning_sources_future) ? value.earning_sources_future : [];
+  const summaryRaw = value?.earning_sources_summary;
+  const message = String(value?.earning_sources_message || '').trim();
+  const hasSources = message
+    || active.length > 0
+    || planned.length > 0
+    || future.length > 0
+    || summaryRaw;
+  if (!hasSources) return null;
+
+  const summary = summaryRaw && typeof summaryRaw === 'object'
+    ? {
+      active: summaryRaw.active ?? summaryRaw.activas ?? summaryRaw.active_count ?? active.length,
+      planned: summaryRaw.planned ?? summaryRaw.planificadas ?? summaryRaw.planned_count ?? planned.length,
+      future: summaryRaw.future ?? summaryRaw.futuras ?? summaryRaw.future_count ?? future.length,
+    }
+    : {
+      active: active.length,
+      planned: planned.length,
+      future: future.length,
+    };
+
+  return {
+    message,
+    summary,
+    active: active.map((row, idx) => normalizeEarningSource(row, idx, 'active')).filter((row) => row.label),
+    planned: planned.map((row, idx) => normalizeEarningSource(row, idx, 'planned')).filter((row) => row.label),
+    future: future.map((row, idx) => normalizeEarningSource(row, idx, 'future')).filter((row) => row.label),
+  };
+}
+
 function setupHumanText(entry) {
   if (!entry) return '';
   if (typeof entry === 'string') return entry.trim();
@@ -490,6 +567,7 @@ function parseSetupSections(raw) {
     const padcoinsPolicy = (sectionKey === 'padcoins' || sectionKey === 'beneficios')
       ? parseSetupPadcoinsPolicy(value)
       : null;
+    const earningSources = sectionKey === 'padcoins' ? parseSetupEarningSources(value) : null;
     return {
       key: sectionKey,
       label: sectionLabel || (sectionKey ? sectionKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : ''),
@@ -499,6 +577,7 @@ function parseSetupSections(raw) {
       items,
       benefitsEvaluation,
       padcoinsPolicy,
+      earningSources,
     };
   };
 
@@ -2362,6 +2441,7 @@ export default function AdminDashboard({
           const isPadcoins = section.key === 'padcoins';
           const benefitsEval = section.benefitsEvaluation;
           const policy = section.padcoinsPolicy;
+          const earningSources = section.earningSources;
           const loyaltyConfig = benefitsEval?.loyalty_quality
             ? SETUP_LOYALTY_QUALITY_CONFIG[benefitsEval.loyalty_quality]
             : null;
@@ -2383,7 +2463,122 @@ export default function AdminDashboard({
             || benefitsEval.detail
           );
           const hasBenefitsPolicyExtras = isBeneficios && (hasCalculator || hasPolicyWarnings || hasPolicyActions || hasPolicyCore);
-          const hasSectionInsights = hasBenefitsInsights || hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras;
+          const hasEarningSourcesBlock = isPadcoins && !!earningSources;
+          const hasSectionInsights = hasBenefitsInsights || hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras || hasEarningSourcesBlock;
+
+          const renderEarningSourceCard = (source) => (
+            <div
+              key={source.key}
+              style={{
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: source.description ? '4px' : 0 }}>
+                <strong style={{ fontSize: '14px', color: '#1e293b' }}>{source.label}</strong>
+                {source.editableBySede ? (
+                  <span style={{
+                    background: '#eef2ff',
+                    color: '#4338ca',
+                    borderRadius: '12px',
+                    padding: '2px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                  }}>
+                    {source.editableBySede}
+                  </span>
+                ) : null}
+              </div>
+              {source.description ? (
+                <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#64748b', lineHeight: 1.45 }}>{source.description}</p>
+              ) : null}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '12px', color: '#475569' }}>
+                {source.category ? <span><strong>Categoría:</strong> {source.category}</span> : null}
+                {source.calculationType ? <span><strong>Cálculo:</strong> {source.calculationType}</span> : null}
+              </div>
+            </div>
+          );
+
+          const renderEarningSourcesList = (title, sources) => {
+            if (!sources?.length) return null;
+            return (
+              <div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '8px' }}>{title}</strong>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {sources.map((source) => renderEarningSourceCard(source))}
+                </div>
+              </div>
+            );
+          };
+
+          const renderEarningSourcesBlock = () => {
+            if (!earningSources) return null;
+            const displayMessage = earningSources.message || SETUP_EARNING_SOURCES_DEFAULT_MESSAGE;
+            return (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: '#f5f3ff',
+                border: '1px solid #ddd6fe',
+              }}>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#5b21b6', marginBottom: '10px' }}>
+                  Fuentes de generación PadCoins
+                </strong>
+                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#4c1d95', lineHeight: 1.5 }}>
+                  {displayMessage}
+                </p>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                  gap: '10px',
+                  marginBottom: '14px',
+                }}>
+                  {[
+                    { label: 'Activas', value: earningSources.summary?.active },
+                    { label: 'Planificadas', value: earningSources.summary?.planned },
+                    { label: 'Futuras', value: earningSources.summary?.future },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        background: 'white',
+                        border: '1px solid #e9d5ff',
+                      }}
+                    >
+                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>{stat.label}</div>
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b' }}>
+                        {stat.value != null ? stat.value : '—'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gap: '14px', marginBottom: '12px' }}>
+                  {renderEarningSourcesList('Fuentes activas', earningSources.active)}
+                  {renderEarningSourcesList('Fuentes planificadas', earningSources.planned)}
+                  {renderEarningSourcesList('Fuentes futuras', earningSources.future)}
+                </div>
+
+                <p style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: '#5b21b6',
+                  lineHeight: 1.45,
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: 'white',
+                  border: '1px solid #e9d5ff',
+                }}>
+                  Esta pantalla no significa que todas las fuentes ya estén activas para el jugador. Algunas están planificadas o preparadas para futuras etapas.
+                </p>
+              </div>
+            );
+          };
 
           const renderPolicyBlock = () => {
             if (!hasPolicyCore) return null;
@@ -2560,9 +2755,10 @@ export default function AdminDashboard({
               </p>
             )}
 
-            {(hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras) ? (
+            {(hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras || hasEarningSourcesBlock) ? (
               <div style={{ display: 'grid', gap: '14px', marginBottom: (hasBenefitsInsights || section.items.length > 0) ? '14px' : 0 }}>
                 {(isPadcoins || (isBeneficios && hasPolicyCore)) ? renderPolicyBlock() : null}
+                {hasEarningSourcesBlock ? renderEarningSourcesBlock() : null}
                 {isBeneficios ? renderCalculatorBlock() : null}
                 {renderPolicyWarningsBlock()}
                 {renderPolicyActionsBlock()}
