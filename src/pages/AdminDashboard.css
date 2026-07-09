@@ -320,6 +320,30 @@
   color: #312e81;
 }
 
+/* Sponsors informativo — Mi Sede / Info (MEJ-03) */
+.admin-mi-sede-sponsor-info {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-shadow: none;
+  cursor: default;
+}
+
+.admin-mi-sede-sponsor-info__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #64748b;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .admin-dashboard {
     padding: 16px;

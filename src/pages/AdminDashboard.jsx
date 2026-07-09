@@ -6,7 +6,14 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants
 import { createPartido, getAuthHeaders } from '../utils/scoreboardApi';
 import { useSafeTranslation } from '../i18n/tSafe';
 import PadcoinsCampaignsAdminSection from '../components/PadcoinsCampaignsAdminSection';
+import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
+import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
+import {
+  DEFAULT_SPONSOR_CUPOS,
+  maxPorSedeSegunNombrePlan,
+  resolveSedeCommercialPlanNombre,
+} from '../utils/sponsorQuotaShared';
 import {
   RESERVA_DURACIONES_MIN,
   parsePrecioDuracionField,
@@ -1007,6 +1014,7 @@ export default function AdminDashboard({
       'redes',
       'canchas',
       'fotos',
+      ...(esAdminClub || isSuperAdmin ? ['extras', 'resenas'] : []),
     ];
     if (!allowedIds.includes(miSedeActiveSection)) {
       setMiSedeActiveSection('licencia');
@@ -1405,6 +1413,25 @@ export default function AdminDashboard({
   const [franjasSaving, setFranjasSaving] = useState(false);
   const [franjasMsg, setFranjasMsg] = useState('');
   const [franjasOverlapMsg, setFranjasOverlapMsg] = useState('');
+  const [accessToken, setAccessToken] = useState(null);
+  const [miSedeSponsorSlots, setMiSedeSponsorSlots] = useState({
+    loading: false,
+    used: 0,
+    max: 0,
+    planLabel: '',
+    usedConfigFallback: false,
+    error: null,
+  });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAccessToken(session?.access_token || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAccessToken(session?.access_token || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!franjasHorarias.length) {
@@ -1414,6 +1441,96 @@ export default function AdminDashboard({
     const overlap = detectFranjasHorariasOverlap(franjasHorarias);
     setFranjasOverlapMsg(overlap.hasOverlap ? overlap.message : '');
   }, [franjasHorarias]);
+
+  useEffect(() => {
+    if (activeTab !== 'mi_sede' || !sedeId || !miSede) {
+      setMiSedeSponsorSlots((p) => ({ ...p, loading: false }));
+      return;
+    }
+    if (!puedeVerMiSede) {
+      setMiSedeSponsorSlots((p) => ({ ...p, loading: false }));
+      return;
+    }
+
+    let cancelled = false;
+    setMiSedeSponsorSlots((p) => ({ ...p, loading: true, error: null, usedConfigFallback: false }));
+
+    (async () => {
+      try {
+        const [cfgRes, plansRes, spRes] = await Promise.all([
+          supabase
+            .from('sponsor_config')
+            .select('max_por_sede_starter, max_por_sede_pro, max_por_sede_elite')
+            .eq('id', 1)
+            .maybeSingle(),
+          supabase
+            .from('plan_pricing')
+            .select('nombre, canchas_min, canchas_max')
+            .eq('activo', true)
+            .order('canchas_min', { ascending: true }),
+          supabase
+            .from('sponsors')
+            .select('id')
+            .eq('scope', 'sede')
+            .eq('sede_id', Number(sedeId))
+            .eq('activo', true)
+            .eq('aprobado', true),
+        ]);
+        if (cancelled) return;
+
+        const usedConfigFallback = Boolean(cfgRes.error) || !cfgRes.data;
+        const base = { ...DEFAULT_SPONSOR_CUPOS };
+        if (cfgRes.data) {
+          base.max_por_sede_starter =
+            Number(cfgRes.data.max_por_sede_starter) || DEFAULT_SPONSOR_CUPOS.max_por_sede_starter;
+          base.max_por_sede_pro = Number(cfgRes.data.max_por_sede_pro) || DEFAULT_SPONSOR_CUPOS.max_por_sede_pro;
+          base.max_por_sede_elite =
+            Number(cfgRes.data.max_por_sede_elite) || DEFAULT_SPONSOR_CUPOS.max_por_sede_elite;
+        }
+
+        const plans = !plansRes.error && Array.isArray(plansRes.data) ? plansRes.data : [];
+        const planLabel = resolveSedeCommercialPlanNombre(miSede, plans);
+        const max = Math.max(0, maxPorSedeSegunNombrePlan(planLabel, base));
+        const used = Array.isArray(spRes.data) ? spRes.data.length : 0;
+
+        if (spRes.error) {
+          setMiSedeSponsorSlots({
+            loading: false,
+            used: 0,
+            max: 0,
+            planLabel: '',
+            usedConfigFallback,
+            error: spRes.error.message || String(spRes.error),
+          });
+          return;
+        }
+
+        setMiSedeSponsorSlots({
+          loading: false,
+          used,
+          max,
+          planLabel,
+          usedConfigFallback,
+          error: null,
+        });
+      } catch (e) {
+        if (!cancelled) {
+          setMiSedeSponsorSlots({
+            loading: false,
+            used: 0,
+            max: 0,
+            planLabel: '',
+            usedConfigFallback: true,
+            error: e?.message || String(e),
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, sedeId, miSede, puedeVerMiSede]);
 
   useEffect(() => {
     if (activeTab !== 'mi_sede' || !sedeId) return;
@@ -1674,6 +1791,10 @@ export default function AdminDashboard({
     { id: 'redes', label: 'Redes sociales' },
     { id: 'canchas', label: 'Canchas' },
     { id: 'fotos', label: 'Fotos' },
+    ...(esAdminClub || isSuperAdmin ? [
+      { id: 'extras', label: 'Extras del tercer tiempo' },
+      { id: 'resenas', label: 'Reseñas' },
+    ] : []),
   ];
 
   const resetAdminPanelScroll = () => {
@@ -3907,6 +4028,40 @@ export default function AdminDashboard({
           {miSedeActiveSection === 'info' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Información General</h3>
+            {(esAdminClub || isSuperAdmin) && (
+              <div className="admin-mi-sede-sponsor-info" style={{ maxWidth: '560px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: '#64748b', letterSpacing: '0.02em' }}>
+                      Sponsors de la sede
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8', lineHeight: 1.45 }}>
+                      Información de cupos según plan. No es un acceso de gestión.
+                    </p>
+                  </div>
+                  <span className="admin-mi-sede-sponsor-info__badge">Solo lectura</span>
+                </div>
+                {miSedeSponsorSlots.loading ? (
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>Cargando cupos…</p>
+                ) : miSedeSponsorSlots.error ? (
+                  <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#b91c1c', lineHeight: 1.45 }}>
+                    No se pudieron leer los cupos de sponsors. {miSedeSponsorSlots.error}
+                  </p>
+                ) : (
+                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#475569', lineHeight: 1.45 }}>
+                    📢 {miSedeSponsorSlots.used} de {miSedeSponsorSlots.max} slots usados
+                    ({Math.max(0, miSedeSponsorSlots.max - miSedeSponsorSlots.used)} disponible
+                    {Math.max(0, miSedeSponsorSlots.max - miSedeSponsorSlots.used) === 1 ? '' : 's'}).
+                    Plan considerado: <strong>{miSedeSponsorSlots.planLabel || 'Starter'}</strong>.
+                  </p>
+                )}
+                <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#94a3b8', lineHeight: 1.45 }}>
+                  La gestión de sponsors (alta, edición y publicación) está disponible según plan.
+                  Consultá actualización del plan con Padbol Match.
+                  {miSedeSponsorSlots.usedConfigFallback ? ' Se muestran límites por defecto hasta leer la configuración global.' : ''}
+                </p>
+              </div>
+            )}
             <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '560px' }}>
               {[
                 { label: 'Nombre del club',        field: 'nombre' },
@@ -4513,6 +4668,36 @@ export default function AdminDashboard({
           )}
 
         </>)}
+
+          )}
+
+          {miSedeActiveSection === 'extras' && (esAdminClub || isSuperAdmin) && (
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Extras del tercer tiempo</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '640px' }}>
+              <AdminSedeExtrasSection
+                apiBaseUrl={apiBaseUrl}
+                accessToken={accessToken}
+                sedeId={sedeId}
+                monedaSede={String(miSedeForm.moneda || miSede?.moneda || 'ARS').trim().toUpperCase().slice(0, 8) || 'ARS'}
+                isSuperAdmin={isSuperAdmin}
+              />
+            </div>
+          </div>
+          )}
+
+          {miSedeActiveSection === 'resenas' && (esAdminClub || isSuperAdmin) && (
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Reseñas</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '640px' }}>
+              <AdminSedeResenasSection
+                apiBaseUrl={apiBaseUrl}
+                accessToken={accessToken}
+                sedeId={sedeId}
+              />
+            </div>
+          </div>
+          )}
 
         {miSedeActiveSection === 'fotos' && !miSedeLoading && (
         <div style={{ marginBottom: '32px' }}>
