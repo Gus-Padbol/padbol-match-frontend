@@ -345,6 +345,91 @@ function setupPadcoinsRangeText(range) {
   return null;
 }
 
+const SETUP_REACHABILITY_LABELS = {
+  muy_facil: 'Muy fácil',
+  buena: 'Buena',
+  aspiracional: 'Aspiracional',
+  demasiado_lejano: 'Demasiado lejano',
+};
+
+const SETUP_REACHABILITY_STYLES = {
+  muy_facil: { bg: '#fef3c7', color: '#92400e' },
+  buena: { bg: '#dcfce7', color: '#166534' },
+  aspiracional: { bg: '#dbeafe', color: '#1d4ed8' },
+  demasiado_lejano: { bg: '#fef2f2', color: '#b91c1c' },
+};
+
+function setupReachabilityLabel(zone) {
+  const key = String(zone || '').trim().toLowerCase();
+  if (!key) return '—';
+  return SETUP_REACHABILITY_LABELS[key] || key.replace(/_/g, ' ');
+}
+
+function setupReachabilityStyle(zone) {
+  const key = String(zone || '').trim().toLowerCase();
+  return SETUP_REACHABILITY_STYLES[key] || { bg: '#f1f5f9', color: '#64748b' };
+}
+
+function setupConversionRateText(rate) {
+  if (!rate) return '100 PadCoins = 1 unidad interna';
+  if (typeof rate === 'object') {
+    const padcoins = rate.padcoins ?? rate.from ?? rate.padcoins_per_unit ?? 100;
+    const units = rate.units ?? rate.to ?? rate.internal_units ?? 1;
+    const unitLabel = units === 1 ? 'unidad interna' : 'unidades internas';
+    return `${padcoins} PadCoins = ${units} ${unitLabel}`;
+  }
+  return '100 PadCoins = 1 unidad interna';
+}
+
+function setupPolicyWarningText(warning) {
+  const message = String(warning?.message || warning?.text || '').trim();
+  if (message) return message;
+  const code = String(warning?.code || '').trim();
+  if (code) return `Alerta de política: ${code.replace(/_/g, ' ')}`;
+  return setupHumanText(warning);
+}
+
+function normalizeCalculatorExample(row, idx) {
+  const reachability = row?.reachability
+    || row?.reachability_zone
+    || row?.alcanceabilidad
+    || row?.zone
+    || row?.reachability?.zone;
+  return {
+    key: row?.key || row?.id || row?.premio_id || `calc-${idx}`,
+    benefit: String(row?.beneficio || row?.benefit || row?.name || row?.benefit_name || '').trim() || '—',
+    referenceValue: row?.valor_referencia ?? row?.reference_value ?? row?.valor ?? '—',
+    padcoinsRequired: row?.padcoins_requeridos ?? row?.padcoins_required ?? row?.required_padcoins ?? row?.costo_padcoins ?? '—',
+    padcoinsPerReservation: row?.padcoins_estimados_por_reserva ?? row?.estimated_padcoins_per_reservation ?? row?.padcoins_por_reserva ?? '—',
+    approximateReservations: row?.reservas_aproximadas ?? row?.approximate_reservations ?? row?.reservas ?? '—',
+    reachability,
+    reachabilityLabel: setupReachabilityLabel(reachability),
+    reservationMetrics: row?.reservation_metrics || null,
+  };
+}
+
+function parseSetupPadcoinsPolicy(value) {
+  if (!value || typeof value !== 'object') return null;
+  const examples = Array.isArray(value?.calculator_examples) ? value.calculator_examples : [];
+  const warnings = Array.isArray(value?.loyalty_policy_warnings) ? value.loyalty_policy_warnings : [];
+  const nextActions = Array.isArray(value?.loyalty_policy_next_actions) ? value.loyalty_policy_next_actions : [];
+  const hasPolicy = value?.minimum_loyalty_percentage != null
+    || value?.current_loyalty_percentage != null
+    || value?.conversion_rate != null
+    || examples.length > 0
+    || warnings.length > 0
+    || nextActions.length > 0;
+  if (!hasPolicy) return null;
+  return {
+    minimum_loyalty_percentage: value?.minimum_loyalty_percentage ?? 5,
+    current_loyalty_percentage: value?.current_loyalty_percentage ?? null,
+    conversion_rate: value?.conversion_rate ?? null,
+    calculator_examples: examples.map(normalizeCalculatorExample),
+    loyalty_policy_warnings: warnings,
+    loyalty_policy_next_actions: nextActions,
+  };
+}
+
 function setupHumanText(entry) {
   if (!entry) return '';
   if (typeof entry === 'string') return entry.trim();
@@ -402,6 +487,9 @@ function parseSetupSections(raw) {
 
     const sectionLabel = value?.label || value?.title || SETUP_SECTION_LABELS[sectionKey] || '';
     const benefitsEvaluation = sectionKey === 'beneficios' ? parseSetupBenefitsEvaluation(value) : null;
+    const padcoinsPolicy = (sectionKey === 'padcoins' || sectionKey === 'beneficios')
+      ? parseSetupPadcoinsPolicy(value)
+      : null;
     return {
       key: sectionKey,
       label: sectionLabel || (sectionKey ? sectionKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : ''),
@@ -410,6 +498,7 @@ function parseSetupSections(raw) {
       detail: String(value?.detail || '').trim(),
       items,
       benefitsEvaluation,
+      padcoinsPolicy,
     };
   };
 
@@ -2270,11 +2359,22 @@ export default function AdminDashboard({
 
         const renderSetupSectionCard = (section) => {
           const isBeneficios = section.key === 'beneficios';
+          const isPadcoins = section.key === 'padcoins';
           const benefitsEval = section.benefitsEvaluation;
+          const policy = section.padcoinsPolicy;
           const loyaltyConfig = benefitsEval?.loyalty_quality
             ? SETUP_LOYALTY_QUALITY_CONFIG[benefitsEval.loyalty_quality]
             : null;
           const evalSummary = benefitsEval?.evaluation_summary;
+          const hasPolicyCore = policy && (
+            policy.minimum_loyalty_percentage != null
+            || policy.current_loyalty_percentage != null
+            || policy.conversion_rate != null
+          );
+          const hasCalculator = policy?.calculator_examples?.length > 0;
+          const hasPolicyWarnings = policy?.loyalty_policy_warnings?.length > 0;
+          const hasPolicyActions = policy?.loyalty_policy_next_actions?.length > 0;
+          const hasPadcoinsPolicyBlock = isPadcoins && (hasPolicyCore || hasPolicyWarnings || hasPolicyActions);
           const hasBenefitsInsights = isBeneficios && benefitsEval && (
             loyaltyConfig
             || evalSummary
@@ -2282,6 +2382,162 @@ export default function AdminDashboard({
             || (benefitsEval.recommendations?.length > 0)
             || benefitsEval.detail
           );
+          const hasBenefitsPolicyExtras = isBeneficios && (hasCalculator || hasPolicyWarnings || hasPolicyActions || hasPolicyCore);
+          const hasSectionInsights = hasBenefitsInsights || hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras;
+
+          const renderPolicyBlock = () => {
+            if (!hasPolicyCore) return null;
+            const minPct = policy.minimum_loyalty_percentage ?? 5;
+            const currentPct = policy.current_loyalty_percentage;
+            return (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+              }}>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#1e3a8a', marginBottom: '10px' }}>
+                  Política PadCoins
+                </strong>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: '10px',
+                  marginBottom: '10px',
+                }}>
+                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'white', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Porcentaje mínimo</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>{minPct}%</div>
+                  </div>
+                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'white', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Porcentaje actual de la sede</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>
+                      {currentPct != null ? `${currentPct}%` : '—'}
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'white', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Conversión global</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b', lineHeight: 1.4 }}>
+                      {setupConversionRateText(policy.conversion_rate)}
+                    </div>
+                  </div>
+                </div>
+                <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: 1.45 }}>
+                  El 5% es el mínimo para que PadCoins tenga impacto real. La sede puede subirlo, pero no bajarlo.
+                </p>
+              </div>
+            );
+          };
+
+          const renderCalculatorBlock = () => {
+            if (!hasCalculator) return null;
+            return (
+              <div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '8px' }}>
+                  Calculadora de beneficios
+                </strong>
+                <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#475569', lineHeight: 1.45 }}>
+                  La sede carga el valor real local del beneficio. Padbol Match calcula los PadCoins necesarios y estima si el beneficio queda alcanzable para fidelizar.
+                </p>
+                <p style={{
+                  margin: '0 0 12px',
+                  fontSize: '13px',
+                  color: '#475569',
+                  lineHeight: 1.45,
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                }}>
+                  En esta pantalla, las reservas se usan como base de cálculo para estimar la alcanzabilidad de los beneficios. Más adelante PadCoins también podrá generarse por torneos, partidos, invitaciones, reseñas, perfil, e-shop y otras acciones.
+                </p>
+                <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <table style={{ width: '100%', minWidth: '720px', borderCollapse: 'collapse', background: 'white', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9', color: '#334155' }}>
+                        {['Beneficio', 'Valor de referencia', 'PadCoins requeridos', 'PadCoins estimados por reserva', 'Reservas aproximadas', 'Alcanzabilidad'].map((col) => (
+                          <th key={col} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, borderBottom: '1px solid #e2e8f0' }}>
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {policy.calculator_examples.map((row) => {
+                        const reachStyle = setupReachabilityStyle(row.reachability);
+                        return (
+                          <tr key={row.key} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 12px', color: '#1e293b', fontWeight: 600 }}>{row.benefit}</td>
+                            <td style={{ padding: '10px 12px', color: '#475569' }}>{row.referenceValue}</td>
+                            <td style={{ padding: '10px 12px', color: '#475569' }}>{row.padcoinsRequired}</td>
+                            <td style={{ padding: '10px 12px', color: '#475569' }}>{row.padcoinsPerReservation}</td>
+                            <td style={{ padding: '10px 12px', color: '#475569' }}>{row.approximateReservations}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{
+                                background: reachStyle.bg,
+                                color: reachStyle.color,
+                                borderRadius: '12px',
+                                padding: '2px 10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {row.reachabilityLabel}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          };
+
+          const renderPolicyWarningsBlock = () => {
+            if (!hasPolicyWarnings) return null;
+            return (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+              }}>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#c2410c', marginBottom: '8px' }}>
+                  Alertas de política PadCoins
+                </strong>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#9a3412', lineHeight: 1.5 }}>
+                  {policy.loyalty_policy_warnings.map((warning, idx) => {
+                    const text = setupPolicyWarningText(warning);
+                    return text ? <li key={`policy-warn-${idx}`}>{text}</li> : null;
+                  })}
+                </ul>
+              </div>
+            );
+          };
+
+          const renderPolicyActionsBlock = () => {
+            if (!hasPolicyActions) return null;
+            return (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+              }}>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '8px' }}>
+                  Acciones recomendadas
+                </strong>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                  {policy.loyalty_policy_next_actions.map((action, idx) => {
+                    const text = setupHumanText(action);
+                    return text ? <li key={`policy-action-${idx}`}>{text}</li> : null;
+                  })}
+                </ul>
+              </div>
+            );
+          };
 
           return (
           <div
@@ -2303,6 +2559,15 @@ export default function AdminDashboard({
                 {benefitsEval?.detail || section.detail}
               </p>
             )}
+
+            {(hasPadcoinsPolicyBlock || hasBenefitsPolicyExtras) ? (
+              <div style={{ display: 'grid', gap: '14px', marginBottom: (hasBenefitsInsights || section.items.length > 0) ? '14px' : 0 }}>
+                {(isPadcoins || (isBeneficios && hasPolicyCore)) ? renderPolicyBlock() : null}
+                {isBeneficios ? renderCalculatorBlock() : null}
+                {renderPolicyWarningsBlock()}
+                {renderPolicyActionsBlock()}
+              </div>
+            ) : null}
 
             {hasBenefitsInsights ? (
               <div style={{ display: 'grid', gap: '14px', marginBottom: section.items.length > 0 ? '14px' : 0 }}>
@@ -2466,7 +2731,7 @@ export default function AdminDashboard({
                   </div>
                 ))}
               </div>
-            ) : !hasBenefitsInsights ? (
+            ) : !hasSectionInsights ? (
               <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Sin ítems detallados en esta área.</p>
             ) : null}
           </div>
