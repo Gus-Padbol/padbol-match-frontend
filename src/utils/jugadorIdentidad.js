@@ -121,11 +121,8 @@ export function parseIdentidadFromApi(body) {
   const masked = String(
     raw.numero_documento_mascarado || raw.documento_mascarado || '',
   ).trim();
-  const tieneDocumento = Boolean(
-    raw.tiene_documento
-    || raw.documento_registrado
-    || masked,
-  );
+  // Solo ocultar el input si hay máscara visible para mostrar al usuario.
+  const tieneDocumento = masked.length >= 4;
 
   return {
     fecha_nacimiento: String(raw.fecha_nacimiento || '').slice(0, 10),
@@ -171,6 +168,21 @@ export function identidadToForm(parsed) {
     contacto_emergencia_telefono: parsed.contacto_emergencia_telefono || '',
     contacto_emergencia_relacion: parsed.contacto_emergencia_relacion || '',
   };
+}
+
+export function formatDocumentoGuardadoDisplay(masked) {
+  const s = String(masked || '').trim();
+  if (!s) return '';
+  if (/[*•]/.test(s)) {
+    return s.toLowerCase().startsWith('documento guardado')
+      ? s
+      : `Documento guardado: ${s}`;
+  }
+  const digits = s.replace(/\D/g, '');
+  if (digits.length >= 4) {
+    return `Documento guardado: ****${digits.slice(-4)}`;
+  }
+  return `Documento guardado: ${s}`;
 }
 
 export function maskDocumentoLocal(numero) {

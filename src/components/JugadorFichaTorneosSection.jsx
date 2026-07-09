@@ -11,6 +11,7 @@ import {
   identidadToForm,
   buildIdentidadPutPayload,
   validateIdentidadForm,
+  formatDocumentoGuardadoDisplay,
 } from '../utils/jugadorIdentidad';
 
 const inputStyle = {
@@ -30,6 +31,21 @@ const labelStyle = {
   marginBottom: '5px',
   color: '#333',
   fontSize: '13px',
+};
+
+const sectionTitleStyle = {
+  margin: '0 0 12px',
+  fontSize: '14px',
+  fontWeight: 800,
+  color: '#1e3a8a',
+};
+
+const sectionBoxStyle = {
+  background: '#f8fafc',
+  border: '1px solid #dbeafe',
+  borderRadius: '10px',
+  padding: '14px',
+  marginBottom: '16px',
 };
 
 export default function JugadorFichaTorneosSection() {
@@ -132,6 +148,9 @@ export default function JugadorFichaTorneosSection() {
 
   const estadoUi = identidadEstadoDisplay(parsed?.estado || 'incompleta');
   const maskedDoc = parsed?.numero_documento_mascarado || '';
+  const hasSavedDocument = Boolean(parsed?.tiene_documento);
+  const showDocumentInput = !hasSavedDocument || replaceDocument;
+  const documentoGuardadoLabel = formatDocumentoGuardadoDisplay(maskedDoc) || 'Documento guardado: ****';
   const formDisabled = saving;
 
   return (
@@ -189,21 +208,15 @@ export default function JugadorFichaTorneosSection() {
       ) : null}
 
       <form onSubmit={handleGuardar}>
-          <label style={labelStyle}>Fecha de nacimiento</label>
-          <input
-            type="date"
-            name="fecha_nacimiento"
-            value={form.fecha_nacimiento}
-            onChange={handleChange}
-            disabled={formDisabled}
-            style={{ ...inputStyle, marginBottom: '14px' }}
-          />
+        <div style={sectionBoxStyle}>
+          <h5 style={sectionTitleStyle}>Documento de identidad</h5>
 
           <label style={labelStyle}>Tipo de documento</label>
           <select
             name="tipo_documento"
             value={form.tipo_documento}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           >
             {TIPO_DOCUMENTO_OPTIONS.map((o) => (
@@ -216,6 +229,7 @@ export default function JugadorFichaTorneosSection() {
             name="pais_documento"
             value={form.pais_documento}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           >
             {PAISES_ISO_OPTIONS.map((p) => (
@@ -223,55 +237,31 @@ export default function JugadorFichaTorneosSection() {
             ))}
           </select>
 
-          <label style={labelStyle}>Número de documento</label>
-          {parsed?.tiene_documento && !replaceDocument ? (
-            <div style={{ marginBottom: '14px' }}>
-              <div
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid #e2e8f0',
-                  background: '#fff',
-                  fontSize: '14px',
-                  color: '#334155',
-                  fontFamily: 'monospace',
-                  letterSpacing: '0.05em',
-                  marginBottom: '8px',
-                }}
-              >
-                {maskedDoc || '••••••••'}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setReplaceDocument(true);
-                  setForm((prev) => ({ ...prev, numero_documento: '' }));
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '5px',
-                  border: '1px solid #cbd5e1',
-                  background: '#fff',
-                  color: '#475569',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Reemplazar documento
-              </button>
-            </div>
-          ) : (
+          <label style={labelStyle}>
+            {showDocumentInput && replaceDocument ? 'Nuevo número de documento' : 'Número de documento'}
+          </label>
+
+          {showDocumentInput ? (
             <>
               <input
                 type="text"
                 name="numero_documento"
                 value={form.numero_documento}
                 onChange={handleChange}
-                placeholder="Solo visible para vos al guardar"
+                placeholder="Ingresá tu número de documento"
                 autoComplete="off"
-                style={{ ...inputStyle, marginBottom: replaceDocument ? '8px' : '14px' }}
+                disabled={formDisabled}
+                style={{
+                  ...inputStyle,
+                  marginBottom: '8px',
+                  border: '2px solid #93c5fd',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                }}
               />
+              <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+                Este dato es privado y se usa solo para validar identidad en torneos.
+              </p>
               {replaceDocument ? (
                 <button
                   type="button"
@@ -280,27 +270,81 @@ export default function JugadorFichaTorneosSection() {
                     setForm((prev) => ({ ...prev, numero_documento: '' }));
                   }}
                   style={{
-                    marginBottom: '14px',
-                    padding: 0,
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#64748b',
+                    marginBottom: '4px',
+                    padding: '6px 12px',
+                    borderRadius: '5px',
+                    border: '1px solid #cbd5e1',
+                    background: '#fff',
+                    color: '#475569',
                     fontSize: '12px',
-                    textDecoration: 'underline',
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  Cancelar reemplazo
+                  Cancelar cambio
                 </button>
               ) : null}
             </>
+          ) : (
+            <div style={{ marginBottom: '4px' }}>
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: '2px solid #bfdbfe',
+                  background: '#eff6ff',
+                  fontSize: '15px',
+                  color: '#1e3a8a',
+                  fontWeight: 700,
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.06em',
+                  marginBottom: '10px',
+                }}
+              >
+                {documentoGuardadoLabel}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setReplaceDocument(true);
+                  setForm((prev) => ({ ...prev, numero_documento: '' }));
+                }}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  border: '1px solid #1e3a8a',
+                  background: '#fff',
+                  color: '#1e3a8a',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Cambiar documento
+              </button>
+            </div>
           )}
+        </div>
+
+        <div style={sectionBoxStyle}>
+          <h5 style={sectionTitleStyle}>Datos personales</h5>
+
+          <label style={labelStyle}>Fecha de nacimiento</label>
+          <input
+            type="date"
+            name="fecha_nacimiento"
+            value={form.fecha_nacimiento}
+            onChange={handleChange}
+            disabled={formDisabled}
+            style={{ ...inputStyle, marginBottom: '14px' }}
+          />
 
           <label style={labelStyle}>Nacionalidad</label>
           <select
             name="nacionalidad"
             value={form.nacionalidad}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           >
             {PAISES_ISO_OPTIONS.map((p) => (
@@ -313,6 +357,7 @@ export default function JugadorFichaTorneosSection() {
             name="genero"
             value={form.genero}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           >
             <option value="">— Seleccionar —</option>
@@ -328,10 +373,13 @@ export default function JugadorFichaTorneosSection() {
             value={form.telefono}
             onChange={handleChange}
             placeholder="Ej: +5491112345678"
-            style={{ ...inputStyle, marginBottom: '14px' }}
+            disabled={formDisabled}
+            style={{ ...inputStyle, marginBottom: '0' }}
           />
+        </div>
 
-          <p style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 700, color: '#444' }}>Contacto de emergencia</p>
+        <div style={sectionBoxStyle}>
+          <h5 style={sectionTitleStyle}>Contacto de emergencia</h5>
 
           <label style={labelStyle}>Nombre</label>
           <input
@@ -339,6 +387,7 @@ export default function JugadorFichaTorneosSection() {
             name="contacto_emergencia_nombre"
             value={form.contacto_emergencia_nombre}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           />
 
@@ -348,6 +397,7 @@ export default function JugadorFichaTorneosSection() {
             name="contacto_emergencia_telefono"
             value={form.contacto_emergencia_telefono}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           />
 
@@ -358,15 +408,17 @@ export default function JugadorFichaTorneosSection() {
             value={form.contacto_emergencia_relacion}
             onChange={handleChange}
             placeholder="Ej: Madre, pareja, amigo"
-            style={{ ...inputStyle, marginBottom: '14px' }}
+            disabled={formDisabled}
+            style={{ ...inputStyle, marginBottom: '0' }}
           />
+        </div>
 
-          {errorMsg ? (
-            <p style={{ color: '#b91c1c', fontSize: '13px', marginBottom: '10px' }}>{errorMsg}</p>
-          ) : null}
-          {successMsg ? (
-            <p style={{ color: '#15803d', fontWeight: 'bold', fontSize: '13px', marginBottom: '10px' }}>{successMsg}</p>
-          ) : null}
+        {errorMsg ? (
+          <p style={{ color: '#b91c1c', fontSize: '13px', marginBottom: '10px' }}>{errorMsg}</p>
+        ) : null}
+        {successMsg ? (
+          <p style={{ color: '#15803d', fontWeight: 'bold', fontSize: '13px', marginBottom: '10px' }}>{successMsg}</p>
+        ) : null}
 
         <button
           type="submit"
