@@ -6,6 +6,22 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants
 import { createPartido, getAuthHeaders } from '../utils/scoreboardApi';
 import { useSafeTranslation } from '../i18n/tSafe';
 import PadcoinsCampaignsAdminSection from '../components/PadcoinsCampaignsAdminSection';
+import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
+import {
+  RESERVA_DURACIONES_MIN,
+  parsePrecioDuracionField,
+  precioDuracionInputDisplay,
+  buildPreciosDuracionPatch,
+  duracionesReservaDisponiblesDesdeForm,
+} from '../utils/miSedePrecios';
+import {
+  DIAS_SEMANA_FRANJA,
+  DIAS_SEMANA_DEFAULT_FRANJA,
+  newFranjaId,
+  normalizeFranjasHorarias,
+  detectFranjasHorariasOverlap,
+  validateFranjasHorariasBeforeSave,
+} from '../utils/miSedeFranjas';
 
 const EMPTY_JUGADORES = () => ([
   { numero: 1, nombre: '' },
@@ -986,6 +1002,7 @@ export default function AdminDashboard({
       'licencia',
       'info',
       'precios',
+      'horarios',
       ...(esAdminClub || isSuperAdmin ? ['mercadopago'] : []),
       'redes',
       'canchas',
@@ -1384,6 +1401,19 @@ export default function AdminDashboard({
   const [fotosUrls,      setFotosUrls]      = useState([]);
   const [fotosUploading, setFotosUploading] = useState(false);
   const [fotosMsg,       setFotosMsg]       = useState('');
+  const [franjasHorarias, setFranjasHorarias] = useState([]);
+  const [franjasSaving, setFranjasSaving] = useState(false);
+  const [franjasMsg, setFranjasMsg] = useState('');
+  const [franjasOverlapMsg, setFranjasOverlapMsg] = useState('');
+
+  useEffect(() => {
+    if (!franjasHorarias.length) {
+      setFranjasOverlapMsg('');
+      return;
+    }
+    const overlap = detectFranjasHorariasOverlap(franjasHorarias);
+    setFranjasOverlapMsg(overlap.hasOverlap ? overlap.message : '');
+  }, [franjasHorarias]);
 
   useEffect(() => {
     if (activeTab !== 'mi_sede' || !sedeId) return;
@@ -1406,6 +1436,10 @@ export default function AdminDashboard({
           precio_turno:     sedeData.precio_turno     ?? '',
           precio_manana:    sedeData.precio_manana    ?? '',
           precio_tarde:     sedeData.precio_tarde     ?? '',
+          precio_60min:     sedeData.precio_60min     ?? '',
+          precio_90min:     sedeData.precio_90min     ?? sedeData.precio_turno ?? '',
+          precio_120min:    sedeData.precio_120min    ?? '',
+          duracion_reserva_minutos: sedeData.duracion_reserva_minutos ?? 90,
           moneda:           sedeData.moneda           || 'ARS',
           descripcion:      sedeData.descripcion      || '',
           mp_access_token:  sedeData.mp_access_token  || '',
@@ -1425,6 +1459,8 @@ export default function AdminDashboard({
         });
         setLogoUrl(sedeData.logo_url || '');
         setFotosUrls(Array.isArray(sedeData.fotos_urls) ? sedeData.fotos_urls : []);
+        setFranjasHorarias(normalizeFranjasHorarias(sedeData.franjas_horarias));
+        setFranjasOverlapMsg('');
       }
       setCanchas(canchasData || []);
       setMiSedeLoading(false);
@@ -1442,6 +1478,7 @@ export default function AdminDashboard({
 
   const guardarMiSede = async () => {
     setMiSedeSaving(true); setMiSedeMsg('');
+    const preciosPatch = buildPreciosDuracionPatch(miSedeForm);
     const { error } = await supabase.from('sedes').update({
       nombre:           miSedeForm.nombre,
       direccion:        miSedeForm.direccion        || null,
@@ -1451,9 +1488,13 @@ export default function AdminDashboard({
       email_contacto:   miSedeForm.email_contacto  || null,
       horario_apertura: miSedeForm.horario_apertura || null,
       horario_cierre:   miSedeForm.horario_cierre   || null,
-      precio_turno:     miSedeForm.precio_turno  !== '' ? parseFloat(miSedeForm.precio_turno)  : null,
+      precio_turno:     preciosPatch.precio_turno,
       precio_manana:    miSedeForm.precio_manana  !== '' ? parseFloat(miSedeForm.precio_manana) : null,
       precio_tarde:     miSedeForm.precio_tarde   !== '' ? parseFloat(miSedeForm.precio_tarde)  : null,
+      precio_60min:     preciosPatch.precio_60min,
+      precio_90min:     preciosPatch.precio_90min,
+      precio_120min:    preciosPatch.precio_120min,
+      duracion_reserva_minutos: preciosPatch.duracion_reserva_minutos,
       moneda:           miSedeForm.moneda           || 'ARS',
       descripcion:      miSedeForm.descripcion      || null,
       mp_access_token:  miSedeForm.mp_access_token  || null,
@@ -1481,6 +1522,33 @@ export default function AdminDashboard({
     setLicenciaSaving(false);
     setLicenciaMsg(error ? `⚠️ ${error.message}` : '✅ Licencia actualizada');
     setTimeout(() => setLicenciaMsg(''), 3000);
+  };
+
+  const guardarFranjas = async () => {
+    if (!sedeId) return;
+    setFranjasSaving(true);
+    setFranjasMsg('');
+    const validation = validateFranjasHorariasBeforeSave(franjasHorarias);
+    if (!validation.ok) {
+      setFranjasSaving(false);
+      setFranjasOverlapMsg(validation.message);
+      setFranjasMsg(`⚠️ ${validation.message}`);
+      setTimeout(() => setFranjasMsg(''), 5000);
+      return;
+    }
+    const { error } = await supabase.from('sedes').update({
+      franjas_horarias: validation.payload,
+    }).eq('id', sedeId);
+    setFranjasSaving(false);
+    if (error) {
+      setFranjasMsg(`⚠️ ${error.message}`);
+    } else {
+      setFranjasOverlapMsg('');
+      setFranjasHorarias(normalizeFranjasHorarias(validation.payload));
+      setMiSede((prev) => (prev ? { ...prev, franjas_horarias: validation.payload } : prev));
+      setFranjasMsg('✅ Franjas horarias guardadas');
+    }
+    setTimeout(() => setFranjasMsg(''), 4000);
   };
 
   const subirLogo = async (file) => {
@@ -1601,6 +1669,7 @@ export default function AdminDashboard({
     { id: 'licencia', label: 'Licencia PADBOL' },
     { id: 'info', label: 'Información general' },
     { id: 'precios', label: 'Precios' },
+    { id: 'horarios', label: 'Franjas horarias' },
     ...(esAdminClub || isSuperAdmin ? [{ id: 'mercadopago', label: 'Mercado Pago' }] : []),
     { id: 'redes', label: 'Redes sociales' },
     { id: 'canchas', label: 'Canchas' },
@@ -3881,18 +3950,6 @@ export default function AdminDashboard({
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <label style={{ width: '180px', flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Moneda</label>
-                <select value={miSedeForm.moneda || 'ARS'} onChange={e => setMiSedeForm(p => ({ ...p, moneda: e.target.value }))}
-                  style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}>
-                  <option value="ARS">ARS — Peso argentino</option>
-                  <option value="USD">USD — Dólar estadounidense</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="BRL">BRL — Real brasileño</option>
-                  <option value="CLP">CLP — Peso chileno</option>
-                  <option value="UYU">UYU — Peso uruguayo</option>
-                </select>
-              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button onClick={guardarMiSede} disabled={miSedeSaving}
                   style={{ padding: '10px 24px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
@@ -3900,6 +3957,9 @@ export default function AdminDashboard({
                 </button>
                 {miSedeMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: miSedeMsg.startsWith('✅') ? '#4ade80' : '#fca5a5' }}>{miSedeMsg}</span>}
               </div>
+              <p style={{ margin: '14px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+                La moneda y los precios por duración se configuran en la sección <strong>Precios</strong>.
+              </p>
             </div>
           </div>
           )}
@@ -3907,61 +3967,434 @@ export default function AdminDashboard({
           {miSedeActiveSection === 'precios' && (
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Precios</h3>
-            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '400px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555' }}>Precio por turno (90 min)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
+            <div style={{ display: 'grid', gap: '16px', maxWidth: '560px' }}>
+              <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                  Configurá la moneda y los precios por duración de turno. Dejá vacío un campo para no ofrecer esa duración.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                  <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '160px' }}>Moneda</label>
+                  <select
+                    value={miSedeForm.moneda || 'ARS'}
+                    onChange={(e) => setMiSedeForm((p) => ({ ...p, moneda: e.target.value }))}
+                    style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                  >
+                    <option value="ARS">ARS — Peso argentino</option>
+                    <option value="USD">USD — Dólar estadounidense</option>
+                    <option value="EUR">EUR — Euro</option>
+                    <option value="BRL">BRL — Real brasileño</option>
+                    <option value="CLP">CLP — Peso chileno</option>
+                    <option value="UYU">UYU — Peso uruguayo</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                  <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '160px' }}>Duración por defecto</label>
+                  <select
+                    value={String(miSedeForm.duracion_reserva_minutos || 90)}
+                    onChange={(e) => setMiSedeForm((p) => ({ ...p, duracion_reserva_minutos: parseInt(e.target.value, 10) }))}
+                    style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                  >
+                    {RESERVA_DURACIONES_MIN.map((min) => (
+                      <option key={min} value={min}>{min} minutos</option>
+                    ))}
+                  </select>
+                </div>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '10px' }}>Precios por duración</strong>
+                {[
+                  { field: 'precio_60min', label: '60 min' },
+                  { field: 'precio_90min', label: '90 min (recomendado)' },
+                  { field: 'precio_120min', label: '120 min' },
+                ].map(({ field, label }) => (
+                  <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '160px' }}>{label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
+                      <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={precioDuracionInputDisplay(miSedeForm[field])}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
+                          setMiSedeForm((p) => {
+                            const next = { ...p, [field]: digits };
+                            if (field === 'precio_90min') next.precio_turno = digits;
+                            return next;
+                          });
+                        }}
+                        placeholder="Vacío = no ofrecer"
+                        style={{ flex: 1, padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#9ca3af' }}>
+                  Duraciones con precio cargado: {duracionesReservaDisponiblesDesdeForm(miSedeForm).join(', ') || 'ninguna'} min.
+                </p>
+              </div>
+
+              <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                <strong style={{ display: 'block', fontSize: '14px', color: '#334155', marginBottom: '8px' }}>Tarifas por horario del día (opcional)</strong>
+                <p style={{ margin: '0 0 14px', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                  Complemento simple mañana/tarde. Para precios detallados por día y hora usá la sección <strong>Franjas horarias</strong>.
+                </p>
+                {[
+                  { field: 'precio_manana', label: '🌅 Mañana (08–16hs)' },
+                  { field: 'precio_tarde', label: '🌆 Tarde/noche (16–23hs)' },
+                ].map(({ field, label }) => (
+                  <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                    <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '190px' }}>{label}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={miSedeForm[field] !== '' && miSedeForm[field] != null
+                          ? Number(miSedeForm[field]).toLocaleString('es-AR')
+                          : ''}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
+                          setMiSedeForm((p) => ({ ...p, [field]: digits }));
+                        }}
+                        placeholder="Opcional"
+                        style={{ width: '120px', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={guardarMiSede}
+                  disabled={miSedeSaving}
+                  style={{ padding: '10px 24px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+                >
+                  {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar precios'}
+                </button>
+                {miSedeMsg && <span style={{ fontSize: '13px', fontWeight: 600, color: miSedeMsg.startsWith('✅') ? '#4ade80' : '#fca5a5' }}>{miSedeMsg}</span>}
+              </div>
+              <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
+                Precios por deporte/disciplina avanzados (tabla franjas_precio) y alta/baja de duraciones vía API requieren backend adicional; esta pantalla usa columnas de sede compatibles con el flujo actual.
+              </p>
+            </div>
+          </div>
+          )}
+
+          {miSedeActiveSection === 'horarios' && (
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>Franjas horarias</h3>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '640px' }}>
+              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                Definí franjas semanales por día o fechas especiales. El precio se aplica según la hora de inicio del turno.
+                Opcionalmente podés acotar por deporte o cancha (se guardan en el JSON de la sede).
+              </p>
+              {franjasOverlapMsg && (
+                <div
+                  role="alert"
+                  style={{
+                    marginBottom: '14px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  ⚠️ {franjasOverlapMsg}
+                </div>
+              )}
+              {franjasHorarias.length === 0 && (
+                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#9ca3af' }}>
+                  No hay franjas configuradas. Agregá una franja semanal o de fecha especial.
+                </p>
+              )}
+              {franjasHorarias.map((fj, idx) => (
+                <div key={fj.id} className="admin-franja-bloque">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Franja {idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFranjasHorarias((rows) => rows.filter((r) => r.id !== fj.id))}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: '#fee2e2',
+                        color: '#b91c1c',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                      }}
+                      title="Eliminar franja"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#555' }}>Nombre (opcional)</label>
                   <input
                     type="text"
-                    inputMode="numeric"
-                    value={miSedeForm.precio_turno !== '' && miSedeForm.precio_turno !== null
-                      ? Number(miSedeForm.precio_turno).toLocaleString('es-AR')
-                      : ''}
-                    onChange={e => {
-                      const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
-                      setMiSedeForm(p => ({ ...p, precio_turno: digits }));
+                    value={fj.nombre}
+                    placeholder={fj.tipo === 'fecha_especial' ? 'Ej: Feriado 25/05' : 'Ej: Mañana entre semana'}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, nombre: v } : r)));
                     }}
-                    style={{ width: '120px', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
                   />
-                </div>
-              </div>
-              <p style={{ margin: '4px 0 18px', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
-                Precio base aplicado cuando no hay tarifas diferenciadas.
-              </p>
-
-              {[
-                { field: 'precio_manana', label: '🌅 Mañana (08–16hs)' },
-                { field: 'precio_tarde',  label: '🌆 Tarde/noche (16–23hs)' },
-              ].map(({ field, label }) => (
-                <div key={field} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                  <label style={{ flexShrink: 0, fontSize: '13px', fontWeight: 600, color: '#555', width: '190px' }}>{label}</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '13px', color: '#888', fontWeight: 600 }}>{miSedeForm.moneda || 'ARS'}</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={miSedeForm[field] !== '' && miSedeForm[field] !== null
-                        ? Number(miSedeForm[field]).toLocaleString('es-AR')
-                        : ''}
-                      onChange={e => {
-                        const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
-                        setMiSedeForm(p => ({ ...p, [field]: digits }));
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#555' }}>Aplicación</label>
+                    <select
+                      value={fj.tipo || 'semanal'}
+                      onChange={(e) => {
+                        const v = e.target.value === 'fecha_especial' ? 'fecha_especial' : 'semanal';
+                        setFranjasHorarias((rows) =>
+                          rows.map((r) =>
+                            r.id === fj.id
+                              ? {
+                                  ...r,
+                                  tipo: v,
+                                  fecha: v === 'fecha_especial' ? r.fecha || '' : '',
+                                  dias: v === 'semanal'
+                                    ? (Array.isArray(r.dias) && r.dias.length ? r.dias : DIAS_SEMANA_DEFAULT_FRANJA)
+                                    : [],
+                                }
+                              : r
+                          )
+                        );
                       }}
-                      placeholder="Ej: 5000"
-                      style={{ width: '120px', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
-                    />
+                      style={{ width: '100%', maxWidth: '220px', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                    >
+                      <option value="semanal">Semanal (días de la semana)</option>
+                      <option value="fecha_especial">Fecha especial</option>
+                    </select>
+                  </div>
+                  {fj.tipo === 'fecha_especial' ? (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>Fecha</label>
+                      <input
+                        type="date"
+                        value={fj.fecha || ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, fecha: v } : r)));
+                        }}
+                        style={{ width: '100%', maxWidth: '220px', boxSizing: 'border-box', padding: '7px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '6px' }}>Días</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {DIAS_SEMANA_FRANJA.map((dia) => {
+                          const checked = Array.isArray(fj.dias) ? fj.dias.includes(dia.id) : true;
+                          return (
+                            <label
+                              key={dia.id}
+                              className={`admin-franja-dia-chip${checked ? ' admin-franja-dia-chip--checked' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  setFranjasHorarias((rows) =>
+                                    rows.map((r) => {
+                                      if (r.id !== fj.id) return r;
+                                      const actuales = Array.isArray(r.dias) ? r.dias : DIAS_SEMANA_DEFAULT_FRANJA;
+                                      const next = isChecked
+                                        ? [...new Set([...actuales, dia.id])]
+                                        : actuales.filter((d) => d !== dia.id);
+                                      return { ...r, dias: next };
+                                    })
+                                  );
+                                }}
+                              />
+                              {dia.label}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>Deporte (opcional)</label>
+                      <select
+                        value={fj.deporte || ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, deporte: v } : r)));
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                      >
+                        <option value="">Todos los deportes</option>
+                        {DEPORTES_CANCHA_SEDE_OPTIONS.map((d) => (
+                          <option key={d.key} value={d.key}>{d.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>Cancha (opcional)</label>
+                      <select
+                        value={fj.cancha_id || ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, cancha_id: v } : r)));
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                      >
+                        <option value="">Todas las canchas</option>
+                        {canchas.map((c) => (
+                          <option key={c.id} value={String(c.id)}>{c.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="admin-franja-horas" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ flex: '1 1 120px', minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>Inicio</label>
+                      <input
+                        type="time"
+                        value={fj.hora_inicio}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, hora_inicio: v } : r)));
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 120px', minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>Fin</label>
+                      <input
+                        type="time"
+                        value={fj.hora_fin}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, hora_fin: v } : r)));
+                        }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', color: '#333' }}
+                      />
+                    </div>
+                    <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px' }}>
+                        Precio ({miSedeForm.moneda || 'ARS'})
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={
+                          fj.precio === '' || fj.precio == null
+                            ? ''
+                            : Number(String(fj.precio).replace(/\D/g, '') || 0).toLocaleString('es-AR')
+                        }
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\./g, '').replace(/[^\d]/g, '');
+                          setFranjasHorarias((rows) => rows.map((r) => (r.id === fj.id ? { ...r, precio: digits } : r)));
+                        }}
+                        placeholder="Ej: 8000"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', color: '#1e1b4b', textAlign: 'right' }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
-              <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
-                Si se configuran ambas tarifas, el precio cambia automáticamente según el horario del turno.
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFranjasHorarias((rows) => [
+                      ...rows,
+                      {
+                        id: newFranjaId(),
+                        tipo: 'semanal',
+                        nombre: '',
+                        dias: DIAS_SEMANA_DEFAULT_FRANJA,
+                        fecha: '',
+                        hora_inicio: '',
+                        hora_fin: '',
+                        deporte: '',
+                        cancha_id: '',
+                        precio: '',
+                      },
+                    ])
+                  }
+                  style={{
+                    padding: '8px 16px',
+                    background: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                  }}
+                >
+                  + Agregar franja
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFranjasHorarias((rows) => [
+                      ...rows,
+                      {
+                        id: newFranjaId(),
+                        tipo: 'fecha_especial',
+                        nombre: '',
+                        dias: [],
+                        fecha: '',
+                        hora_inicio: '',
+                        hora_fin: '',
+                        deporte: '',
+                        cancha_id: '',
+                        precio: '',
+                      },
+                    ])
+                  }
+                  style={{
+                    padding: '8px 16px',
+                    background: '#f8fafc',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                  }}
+                >
+                  + Fecha especial
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarFranjas}
+                  disabled={franjasSaving || !!franjasOverlapMsg}
+                  style={{
+                    padding: '8px 20px',
+                    background: franjasSaving || franjasOverlapMsg
+                      ? '#a5b4fc'
+                      : 'linear-gradient(135deg, #4f46e5, #3730a3)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: franjasSaving || franjasOverlapMsg ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '13px',
+                  }}
+                >
+                  {franjasSaving ? '⏳ Guardando...' : '💾 Guardar franjas'}
+                </button>
+                {franjasMsg && (
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: franjasMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>
+                    {franjasMsg}
+                  </span>
+                )}
+              </div>
+              <p style={{ margin: '14px 0 0', fontSize: '12px', color: '#9ca3af', lineHeight: 1.5 }}>
+                La superposición se valida por día/fecha, horario y alcance (deporte/cancha). Tabla franjas_precio y deporte en canchas requieren backend adicional para precios avanzados por disciplina.
               </p>
-
-              <button onClick={guardarMiSede} disabled={miSedeSaving}
-                style={{ padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
-                {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar precios'}
-              </button>
             </div>
           </div>
           )}

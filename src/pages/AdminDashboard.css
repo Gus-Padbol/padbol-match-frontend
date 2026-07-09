@@ -285,6 +285,41 @@
   background: #5568d3;
 }
 
+/* Franjas horarias — Mi Sede */
+.admin-franja-bloque {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-franja-dia-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-franja-dia-chip input {
+  margin: 0;
+}
+
+.admin-franja-dia-chip--checked {
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #312e81;
+}
+
 @media (max-width: 768px) {
   .admin-dashboard {
     padding: 16px;
@@ -311,5 +346,14 @@
 
   .reservas-table, .canchas-table {
     font-size: 0.9rem;
+  }
+
+  .admin-franja-horas {
+    flex-direction: column !important;
+  }
+
+  .admin-franja-horas > div {
+    width: 100%;
+    max-width: 100%;
   }
 }
