@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
 import { API_BASE, getAuthHeaders } from '../utils/scoreboardApi';
 import {
   TIPO_DOCUMENTO_OPTIONS,
@@ -40,11 +41,11 @@ export default function JugadorFichaTorneosSection() {
   const [form, setForm] = useState(emptyIdentidadForm);
   const [replaceDocument, setReplaceDocument] = useState(false);
   const [authMissing, setAuthMissing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   const loadIdentidad = useCallback(async () => {
     setLoading(true);
-    setErrorMsg('');
-    setAuthMissing(false);
+    setLoadError('');
     try {
       const headers = await getAuthHeaders();
       if (!headers.Authorization) {
@@ -53,6 +54,7 @@ export default function JugadorFichaTorneosSection() {
         setForm(emptyIdentidadForm());
         return;
       }
+      setAuthMissing(false);
       const res = await fetch(`${API_BASE}/api/jugador/identidad`, { headers });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -63,7 +65,7 @@ export default function JugadorFichaTorneosSection() {
       setForm(identidadToForm(nextParsed));
       setReplaceDocument(false);
     } catch (e) {
-      setErrorMsg(e.message || 'Error al cargar la ficha');
+      setLoadError(e.message || 'Error al cargar la ficha');
       setParsed(null);
       setForm(emptyIdentidadForm());
     } finally {
@@ -73,6 +75,13 @@ export default function JugadorFichaTorneosSection() {
 
   useEffect(() => {
     void loadIdentidad();
+  }, [loadIdentidad]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      void loadIdentidad();
+    });
+    return () => subscription.unsubscribe();
   }, [loadIdentidad]);
 
   const handleChange = (e) => {
@@ -121,14 +130,26 @@ export default function JugadorFichaTorneosSection() {
     }
   };
 
-  const estadoUi = identidadEstadoDisplay(parsed?.estado);
+  const estadoUi = identidadEstadoDisplay(parsed?.estado || 'incompleta');
   const maskedDoc = parsed?.numero_documento_mascarado || '';
+  const formDisabled = saving;
 
   return (
-    <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
+    <div
+      id="ficha-torneos"
+      style={{
+        background: '#fff',
+        borderRadius: '12px',
+        padding: '20px 24px',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+        marginBottom: '16px',
+        border: '1px solid #c7d2fe',
+        borderLeft: '4px solid #1e3a8a',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-        <h4 style={{ margin: 0, color: '#333', fontSize: '16px' }}>Ficha para torneos</h4>
-        {!loading && parsed ? (
+        <h4 style={{ margin: 0, color: '#1e3a8a', fontSize: '16px' }}>Ficha para torneos</h4>
+        {!loading ? (
           <span
             style={{
               display: 'inline-flex',
@@ -152,19 +173,29 @@ export default function JugadorFichaTorneosSection() {
       </p>
 
       {loading ? (
-        <p style={{ color: '#888', fontSize: '14px', margin: 0 }}>Cargando ficha…</p>
-      ) : authMissing ? (
-        <p style={{ color: '#b45309', fontSize: '13px', margin: 0 }}>
-          Iniciá sesión nuevamente para cargar y guardar tu ficha para torneos.
+        <p style={{ color: '#888', fontSize: '14px', margin: '0 0 12px' }}>Cargando ficha…</p>
+      ) : null}
+
+      {authMissing ? (
+        <p style={{ color: '#b45309', fontSize: '13px', margin: '0 0 12px', lineHeight: 1.45 }}>
+          Tu sesión no está lista para sincronizar con el servidor. Podés completar la ficha abajo; si no podés guardar, volvé a iniciar sesión.
         </p>
-      ) : (
-        <form onSubmit={handleGuardar}>
+      ) : null}
+
+      {loadError ? (
+        <p style={{ color: '#b91c1c', fontSize: '13px', margin: '0 0 12px', lineHeight: 1.45 }}>
+          No se pudieron cargar datos guardados ({loadError}). Completá la ficha y guardala.
+        </p>
+      ) : null}
+
+      <form onSubmit={handleGuardar}>
           <label style={labelStyle}>Fecha de nacimiento</label>
           <input
             type="date"
             name="fecha_nacimiento"
             value={form.fecha_nacimiento}
             onChange={handleChange}
+            disabled={formDisabled}
             style={{ ...inputStyle, marginBottom: '14px' }}
           />
 
@@ -337,25 +368,24 @@ export default function JugadorFichaTorneosSection() {
             <p style={{ color: '#15803d', fontWeight: 'bold', fontSize: '13px', marginBottom: '10px' }}>{successMsg}</p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              width: '100%',
-              padding: '11px',
-              background: '#1e3a8a',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: saving ? 'wait' : 'pointer',
-              fontWeight: 'bold',
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? 'Guardando…' : 'Guardar ficha'}
-          </button>
-        </form>
-      )}
+        <button
+          type="submit"
+          disabled={formDisabled}
+          style={{
+            width: '100%',
+            padding: '11px',
+            background: '#1e3a8a',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: formDisabled ? 'wait' : 'pointer',
+            fontWeight: 'bold',
+            opacity: formDisabled ? 0.7 : 1,
+          }}
+        >
+          {saving ? 'Guardando…' : 'Guardar ficha'}
+        </button>
+      </form>
     </div>
   );
 }

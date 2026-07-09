@@ -370,6 +370,8 @@ return (
         {successMsg && <p style={{ color: '#4caf50', fontWeight: 'bold', marginTop: '14px', marginBottom: 0 }}>{successMsg}</p>}
       </div>
 
+      <JugadorFichaTorneosSection />
+
       {/* Ficha detail card */}
       <div style={{ background: '#f9f9f9', borderRadius: '12px', padding: '20px 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.07)', marginBottom: '16px' }}>
 
@@ -487,8 +489,6 @@ return (
           </form>
         )}
       </div>
-
-      <JugadorFichaTorneosSection />
 
       {/* Credit balance */}
       {creditTotal > 0 && (
