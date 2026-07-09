@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { usePadcoinsActiveCampaign } from '../hooks/usePadcoinsActiveCampaign';
+import { PadcoinsCampaignPlayerHint } from '../components/PadcoinsCampaignPlayerSurfaces';
 
 const API_BASE = 'https://padbol-backend.onrender.com';
 
@@ -15,6 +17,18 @@ export default function PagoExitoso() {
   const [reserva,   setReserva]   = useState(null);  // saved reservation row
   const [saveError, setSaveError] = useState('');
   const savedRef = useRef(false);  // prevent double-save on strict-mode double render
+
+  const reservaSedeId = useMemo(() => {
+    if (!reserva) return null;
+    const raw = reserva.sede_id ?? reserva.sedeId;
+    const n = Number.parseInt(String(raw ?? '').trim(), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [reserva]);
+
+  const { campaign: pagoPadcoinsCampaign } = usePadcoinsActiveCampaign(reservaSedeId, {
+    apiBaseUrl: API_BASE,
+    enabled: !saving && !saveError && Boolean(reservaSedeId),
+  });
 
   useEffect(() => {
     if (savedRef.current) return;
@@ -100,6 +114,8 @@ export default function PagoExitoso() {
             <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
               Tu reserva está confirmada. Recibirás la confirmación por WhatsApp.
             </p>
+
+            <PadcoinsCampaignPlayerHint campaign={pagoPadcoinsCampaign} variant="success" />
 
             {reserva && (
               <div style={{

@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { usePadcoinsActiveCampaign } from '../hooks/usePadcoinsActiveCampaign';
+import { PadcoinsCampaignPlayerBanner } from '../components/PadcoinsCampaignPlayerSurfaces';
+
+const API_BASE = 'https://padbol-backend.onrender.com';
 
 function formatHorario(apertura, cierre) {
   if (!apertura && !cierre) return null;
@@ -128,6 +132,12 @@ export default function SedePublica({ currentCliente }) {
   const [sede, setSede] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const sedeIdNum = Number.parseInt(String(sedeId ?? '').trim(), 10);
+  const { campaign: sedePadcoinsCampaign } = usePadcoinsActiveCampaign(sedeIdNum, {
+    apiBaseUrl: API_BASE,
+    enabled: Number.isFinite(sedeIdNum) && sedeIdNum > 0 && !loading && !error && !!sede,
+  });
 
   useEffect(() => {
     console.log('[SedePublica] useEffect fired, sedeId:', sedeId);
@@ -277,6 +287,12 @@ export default function SedePublica({ currentCliente }) {
 
             {/* ── BODY ── */}
             <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
+
+              <PadcoinsCampaignPlayerBanner
+                campaign={sedePadcoinsCampaign}
+                ctaLabel="Reservar ahora"
+                onCtaClick={() => navigate(`/reservar?sedeId=${sedeId}`)}
+              />
 
               {/* ── Top reservar button ── */}
               <button

@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 import { createPartido, getAuthHeaders } from '../utils/scoreboardApi';
 import { useSafeTranslation } from '../i18n/tSafe';
+import PadcoinsCampaignsAdminSection from '../components/PadcoinsCampaignsAdminSection';
 
 const EMPTY_JUGADORES = () => ([
   { numero: 1, nombre: '' },
@@ -3155,6 +3156,23 @@ export default function AdminDashboard({
 
         return (
           <div className="section">
+            {(isSuperAdmin || esAdminClub) && (
+              <PadcoinsCampaignsAdminSection
+                apiBaseUrl={apiBaseUrl}
+                isSuperAdmin={isSuperAdmin}
+                esAdminClub={esAdminClub}
+                resolvePcSedeId={resolvePcSedeId}
+                sedesList={sedesList}
+                sedesMap={sedesMap}
+                sedeFlag={sedeFlag}
+                active={activeTab === 'padcoins'}
+                onSuccessMessage={(msg) => {
+                  setMensajeExito(msg);
+                  setTimeout(() => setMensajeExito(''), 3000);
+                }}
+              />
+            )}
+
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
               <div>
                 <h2 style={{ marginTop: 0 }}>🪙 Premios PadCoins</h2>

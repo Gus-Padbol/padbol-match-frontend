@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/ReservaForm.css';
+import { usePadcoinsActiveCampaign } from '../hooks/usePadcoinsActiveCampaign';
+import {
+  PadcoinsCampaignPlayerBadge,
+  PadcoinsCampaignPlayerHint,
+} from '../components/PadcoinsCampaignPlayerSurfaces';
 
 function getPrecio(sede, hora) {
   const base = Number(sede?.precio_por_reserva || sede?.precio_turno || 0);
@@ -80,6 +85,17 @@ export default function ReservaForm({
     Array.isArray(sedes) && sedes.length > 0
       ? sedes.find(s => s.id === filtros.sede_id)
       : null;
+
+  const reservaCampaignSedeId = useMemo(() => {
+    const raw = filtros.sede_id ?? sedeSeleccionada?.id;
+    const n = Number.parseInt(String(raw ?? '').trim(), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [filtros.sede_id, sedeSeleccionada?.id]);
+
+  const { campaign: pcActiveCampaign } = usePadcoinsActiveCampaign(reservaCampaignSedeId, {
+    apiBaseUrl,
+    enabled: Boolean(reservaCampaignSedeId) && (pantalla === 2 || pantalla === 4),
+  });
 
   useEffect(() => {
     const whatsappCliente = getClienteWhatsapp(currentCliente);
@@ -335,6 +351,7 @@ const buscarHorariosDisponibles = (fecha) => {
 
 const reservaData = {
   sede: sedeSeleccionada.nombre,
+  sede_id: sedeSeleccionada.id,
   fecha: formData.fecha,
   hora: formData.hora,
   cancha: parseInt(formData.cancha, 10),
@@ -410,6 +427,7 @@ const reservaData = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sede: sedeSeleccionada.nombre,
+          sede_id: sedeSeleccionada.id,
           fecha: formData.fecha,
           hora: formData.hora,
           cancha: parseInt(formData.cancha, 10),
@@ -500,6 +518,12 @@ if (pantalla === 2) {
         <p>
           Estás en: <strong>{sedeSeleccionada?.nombre || sedeGuardada}</strong>
         </p>
+
+        {pcActiveCampaign ? (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <PadcoinsCampaignPlayerBadge campaign={pcActiveCampaign} />
+          </div>
+        ) : null}
 
         <button
           onClick={() => {
@@ -625,6 +649,8 @@ if (pantalla === 2) {
           <div style={{ marginBottom: '20px', lineHeight: '1.6' }}>
             <p><strong>Total:</strong> {Number(precioFinal).toLocaleString('es-AR')} {sedeSeleccionada?.moneda || 'ARS'}</p>
           </div>
+
+          <PadcoinsCampaignPlayerHint campaign={pcActiveCampaign} variant="confirm" />
 
 <div className="form-group">
   <label>WhatsApp</label>
