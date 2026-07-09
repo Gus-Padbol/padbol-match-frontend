@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants/paisesTelefono';
 import UserHeader from '../components/UserHeader';
+import JugadorFichaTorneosSection from '../components/JugadorFichaTorneosSection';
 
 const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
@@ -486,6 +487,8 @@ return (
           </form>
         )}
       </div>
+
+      <JugadorFichaTorneosSection />
 
       {/* Credit balance */}
       {creditTotal > 0 && (
