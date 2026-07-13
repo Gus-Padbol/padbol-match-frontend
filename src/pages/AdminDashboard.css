@@ -2,6 +2,11 @@
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
   color: #333;
 }
 
@@ -12,13 +17,16 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
+  flex-shrink: 0;
 }
 
 .admin-shell {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .admin-sidebar {
@@ -28,11 +36,9 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 12px 10px;
-  position: sticky;
-  top: 16px;
-  align-self: flex-start;
-  max-height: calc(100vh - 120px);
+  align-self: stretch;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-sidebar-nav {
@@ -128,7 +134,10 @@
 .admin-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding-left: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-dashboard h1 {
@@ -347,21 +356,29 @@
 @media (max-width: 768px) {
   .admin-dashboard {
     padding: 16px;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .admin-shell {
     flex-direction: column;
     gap: 12px;
+    flex: none;
+    overflow: visible;
   }
 
   .admin-sidebar {
     width: 100%;
-    position: static;
+    align-self: auto;
     max-height: none;
+    overflow-y: visible;
   }
 
   .admin-main {
     padding-left: 0;
+    overflow-y: visible;
+    min-height: auto;
   }
 
   .dashboard-grid {

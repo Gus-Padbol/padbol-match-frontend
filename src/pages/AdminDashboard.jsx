@@ -10,6 +10,7 @@ import PadcoinsPremiosAdminSection from '../components/PadcoinsPremiosAdminSecti
 import PadcoinsCanjesAdminSection from '../components/PadcoinsCanjesAdminSection';
 import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
 import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
+import AdminReservaManualPanel from '../components/AdminReservaManualPanel';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
 import {
   DEFAULT_SPONSOR_CUPOS,
@@ -602,7 +603,7 @@ export default function AdminDashboard({
 }) {
   const { t } = useSafeTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentEmail = (JSON.parse(localStorage.getItem('currentCliente') || '{}')?.email || '').trim().toLowerCase();
 
   // Legacy email-based flags (kept for backward compatibility while roles roll out)
@@ -638,6 +639,18 @@ export default function AdminDashboard({
     () => sessionStorage.getItem('adminMiSedeSection') || 'licencia'
   );
   const adminMainRef = useRef(null);
+
+  const ADMIN_TAB_IDS = [
+    'resumen',
+    'torneos',
+    'reservas',
+    'validaciones',
+    'scoreboard',
+    'setup',
+    'padcoins',
+    'mi_sede',
+    'config',
+  ];
 
   const [pendientes, setPendientes] = useState([]);
   const [pendientesLoading, setPendientesLoading] = useState(true);
@@ -1412,6 +1425,48 @@ export default function AdminDashboard({
       .then(({ data }) => { if (data) setSedeStatus(data); });
   }, [sedeId, esAdminClub]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const scrollAdminMainToTop = () => {
+    if (adminMainRef.current) adminMainRef.current.scrollTop = 0;
+  };
+
+  const syncAdminTabInUrl = (tabId) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tabId);
+      return next;
+    }, { replace: true });
+  };
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && ADMIN_TAB_IDS.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+      sessionStorage.setItem('adminActiveTab', tabFromUrl);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!searchParams.get('tab') && activeTab && ADMIN_TAB_IDS.includes(activeTab)) {
+      syncAdminTabInUrl(activeTab);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectAdminTab = (tabId) => {
+    setActiveTab(tabId);
+    sessionStorage.setItem('adminActiveTab', tabId);
+    syncAdminTabInUrl(tabId);
+    scrollAdminMainToTop();
+  };
+
+  const selectMiSedeSection = (sectionId) => {
+    setActiveTab('mi_sede');
+    sessionStorage.setItem('adminActiveTab', 'mi_sede');
+    setMiSedeActiveSection(sectionId);
+    sessionStorage.setItem('adminMiSedeSection', sectionId);
+    syncAdminTabInUrl('mi_sede');
+    scrollAdminMainToTop();
+  };
+
   const guardarMiSede = async () => {
     setMiSedeSaving(true); setMiSedeMsg('');
     const preciosPatch = buildPreciosDuracionPatch(miSedeForm);
@@ -1615,25 +1670,6 @@ export default function AdminDashboard({
       { id: 'resenas', label: 'Reseñas' },
     ] : []),
   ];
-
-  const resetAdminPanelScroll = () => {
-    if (adminMainRef.current) adminMainRef.current.scrollTop = 0;
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  };
-
-  const selectAdminTab = (tabId) => {
-    setActiveTab(tabId);
-    sessionStorage.setItem('adminActiveTab', tabId);
-    resetAdminPanelScroll();
-  };
-
-  const selectMiSedeSection = (sectionId) => {
-    setActiveTab('mi_sede');
-    sessionStorage.setItem('adminActiveTab', 'mi_sede');
-    setMiSedeActiveSection(sectionId);
-    sessionStorage.setItem('adminMiSedeSection', sectionId);
-    resetAdminPanelScroll();
-  };
 
   const TABS = [
     { id: 'resumen',      label: '📊 Resumen' },
@@ -2058,6 +2094,21 @@ export default function AdminDashboard({
       </div>}
 
       {activeTab === 'reservas' && <div className="section">
+        {isAdmin ? (
+          <AdminReservaManualPanel
+            apiBaseUrl={apiBaseUrl}
+            sedesMap={sedesMap}
+            reservas={reservas}
+            esAdminClub={esAdminClub}
+            sedeId={sedeId}
+            adminEmail={currentEmail || 'admin@padbolmatch.com'}
+            onSuccess={() => {
+              setMensajeExito('✅ Reserva manual creada');
+              fetchData();
+              setTimeout(() => setMensajeExito(''), 3500);
+            }}
+          />
+        ) : null}
         {(() => {
           // Upcoming ASC (soonest first), completed DESC (most recent first)
           const proximas    = reservas.filter(esFutura).sort((a, b) => (a.fecha + a.hora) < (b.fecha + b.hora) ? -1 : 1);
