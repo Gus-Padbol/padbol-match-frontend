@@ -6,6 +6,8 @@ import { PAISES_TELEFONO_PRINCIPALES, PAISES_TELEFONO_OTROS } from '../constants
 import { createPartido, getAuthHeaders } from '../utils/scoreboardApi';
 import { useSafeTranslation } from '../i18n/tSafe';
 import PadcoinsCampaignsAdminSection from '../components/PadcoinsCampaignsAdminSection';
+import PadcoinsPremiosAdminSection from '../components/PadcoinsPremiosAdminSection';
+import PadcoinsCanjesAdminSection from '../components/PadcoinsCanjesAdminSection';
 import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
 import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
@@ -36,58 +38,6 @@ const EMPTY_JUGADORES = () => ([
   { numero: 3, nombre: '' },
   { numero: 4, nombre: '' },
 ]);
-
-const EMPTY_PREMIO_FORM = () => ({
-  nombre: '',
-  descripcion: '',
-  costo_padcoins: '',
-  stock_total: '',
-  stock_disponible: '',
-  condiciones: '',
-  activo: true,
-});
-
-function validatePremioForm(form) {
-  if (!(form.nombre || '').trim()) return 'El nombre es obligatorio';
-
-  const costo = parseInt(form.costo_padcoins, 10);
-  if (!Number.isFinite(costo) || costo <= 0) return 'El costo en PadCoins debe ser mayor a 0';
-
-  const hasStockTotal = form.stock_total !== '' && form.stock_total != null;
-  const hasStockDisp = form.stock_disponible !== '' && form.stock_disponible != null;
-  const stockTotal = hasStockTotal ? parseInt(form.stock_total, 10) : null;
-  const stockDisp = hasStockDisp ? parseInt(form.stock_disponible, 10) : null;
-
-  if (stockTotal !== null && (!Number.isFinite(stockTotal) || stockTotal < 0)) {
-    return 'El stock total no puede ser negativo';
-  }
-  if (stockDisp !== null && (!Number.isFinite(stockDisp) || stockDisp < 0)) {
-    return 'El stock disponible no puede ser negativo';
-  }
-  if (stockTotal !== null && stockDisp !== null && stockDisp > stockTotal) {
-    return 'El stock disponible no puede superar el stock total';
-  }
-
-  return null;
-}
-
-function buildPremioPayload(form, sede_id) {
-  const payload = {
-    sede_id: parseInt(sede_id, 10),
-    nombre: form.nombre.trim(),
-    descripcion: (form.descripcion || '').trim() || null,
-    costo_padcoins: parseInt(form.costo_padcoins, 10),
-    condiciones: (form.condiciones || '').trim() || null,
-    activo: !!form.activo,
-  };
-  if (form.stock_total !== '' && form.stock_total != null) {
-    payload.stock_total = parseInt(form.stock_total, 10);
-  }
-  if (form.stock_disponible !== '' && form.stock_disponible != null) {
-    payload.stock_disponible = parseInt(form.stock_disponible, 10);
-  }
-  return payload;
-}
 
 const CATEGORIAS = ['Principiante', '5ta', '4ta', '3ra', '2da', '1ra', 'Elite'];
 
@@ -708,14 +658,7 @@ export default function AdminDashboard({
 
   const puedeVerPadCoins = isAdmin;
   const [pcSedeId, setPcSedeId] = useState(sedeId ? String(sedeId) : '');
-  const [premios, setPremios] = useState([]);
-  const [premiosLoading, setPremiosLoading] = useState(false);
-  const [premiosError, setPremiosError] = useState('');
-  const [premioFormMode, setPremioFormMode] = useState(null);
-  const [premioEditId, setPremioEditId] = useState(null);
-  const [premioForm, setPremioForm] = useState(EMPTY_PREMIO_FORM);
-  const [premioFormError, setPremioFormError] = useState('');
-  const [premioSaving, setPremioSaving] = useState(false);
+  const [pcPremiosOptions, setPcPremiosOptions] = useState([]);
 
   const [setupSedeId, setSetupSedeId] = useState(sedeId ? String(sedeId) : '');
   const [setupStatus, setSetupStatus] = useState(null);
@@ -855,118 +798,6 @@ export default function AdminDashboard({
     }
   }
 
-  async function fetchPremios() {
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremios([]);
-      return;
-    }
-    setPremiosLoading(true);
-    setPremiosError('');
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(
-        `${apiBaseUrl}/api/admin/premios-canjeables?sede_id=${encodeURIComponent(sid)}`,
-        { headers },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al cargar premios');
-      const list = Array.isArray(data) ? data : (data.premios || data.data || []);
-      setPremios(list);
-    } catch (err) {
-      setPremiosError(err.message || 'Error al cargar premios');
-      setPremios([]);
-    } finally {
-      setPremiosLoading(false);
-    }
-  }
-
-  function abrirNuevoPremio() {
-    setPremioForm(EMPTY_PREMIO_FORM());
-    setPremioEditId(null);
-    setPremioFormMode('create');
-    setPremioFormError('');
-  }
-
-  function abrirEditarPremio(premio) {
-    setPremioForm({
-      nombre: premio.nombre || '',
-      descripcion: premio.descripcion || '',
-      costo_padcoins: premio.costo_padcoins != null ? String(premio.costo_padcoins) : '',
-      stock_total: premio.stock_total != null ? String(premio.stock_total) : '',
-      stock_disponible: premio.stock_disponible != null ? String(premio.stock_disponible) : '',
-      condiciones: premio.condiciones || '',
-      activo: premio.activo !== false,
-    });
-    setPremioEditId(premio.id);
-    setPremioFormMode('edit');
-    setPremioFormError('');
-  }
-
-  function cerrarPremioForm() {
-    setPremioFormMode(null);
-    setPremioEditId(null);
-    setPremioForm(EMPTY_PREMIO_FORM());
-    setPremioFormError('');
-  }
-
-  async function guardarPremio(e) {
-    e.preventDefault();
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremioFormError('Seleccioná una sede para gestionar premios PadCoins');
-      return;
-    }
-    const validationError = validatePremioForm(premioForm);
-    if (validationError) {
-      setPremioFormError(validationError);
-      return;
-    }
-    setPremioSaving(true);
-    setPremioFormError('');
-    try {
-      const headers = await getAuthHeaders();
-      const payload = buildPremioPayload(premioForm, sid);
-      const isEdit = premioFormMode === 'edit' && premioEditId;
-      const url = isEdit
-        ? `${apiBaseUrl}/api/admin/premios-canjeables/${premioEditId}`
-        : `${apiBaseUrl}/api/admin/premios-canjeables`;
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al guardar premio');
-      cerrarPremioForm();
-      setMensajeExito(isEdit ? '✅ Premio actualizado' : '✅ Premio creado');
-      setTimeout(() => setMensajeExito(''), 3000);
-      await fetchPremios();
-    } catch (err) {
-      setPremioFormError(err.message || 'Error al guardar premio');
-    } finally {
-      setPremioSaving(false);
-    }
-  }
-
-  async function desactivarPremio(premio) {
-    if (!window.confirm(`¿Desactivar el premio "${premio.nombre}"? Ya no será visible para los jugadores.`)) return;
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${apiBaseUrl}/api/admin/premios-canjeables/${premio.id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || 'Error al desactivar premio');
-      setMensajeExito('✅ Premio desactivado');
-      setTimeout(() => setMensajeExito(''), 3000);
-      await fetchPremios();
-    } catch (err) {
-      alert(err.message || 'Error al desactivar premio');
-    }
-  }
-
   useEffect(() => {
     if (sedeId && !sbSedeId) setSbSedeId(String(sedeId));
   }, [sedeId, sbSedeId]);
@@ -990,18 +821,6 @@ export default function AdminDashboard({
     }
     fetchSetupStatus();
   }, [activeTab, setupSedeId, sedeId, apiBaseUrl, puedeVerSetup, esAdminClub, isSuperAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (activeTab !== 'padcoins') return;
-    const sid = resolvePcSedeId();
-    if (!sid) {
-      setPremios([]);
-      setPremiosError('');
-      setPremiosLoading(false);
-      return;
-    }
-    fetchPremios();
-  }, [activeTab, pcSedeId, sedeId, apiBaseUrl, esAdminClub, isSuperAdmin, esAdminNacional]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab !== 'mi_sede') return;
@@ -3379,12 +3198,7 @@ export default function AdminDashboard({
         );
       })()}
 
-      {activeTab === 'padcoins' && puedeVerPadCoins && (() => {
-        const effectivePcSedeId = resolvePcSedeId();
-        const pcInp = { padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', boxSizing: 'border-box' };
-        const sedeNombre = effectivePcSedeId ? sedesMap[effectivePcSedeId]?.nombre : null;
-
-        return (
+      {activeTab === 'padcoins' && puedeVerPadCoins && (
           <div className="section">
             {(isSuperAdmin || esAdminClub) && (
               <PadcoinsCampaignsAdminSection
@@ -3403,293 +3217,40 @@ export default function AdminDashboard({
               />
             )}
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ marginTop: 0 }}>🪙 Premios PadCoins</h2>
-                <p style={{ color: 'rgba(255,255,255,0.7)', margin: 0, maxWidth: '560px' }}>
-                  Estos premios serán visibles para los jugadores en Premios y Beneficios.
-                </p>
-              </div>
-              {effectivePcSedeId && !premioFormMode && (
-                <button
-                  type="button"
-                  onClick={abrirNuevoPremio}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#e53935',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  + Nuevo premio
-                </button>
-              )}
-            </div>
+            <PadcoinsPremiosAdminSection
+              apiBaseUrl={apiBaseUrl}
+              isSuperAdmin={isSuperAdmin}
+              esAdminClub={esAdminClub}
+              resolvePcSedeId={resolvePcSedeId}
+              sedesList={sedesList}
+              sedesMap={sedesMap}
+              sedeFlag={sedeFlag}
+              pcNeedsSelector={pcNeedsSelector}
+              pcSedeId={pcSedeId}
+              setPcSedeId={setPcSedeId}
+              active={activeTab === 'padcoins'}
+              onSuccessMessage={(msg) => {
+                setMensajeExito(msg);
+                setTimeout(() => setMensajeExito(''), 3000);
+              }}
+              onPremiosChange={setPcPremiosOptions}
+            />
 
-            {pcNeedsSelector && (
-              <div style={{ marginBottom: '20px', maxWidth: '360px' }}>
-                <label style={{ display: 'grid', gap: '6px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>Sede</span>
-                  <select
-                    value={pcSedeId}
-                    onChange={(e) => { setPcSedeId(e.target.value); cerrarPremioForm(); }}
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                  >
-                    <option value="">Seleccionar sede...</option>
-                    {sedesList.map((s) => (
-                      <option key={s.id} value={s.id}>{sedeFlag(s)} {s.nombre}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-
-            {!effectivePcSedeId && (
-              <p style={{ color: 'rgba(255,255,255,0.85)', background: 'rgba(255,255,255,0.1)', padding: '16px 20px', borderRadius: '10px', maxWidth: '520px' }}>
-                Seleccioná una sede para gestionar premios PadCoins.
-              </p>
-            )}
-
-            {effectivePcSedeId && sedeNombre && (
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', marginTop: 0, marginBottom: '20px' }}>
-                Sede: <strong style={{ color: 'white' }}>{sedeNombre}</strong>
-              </p>
-            )}
-
-            {premioFormMode && effectivePcSedeId && (
-              <form
-                onSubmit={guardarPremio}
-                style={{ background: 'white', borderRadius: '12px', padding: '20px', maxWidth: '720px', color: '#1e293b', marginBottom: '24px' }}
-              >
-                <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#334155' }}>
-                  {premioFormMode === 'edit' ? 'Editar premio' : 'Nuevo premio'}
-                </h3>
-                <div style={{ display: 'grid', gap: '14px' }}>
-                  <label style={{ display: 'grid', gap: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '14px' }}>Nombre *</span>
-                    <input
-                      type="text"
-                      value={premioForm.nombre}
-                      onChange={(e) => setPremioForm((p) => ({ ...p, nombre: e.target.value }))}
-                      required
-                      style={pcInp}
-                    />
-                  </label>
-                  <label style={{ display: 'grid', gap: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '14px' }}>Descripción</span>
-                    <textarea
-                      value={premioForm.descripcion}
-                      onChange={(e) => setPremioForm((p) => ({ ...p, descripcion: e.target.value }))}
-                      rows={3}
-                      style={{ ...pcInp, resize: 'vertical' }}
-                    />
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
-                    <label style={{ display: 'grid', gap: '6px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '14px' }}>Costo (PadCoins) *</span>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={premioForm.costo_padcoins}
-                        onChange={(e) => setPremioForm((p) => ({ ...p, costo_padcoins: e.target.value }))}
-                        required
-                        style={pcInp}
-                      />
-                    </label>
-                    <label style={{ display: 'grid', gap: '6px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '14px' }}>Stock total</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={premioForm.stock_total}
-                        onChange={(e) => setPremioForm((p) => ({ ...p, stock_total: e.target.value }))}
-                        style={pcInp}
-                      />
-                    </label>
-                    <label style={{ display: 'grid', gap: '6px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '14px' }}>Stock disponible</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={premioForm.stock_disponible}
-                        onChange={(e) => setPremioForm((p) => ({ ...p, stock_disponible: e.target.value }))}
-                        style={pcInp}
-                      />
-                    </label>
-                  </div>
-                  <label style={{ display: 'grid', gap: '6px' }}>
-                    <span style={{ fontWeight: 600, fontSize: '14px' }}>Condiciones</span>
-                    <textarea
-                      value={premioForm.condiciones}
-                      onChange={(e) => setPremioForm((p) => ({ ...p, condiciones: e.target.value }))}
-                      rows={2}
-                      placeholder="Ej: Válido de lunes a viernes"
-                      style={{ ...pcInp, resize: 'vertical' }}
-                    />
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!premioForm.activo}
-                      onChange={(e) => setPremioForm((p) => ({ ...p, activo: e.target.checked }))}
-                    />
-                    Premio activo
-                  </label>
-                </div>
-
-                {premioFormError && (
-                  <p style={{ color: '#dc2626', fontWeight: 600, marginTop: '14px', marginBottom: 0 }}>{premioFormError}</p>
-                )}
-
-                <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
-                  <button
-                    type="submit"
-                    disabled={premioSaving}
-                    style={{
-                      padding: '10px 20px',
-                      background: premioSaving ? '#94a3b8' : '#43a047',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      cursor: premioSaving ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {premioSaving ? 'Guardando...' : 'Guardar premio'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cerrarPremioForm}
-                    disabled={premioSaving}
-                    style={{
-                      padding: '10px 20px',
-                      background: 'transparent',
-                      color: '#64748b',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontWeight: 600,
-                      fontSize: '14px',
-                      cursor: premioSaving ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {effectivePcSedeId && premiosLoading && (
-              <p style={{ color: 'rgba(255,255,255,0.7)' }}>Cargando premios...</p>
-            )}
-
-            {effectivePcSedeId && !premiosLoading && premiosError && (
-              <p style={{ color: '#fecaca', fontWeight: 600, background: 'rgba(220,38,38,0.2)', padding: '12px 16px', borderRadius: '8px', maxWidth: '560px' }}>
-                {premiosError}
-              </p>
-            )}
-
-            {effectivePcSedeId && !premiosLoading && !premiosError && premios.length === 0 && !premioFormMode && (
-              <p style={{ color: 'rgba(255,255,255,0.7)' }}>No hay premios cargados para esta sede.</p>
-            )}
-
-            {effectivePcSedeId && !premiosLoading && premios.length > 0 && (
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {premios.map((premio) => (
-                  <div
-                    key={premio.id}
-                    style={{
-                      background: 'white',
-                      borderRadius: '10px',
-                      padding: '16px 18px',
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      alignItems: 'flex-start',
-                      gap: '14px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: '220px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                        <strong style={{ fontSize: '16px', color: '#1e293b' }}>{premio.nombre}</strong>
-                        <span style={{
-                          background: premio.activo !== false ? '#dcfce7' : '#f1f5f9',
-                          color: premio.activo !== false ? '#166534' : '#64748b',
-                          borderRadius: '12px',
-                          padding: '2px 10px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                        }}>
-                          {premio.activo !== false ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
-                      {premio.descripcion && (
-                        <p style={{ margin: '0 0 8px', color: '#64748b', fontSize: '13px' }}>{premio.descripcion}</p>
-                      )}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '13px', color: '#475569' }}>
-                        <span><strong>Costo:</strong> {premio.costo_padcoins} PadCoins</span>
-                        {premio.stock_total != null && (
-                          <span><strong>Stock total:</strong> {premio.stock_total}</span>
-                        )}
-                        {premio.stock_disponible != null && (
-                          <span><strong>Disponible:</strong> {premio.stock_disponible}</span>
-                        )}
-                      </div>
-                      {premio.condiciones && (
-                        <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                          <strong>Condiciones:</strong> {premio.condiciones}
-                        </p>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => abrirEditarPremio(premio)}
-                        style={{
-                          padding: '7px 14px',
-                          background: '#1976d2',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                        }}
-                      >
-                        ✏️ Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => desactivarPremio(premio)}
-                        style={{
-                          padding: '7px 14px',
-                          background: '#fef2f2',
-                          color: '#b91c1c',
-                          border: '1px solid #fecaca',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          fontSize: '13px',
-                        }}
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <PadcoinsCanjesAdminSection
+              apiBaseUrl={apiBaseUrl}
+              isSuperAdmin={isSuperAdmin}
+              esAdminClub={esAdminClub}
+              resolvePcSedeId={resolvePcSedeId}
+              sedesMap={sedesMap}
+              active={activeTab === 'padcoins'}
+              premiosOptions={pcPremiosOptions}
+              onSuccessMessage={(msg) => {
+                setMensajeExito(msg);
+                setTimeout(() => setMensajeExito(''), 3000);
+              }}
+            />
           </div>
-        );
-      })()}
+      )}
 
       {activeTab === 'config' && puedeVerConfig && <div className="section">
         <h2>⚙️ Configuración de Puntos</h2>
