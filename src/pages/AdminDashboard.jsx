@@ -10,6 +10,7 @@ import PadcoinsPremiosAdminSection from '../components/PadcoinsPremiosAdminSecti
 import PadcoinsCanjesAdminSection from '../components/PadcoinsCanjesAdminSection';
 import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
 import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
+import AdminSedePagosSection from '../components/AdminSedePagosSection';
 import AdminReservaManualPanel from '../components/AdminReservaManualPanel';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
 import {
@@ -32,6 +33,10 @@ import {
   detectFranjasHorariasOverlap,
   validateFranjasHorariasBeforeSave,
 } from '../utils/miSedeFranjas';
+import {
+  deriveSedePagosIndicadores,
+  sanitizeSedeRowForState,
+} from '../utils/miSedePagos';
 
 const EMPTY_JUGADORES = () => ([
   { numero: 1, nombre: '' },
@@ -1227,6 +1232,12 @@ export default function AdminDashboard({
   const [miSede,        setMiSede]        = useState(null);
   const [miSedeLoading, setMiSedeLoading] = useState(false);
   const [miSedeForm,    setMiSedeForm]    = useState({});
+  // Indicadores write-only de pagos: true/false/null (null = desconocido).
+  // Nunca se almacenan credenciales aquí ni en miSedeForm.
+  const [miSedePagos, setMiSedePagos] = useState({
+    mercadopago_configurado: null,
+    stripe_configurado: null,
+  });
   const [miSedeSaving,  setMiSedeSaving]  = useState(false);
   const [miSedeMsg,     setMiSedeMsg]     = useState('');
   const [canchas,       setCanchas]       = useState([]);
@@ -1372,7 +1383,11 @@ export default function AdminDashboard({
       supabase.from('canchas').select('*').eq('sede_id', sedeId).order('nombre'),
     ]).then(([{ data: sedeData }, { data: canchasData }]) => {
       if (sedeData) {
-        setMiSede(sedeData);
+        // Derivamos indicadores ANTES de sanitizar (si RLS aún entrega las
+        // columnas sensibles, las usamos solo en memoria para el booleano).
+        setMiSedePagos(deriveSedePagosIndicadores(sedeData));
+        // La fila en estado nunca contiene secretos.
+        setMiSede(sanitizeSedeRowForState(sedeData));
         setMiSedeForm({
           nombre:           sedeData.nombre          || '',
           direccion:        sedeData.direccion        || '',
@@ -1391,7 +1406,7 @@ export default function AdminDashboard({
           duracion_reserva_minutos: sedeData.duracion_reserva_minutos ?? 90,
           moneda:           sedeData.moneda           || 'ARS',
           descripcion:      sedeData.descripcion      || '',
-          mp_access_token:  sedeData.mp_access_token  || '',
+          // Credenciales write-only: NUNCA se copian desde el Backend.
           latitud:          sedeData.latitud  != null ? String(sedeData.latitud)  : '',
           longitud:         sedeData.longitud != null ? String(sedeData.longitud) : '',
           instagram:        sedeData.instagram  || '',
@@ -1488,7 +1503,9 @@ export default function AdminDashboard({
       duracion_reserva_minutos: preciosPatch.duracion_reserva_minutos,
       moneda:           miSedeForm.moneda           || 'ARS',
       descripcion:      miSedeForm.descripcion      || null,
-      mp_access_token:  miSedeForm.mp_access_token  || null,
+      // mp_access_token / stripe_account_id: write-only vía AdminSedePagosSection.
+      // Nunca se envían desde este guardado general (evita borrar credenciales
+      // existentes con null/string vacío).
       latitud:          miSedeForm.latitud  !== '' ? parseFloat(miSedeForm.latitud)  : null,
       longitud:         miSedeForm.longitud !== '' ? parseFloat(miSedeForm.longitud) : null,
       instagram:        miSedeForm.instagram  || null,
@@ -1661,7 +1678,7 @@ export default function AdminDashboard({
     { id: 'info', label: 'Información general' },
     { id: 'precios', label: 'Precios' },
     { id: 'horarios', label: 'Franjas horarias' },
-    ...(esAdminClub || isSuperAdmin ? [{ id: 'mercadopago', label: 'Mercado Pago' }] : []),
+    ...(esAdminClub || isSuperAdmin ? [{ id: 'mercadopago', label: 'Configuración de pagos' }] : []),
     { id: 'redes', label: 'Redes sociales' },
     { id: 'canchas', label: 'Canchas' },
     { id: 'fotos', label: 'Fotos' },
@@ -4167,28 +4184,15 @@ export default function AdminDashboard({
           )}
 
           {miSedeActiveSection === 'mercadopago' && (esAdminClub || isSuperAdmin) && (
-            <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ color: 'rgba(255,255,255,0.9)', marginBottom: '16px', fontSize: '16px' }}>💳 Mercado Pago</h3>
-              <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', maxWidth: '480px' }}>
-                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
-                  Ingresá el Access Token de tu cuenta de Mercado Pago para recibir los pagos directamente en tu cuenta.
-                </p>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#555', marginBottom: '6px' }}>
-                  Access Token de MP
-                </label>
-                <input
-                  type="password"
-                  value={miSedeForm.mp_access_token || ''}
-                  placeholder="APP_USR-..."
-                  onChange={e => setMiSedeForm(p => ({ ...p, mp_access_token: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', color: '#333', boxSizing: 'border-box', fontFamily: 'monospace', marginBottom: '14px' }}
-                />
-                <button onClick={guardarMiSede} disabled={miSedeSaving}
-                  style={{ padding: '8px 20px', background: miSedeSaving ? '#a5b4fc' : 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', border: 'none', borderRadius: '8px', cursor: miSedeSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '13px' }}>
-                  {miSedeSaving ? '⏳ Guardando...' : '💾 Guardar token'}
-                </button>
-              </div>
-            </div>
+            <AdminSedePagosSection
+              apiBaseUrl={apiBaseUrl}
+              sedeId={sedeId}
+              pagos={miSedePagos}
+              onPagosChange={setMiSedePagos}
+              onSedeActualizada={(sede) => {
+                setMiSede((prev) => (prev ? { ...prev, ...sanitizeSedeRowForState(sede) } : sanitizeSedeRowForState(sede)));
+              }}
+            />
           )}
 
           {miSedeActiveSection === 'redes' && (
