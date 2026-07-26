@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 import ReservaForm from './pages/ReservaForm';
 import AdminDashboard from './pages/AdminDashboard';
+import ContentWorkspace from './pages/ContentWorkspace';
 import TorneoCrear from './pages/TorneoCrear';
 import JugadoresCargar from './pages/JugadoresCargar';
 import FormEquipos from './pages/FormEquipos';
@@ -134,7 +135,7 @@ function AppContent() {
   }, [sedeId]);
 
   // Auto-redirect admin users to /admin as soon as their role resolves
-  const ADMIN_ROLES = ['super_admin', 'admin_nacional', 'admin_club'];
+  const ADMIN_ROLES = ['super_admin', 'admin_nacional', 'admin_club', 'editor_contenido'];
   useEffect(() => {
     if (currentCliente && rol && ADMIN_ROLES.includes(rol)) {
       navigate('/admin');
@@ -753,7 +754,11 @@ return (
 <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
 <Route path="/admin" element={(
       <ErrorBoundary label="el panel de administración">
-        <AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />
+        {rol === 'editor_contenido' ? (
+          <ContentWorkspace apiBaseUrl={API_BASE_URL} onLogout={handleLogout} />
+        ) : (
+          <AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />
+        )}
       </ErrorBoundary>
     )} />
     <Route path="/admin/scoreboard/:partidoId" element={(
