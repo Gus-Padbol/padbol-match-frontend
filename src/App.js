@@ -752,12 +752,26 @@ return (
 <Route path="/torneo/:torneoId/jugadores" element={<JugadoresCargar apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/equipos" element={<FormEquipos apiBaseUrl={API_BASE_URL} />} />
 <Route path="/torneo/:torneoId/vista" element={<TorneoVista apiBaseUrl={API_BASE_URL} />} />
-<Route path="/admin" element={(
+    <Route path="/admin" element={(
       <ErrorBoundary label="el panel de administración">
         {rol === 'editor_contenido' ? (
           <ContentWorkspace apiBaseUrl={API_BASE_URL} onLogout={handleLogout} />
         ) : (
           <AdminDashboard handleLogout={handleLogout} apiBaseUrl={API_BASE_URL} rol={rol} sedeId={sedeId} />
+        )}
+      </ErrorBoundary>
+    )} />
+    <Route path="/admin/content" element={(
+      <ErrorBoundary label="el circuito de contenido">
+        {rol === 'super_admin' || rol === 'editor_contenido' ? (
+          <ContentWorkspace
+            apiBaseUrl={API_BASE_URL}
+            onLogout={handleLogout}
+            canApprove={rol === 'super_admin'}
+            onBack={rol === 'super_admin' ? () => navigate('/admin') : null}
+          />
+        ) : (
+          <div style={{ padding: '2rem' }}>No tenés permiso para gestionar contenido.</div>
         )}
       </ErrorBoundary>
     )} />
