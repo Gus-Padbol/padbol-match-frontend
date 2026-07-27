@@ -120,6 +120,15 @@ function AppContent() {
   });
 
   const [authReady, setAuthReady] = useState(false);
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('password_reset') === '1'
+      || window.location.hash.includes('type=recovery');
+  });
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
   const isAdmin = ADMIN_EMAILS.includes(currentCliente?.email);
   const { rol, sedeId, nombre: rolNombre, loading: roleLoading } = useUserRole(currentCliente);
   const [sedeName, setSedeName] = React.useState('');
@@ -137,10 +146,10 @@ function AppContent() {
   // Auto-redirect admin users to /admin as soon as their role resolves
   const ADMIN_ROLES = ['super_admin', 'admin_nacional', 'admin_club', 'editor_contenido'];
   useEffect(() => {
-    if (currentCliente && rol && ADMIN_ROLES.includes(rol)) {
+    if (!passwordRecoveryMode && currentCliente && rol && ADMIN_ROLES.includes(rol)) {
       navigate('/admin');
     }
-  }, [rol, currentCliente]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rol, currentCliente, passwordRecoveryMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Restore session from Supabase Auth on mount and listen for auth state changes
   useEffect(() => {
@@ -180,7 +189,11 @@ function AppContent() {
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryMode(true);
+      }
+
       if (session?.user) {
         const user = {
           email: session.user.email,
@@ -265,6 +278,61 @@ function AppContent() {
       navigate('/');
     }, 50);
   };
+
+  const handlePasswordResetRequest = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const email = loginEmail.trim().toLowerCase();
+    if (!email) {
+      setErrorMsg('Ingresá tu email para recuperar la contraseña');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/?password_reset=1`,
+    });
+    setRecoveryLoading(false);
+
+    if (error) {
+      setErrorMsg('No pudimos enviar el enlace. Intentá nuevamente en unos minutos.');
+      return;
+    }
+
+    setSuccessMsg('Te enviamos un enlace para crear una contraseña nueva. Revisá también Spam.');
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (newPassword.length < 8) {
+      setErrorMsg('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorMsg('Las contraseñas no coinciden');
+      return;
+    }
+
+    setRecoveryLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setRecoveryLoading(false);
+
+    if (error) {
+      setErrorMsg('El enlace venció o no es válido. Solicitá uno nuevo.');
+      return;
+    }
+
+    window.history.replaceState({}, document.title, '/');
+    setPasswordRecoveryMode(false);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setSuccessMsg('Contraseña actualizada. Ya podés ingresar al panel.');
+  };
+
   const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -449,6 +517,57 @@ function AppContent() {
 if (!authReady) {
   return <div style={{color: 'white'}}>Cargando sesión... (debug)</div>;
 }
+
+  if (passwordRecoveryMode) {
+    return (
+      <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <img src="/logo-padbol-match.png" alt="Padbol Match" style={{ width: '100px' }} />
+        </div>
+        <form onSubmit={handlePasswordUpdate}>
+          <h2>Crear contraseña nueva</h2>
+          <p style={{ color: '#666', fontSize: '14px' }}>
+            Elegí una contraseña de al menos 8 caracteres.
+          </p>
+          <div style={{ position: 'relative', marginBottom: '10px' }}>
+            <input
+              type={showNewPassword ? 'text' : 'password'}
+              placeholder="Nueva contraseña"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              style={{ width: '100%', padding: '10px', paddingRight: '40px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword((visible) => !visible)}
+              aria-label={showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#888' }}
+            >
+              {showNewPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
+          <input
+            type={showNewPassword ? 'text' : 'password'}
+            placeholder="Repetir contraseña"
+            value={confirmNewPassword}
+            onChange={(e) => setConfirmNewPassword(e.target.value)}
+            autoComplete="new-password"
+            style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '5px', boxSizing: 'border-box' }}
+          />
+          {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
+          <button
+            type="submit"
+            disabled={recoveryLoading}
+            style={{ width: '100%', padding: '10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', opacity: recoveryLoading ? 0.65 : 1 }}
+          >
+            {recoveryLoading ? 'Guardando…' : 'Guardar contraseña'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
  if (!currentCliente && showPreguntaTorneo) {
     return (
       <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
@@ -596,8 +715,17 @@ if (!authReady) {
               </button>
             </div>
             {errorMsg && <p style={{ color: 'red' }}>{errorMsg}</p>}
+            {successMsg && <p style={{ color: '#2e7d32' }}>{successMsg}</p>}
             <button type="submit" style={{ width: '100%', padding: '10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Entrar
+            </button>
+            <button
+              type="button"
+              onClick={handlePasswordResetRequest}
+              disabled={recoveryLoading}
+              style={{ width: '100%', padding: '10px', marginTop: '10px', background: 'transparent', color: '#d32f2f', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+            >
+              {recoveryLoading ? 'Enviando enlace…' : '¿Olvidaste tu contraseña?'}
             </button>
             <p style={{ textAlign: 'center' }}>
               ¿No tienes cuenta? <a href="#" onClick={() => setShowLogin(false)} style={{ color: '#d32f2f', textDecoration: 'none' }}>Regístrate</a>
