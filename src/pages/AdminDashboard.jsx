@@ -1723,6 +1723,11 @@ export default function AdminDashboard({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>{currentEmail}</span>
+          {isSuperAdmin ? (
+            <button onClick={() => navigate('/admin/content')} style={{ padding: '10px 20px', background: '#0ea5e9', color: 'white', border: '1px solid #7dd3fc', borderRadius: '5px', cursor: 'pointer', fontWeight: 700 }}>
+              Aprobar contenido
+            </button>
+          ) : null}
           <button onClick={() => navigate('/torneos')} style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '5px', cursor: 'pointer' }}>
             🏆 Torneos
           </button>
