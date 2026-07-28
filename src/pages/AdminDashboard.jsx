@@ -11,6 +11,7 @@ import PadcoinsCanjesAdminSection from '../components/PadcoinsCanjesAdminSection
 import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
 import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
 import AdminSedePagosSection from '../components/AdminSedePagosSection';
+import AdminSedeShopSection from '../components/AdminSedeShopSection';
 import AdminReservaManualPanel from '../components/AdminReservaManualPanel';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
 import {
@@ -1717,6 +1718,7 @@ export default function AdminDashboard({
     { id: 'canchas', label: 'Canchas' },
     { id: 'fotos', label: 'Fotos' },
     ...(esAdminClub || isSuperAdmin ? [
+      { id: 'shop', label: 'Mi Padbol Match Shop' },
       { id: 'extras', label: 'Extras del tercer tiempo' },
       { id: 'resenas', label: 'Reseñas' },
     ] : []),
@@ -4339,6 +4341,16 @@ export default function AdminDashboard({
               />
             </div>
           </div>
+          )}
+
+          {miSedeActiveSection === 'shop' && (esAdminClub || isSuperAdmin) && (
+            <div style={{ marginBottom: '32px' }}>
+              <AdminSedeShopSection
+                apiBaseUrl={apiBaseUrl}
+                sedeId={sedeId}
+                monedaSede={String(miSedeForm.moneda || miSede?.moneda || 'ARS').trim().toUpperCase() || 'ARS'}
+              />
+            </div>
           )}
 
           {miSedeActiveSection === 'resenas' && (esAdminClub || isSuperAdmin) && (
