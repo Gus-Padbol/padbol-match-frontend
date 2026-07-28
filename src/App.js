@@ -279,6 +279,16 @@ function AppContent() {
     }, 50);
   };
 
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) setErrorMsg('No pudimos iniciar sesión con Google. Intentá nuevamente.');
+  };
+
   const handlePasswordResetRequest = async () => {
     setErrorMsg('');
     setSuccessMsg('');
@@ -718,6 +728,13 @@ if (!authReady) {
             {successMsg && <p style={{ color: '#2e7d32' }}>{successMsg}</p>}
             <button type="submit" style={{ width: '100%', padding: '10px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Entrar
+            </button>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              style={{ width: '100%', padding: '10px', marginTop: '10px', background: 'white', color: '#1f2937', border: '1px solid #d1d5db', borderRadius: '5px', cursor: 'pointer', fontWeight: '600' }}
+            >
+              Continuar con Google
             </button>
             <button
               type="button"
