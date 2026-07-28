@@ -634,6 +634,7 @@ export default function AdminDashboard({
   const [sedesMap, setSedesMap] = useState({});
   const [ingresos, setIngresos] = useState({ ARS: 0, USD: 0, EUR: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [editandoId, setEditandoId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [mensajeExito, setMensajeExito] = useState('');
@@ -1099,11 +1100,19 @@ export default function AdminDashboard({
   };
 
   const fetchData = async () => {
+    setLoading(true);
+    setLoadError('');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
     try {
+      const authHeaders = await getAuthHeaders();
       // Cargar sedes primero para poder resolver moneda por sede
       let sedesData = [];
       try {
-        const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`);
+        const sedesRes = await fetch(`${apiBaseUrl}/api/sedes`, {
+          headers: authHeaders,
+          signal: controller.signal,
+        });
         if (sedesRes.ok) {
           sedesData = await sedesRes.json() || [];
 
@@ -1133,8 +1142,11 @@ export default function AdminDashboard({
       const allowedSedeIds = new Set(sedesData.map(s => s.id));
 
       // Cargar reservas
-      const resRes = await fetch(`${apiBaseUrl}/api/reservas`);
-      let resData = await resRes.json();
+      const resRes = await fetch(`${apiBaseUrl}/api/reservas`, {
+        headers: authHeaders,
+        signal: controller.signal,
+      });
+      let resData = await resRes.json().catch(() => []);
       if (!Array.isArray(resData)) resData = [];
 
       // Filter reservas by allowed sedes (for admin_nacional and admin_club)
@@ -1156,8 +1168,11 @@ export default function AdminDashboard({
       setIngresos(totales);
 
       // Cargar torneos (filter by sede scope for non-super-admin)
-      const tornRes = await fetch(`${apiBaseUrl}/api/torneos`);
-      let tornData = await tornRes.json();
+      const tornRes = await fetch(`${apiBaseUrl}/api/torneos`, {
+        headers: authHeaders,
+        signal: controller.signal,
+      });
+      let tornData = await tornRes.json().catch(() => []);
       if (!Array.isArray(tornData)) tornData = [];
       if (!isSuperAdmin && sedesData.length > 0) {
         tornData = tornData.filter(t => t.sede_id == null || allowedSedeIds.has(t.sede_id));
@@ -1167,7 +1182,14 @@ export default function AdminDashboard({
       setLoading(false);
     } catch (err) {
       console.error('Error:', err);
+      setLoadError(
+        err?.name === 'AbortError'
+          ? 'La carga del panel tardó demasiado. Verificá la conexión e intentá de nuevo.'
+          : 'No pudimos cargar todos los datos del panel. Intentá de nuevo.',
+      );
       setLoading(false);
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 
@@ -1672,6 +1694,18 @@ export default function AdminDashboard({
   };
 
   if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Cargando...</div>;
+  if (loadError) return (
+    <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+      <p style={{ color: '#b91c1c', fontWeight: 700 }}>{loadError}</p>
+      <button
+        type="button"
+        onClick={fetchData}
+        style={{ background: '#1d4ed8', border: 0, borderRadius: 8, color: '#fff', cursor: 'pointer', fontWeight: 700, padding: '10px 16px' }}
+      >
+        Reintentar
+      </button>
+    </div>
+  );
 
   const MI_SEDE_SECTIONS = [
     { id: 'licencia', label: 'Licencia PADBOL' },
