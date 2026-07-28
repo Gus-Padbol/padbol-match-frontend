@@ -12,6 +12,7 @@ import AdminSedeExtrasSection from '../components/AdminSedeExtrasSection';
 import AdminSedeResenasSection from '../components/AdminSedeResenasSection';
 import AdminSedePagosSection from '../components/AdminSedePagosSection';
 import AdminSedeShopSection from '../components/AdminSedeShopSection';
+import SuperAdminShopSection from '../components/SuperAdminShopSection';
 import AdminReservaManualPanel from '../components/AdminReservaManualPanel';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
 import {
@@ -1733,6 +1734,7 @@ export default function AdminDashboard({
     ...(puedeVerSetup ? [{ id: 'setup', label: '⚙️ Setup' }] : []),
     ...(puedeVerPadCoins   ? [{ id: 'padcoins',   label: '🪙 PadCoins' }] : []),
     ...(puedeVerMiSede  ? [{ id: 'mi_sede', label: '🏟️ Mi Sede' }] : []),
+    ...(isSuperAdmin ? [{ id: 'shop_global', label: '🛍️ Red Shop' }] : []),
     ...(puedeVerConfig  ? [{ id: 'config',  label: '⚙️ Config' }]  : []),
   ];
 
@@ -3600,6 +3602,12 @@ export default function AdminDashboard({
         </div>
 
       </div>}
+
+      {activeTab === 'shop_global' && isSuperAdmin && (
+        <div className="section">
+          <SuperAdminShopSection apiBaseUrl={apiBaseUrl} />
+        </div>
+      )}
 
       {/* ── Mi Sede tab ── */}
       {activeTab === 'mi_sede' && puedeVerMiSede && <div className="section">
