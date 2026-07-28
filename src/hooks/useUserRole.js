@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 const STORAGE_KEY = 'user_role_data';
+const API_BASE_URL = 'https://padbol-backend.onrender.com';
 
 export default function useUserRole(currentCliente) {
   const [roleData, setRoleData] = useState(() => {
@@ -21,34 +22,59 @@ export default function useUserRole(currentCliente) {
       return;
     }
 
-    // Always re-fetch from DB on email change to avoid stale cached roles
+    // El backend consulta por user_id con service role. Evita que una política
+    // RLS del cliente deje al panel administrativo esperando indefinidamente.
     setLoading(true);
-    supabase
-      .from('user_roles')
-      .select('role, nombre, pais, sede_id, email, torneos_oficiales_habilitados')
-      .eq('email', currentCliente.email)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('useUserRole fetch error:', error.message);
-        }
-        console.log('[useUserRole] query result for', currentCliente.email, '→', data);
-        const result = data
+    let alive = true;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    async function loadRole() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) throw new Error('No hay una sesión activa');
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/mi-rol`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'No se pudo validar el rol');
+
+        const rol = String(data?.rol || data?.role || '').trim().toLowerCase() || null;
+        const result = rol
           ? {
               email: currentCliente.email,
-              rol: data.role,
-              nombre: data.nombre,
-              pais: data.pais,
-              sedeId: data.sede_id,
-              torneosOficialesHabilitados: data.torneos_oficiales_habilitados ?? false,
+              rol,
+              nombre: data?.nombre ?? null,
+              pais: data?.pais ?? null,
+              sedeId: data?.sede_id ?? data?.sedeId ?? null,
+              torneosOficialesHabilitados: Boolean(data?.torneosOficialesHabilitados),
             }
           : null;
-        console.log('[useUserRole] resolved roleData:', result);
+
+        if (!alive) return;
         setRoleData(result);
         if (result) localStorage.setItem(STORAGE_KEY, JSON.stringify(result));
         else localStorage.removeItem(STORAGE_KEY);
-        setLoading(false);
-      });
+      } catch (error) {
+        if (!alive) return;
+        console.error('useUserRole fetch error:', error.message);
+        setRoleData(null);
+        localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        if (alive) setLoading(false);
+        window.clearTimeout(timeout);
+      }
+    }
+
+    void loadRole();
+    return () => {
+      alive = false;
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
   }, [currentCliente?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
