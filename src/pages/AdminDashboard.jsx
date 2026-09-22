@@ -14,7 +14,6 @@ import AdminSedePagosSection from '../components/AdminSedePagosSection';
 import AdminSedeShopSection from '../components/AdminSedeShopSection';
 import SuperAdminShopSection from '../components/SuperAdminShopSection';
 import AdminReservaManualPanel from '../components/AdminReservaManualPanel';
-import ContentWorkspace from './ContentWorkspace';
 import { DEPORTES_CANCHA_SEDE_OPTIONS } from '../constants/deportesCanchaSede';
 import {
   DEFAULT_SPONSOR_CUPOS,
@@ -657,7 +656,6 @@ export default function AdminDashboard({
     'scoreboard',
     'setup',
     'padcoins',
-    'contenido',
     'mi_sede',
     'config',
   ];
@@ -1735,7 +1733,6 @@ export default function AdminDashboard({
     ...(puedeVerScoreboard ? [{ id: 'scoreboard', label: '📺 Scoreboard' }] : []),
     ...(puedeVerSetup ? [{ id: 'setup', label: '⚙️ Setup' }] : []),
     ...(puedeVerPadCoins   ? [{ id: 'padcoins',   label: '🪙 PadCoins' }] : []),
-    ...(isSuperAdmin ? [{ id: 'contenido', label: '🖼️ Fotos y contenido de Signature' }] : []),
     ...(puedeVerMiSede  ? [{ id: 'mi_sede', label: '🏟️ Mi Sede' }] : []),
     ...(isSuperAdmin ? [{ id: 'shop_global', label: '🛍️ Red Shop' }] : []),
     ...(puedeVerConfig  ? [{ id: 'config',  label: '⚙️ Config' }]  : []),
@@ -3364,14 +3361,6 @@ export default function AdminDashboard({
               }}
             />
           </div>
-      )}
-
-      {activeTab === 'contenido' && isSuperAdmin && (
-        <ContentWorkspace
-          apiBaseUrl={apiBaseUrl}
-          onLogout={handleLogout}
-          canApprove
-        />
       )}
 
       {activeTab === 'config' && puedeVerConfig && <div className="section">

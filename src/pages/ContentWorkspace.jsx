@@ -10,14 +10,14 @@ const SPORTS = [
 ];
 
 const CARDS = [
-  ['reservar', 'Reservar cancha', 'Inicio · Jugar'],
-  ['buscar_partido', 'Buscar partido', 'Inicio · Jugar'],
-  ['torneos', 'Torneos y rankings', 'Inicio · Competir'],
-  ['armar_partido', 'Crear partido', 'Inicio · Jugar'],
-  ['comunidad', 'Comunidad', 'Inicio'],
-  ['rankings', 'Rankings', 'Competir'],
-  ['mis_partidos', 'Mis partidos', 'Competir'],
-  ['perfil', 'Mi perfil deportivo', 'Perfil'],
+  ['reservar', 'Reservar cancha'],
+  ['buscar_partido', 'Buscar partido'],
+  ['torneos', 'Torneos'],
+  ['rankings', 'Rankings'],
+  ['armar_partido', 'Crear partido'],
+  ['comunidad', 'Comunidad'],
+  ['perfil', 'Perfil deportivo'],
+  ['mis_partidos', 'Mis partidos'],
 ];
 
 const EMPTY_AD = {
@@ -373,7 +373,7 @@ export default function ContentWorkspace({
 
           <h2>Espacio</h2>
           <div className="content-workspace__cards">
-            {CARDS.map(([key, label, surface]) => {
+            {CARDS.map(([key, label]) => {
               const draft = draftFor(drafts, 'hub', sport, key);
               const published = items.some(
                 (item) => item.deporte === sport && item.card_key === key,
@@ -386,9 +386,7 @@ export default function ContentWorkspace({
                   className={cardKey === key ? 'is-active' : ''}
                 >
                   <span>{label}</span>
-                  <small>
-                    {surface} · {draft ? statusLabel(draft.status) : (published ? 'Publicado' : 'Sin imagen propia')}
-                  </small>
+                  <small>{draft ? statusLabel(draft.status) : (published ? 'Publicado' : 'Pendiente')}</small>
                 </button>
               );
             })}
